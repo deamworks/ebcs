@@ -1,0 +1,87 @@
+
+# Docker Compose — e-BCS
+# รัน:  docker compose up -d
+# หยุด: docker compose down
+# ดู log: docker compose logs -f
+
+services:
+
+  # ── 1. Nginx 
+  # หน้าที่: รับทุก request ที่เข้ามาทาง port 80
+  #   - ขอไฟล์ HTML/CSS/JS → ส่งจาก frontend/ ให้เลย
+  #   - ขอ /api/...        → ส่งต่อให้ Flask
+  nginx:
+    image: nginx:1.27-alpine          # ใช้ nginx เวอร์ชัน 1.27 แบบเล็ก (alpine)
+    container_name: ebcs-nginx        # ชื่อ container ที่เห็นใน Docker Desktop
+    ports:
+      - "80:80"                        # เปิด port 80 ให้ browser เข้าได้
+    volumes:
+      # mount ไฟล์ config เข้าไปใน container (:ro = read-only ป้องกันแก้ไขใน container)
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # mount โฟลเดอร์ frontend ทั้งหมด (HTML/CSS/JS)
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - flask-api                      # รอให้ Flask พร้อมก่อนค่อย start
+    restart: unless-stopped            # restart อัตโนมัติถ้า crash (ยกเว้นที่เราสั่งหยุดเอง)
+
+  # ── 2. Flask API 
+  # หน้าที่: รัน Python Flask REST API
+  # ไม่มี ports: เปิดออกข้างนอก — ป้องกันการเรียก API ตรงๆ ต้องผ่าน Nginx
+  flask-api:
+    build: ./backend                   # build จาก backend/Dockerfile
+    container_name: ebcs-api
+    env_file: .env                     # อ่าน environment variables จาก .env
+    volumes:
+      # mount โฟลเดอร์ uploads เพื่อเก็บไฟล์แนบจริง
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy     # รอให้ MySQL พร้อมจริงๆ (ไม่ใช่แค่เปิดติด)
+      redis:
+        condition: service_started     # รอให้ Redis เปิดติด
+    restart: unless-stopped
+
+  # ── 3. MySQL
+  # หน้าที่: ฐานข้อมูลหลัก
+  # schema.sql จะรันอัตโนมัติตอนสร้าง DB ครั้งแรก
+  mysql:
+    image: mysql:8.0
+    container_name: ebcs-mysql
+    env_file: .env
+    # ตั้งค่าให้รองรับภาษาไทย
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      # เก็บข้อมูลจริงไว้ใน volumes/db (ถ้าลบโฟลเดอร์นี้ = ข้อมูลหาย!)
+      - ./volumes/db:/var/lib/mysql
+      # รัน schema.sql ครั้งแรกที่สร้าง database
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      # ตรวจสอบว่า MySQL พร้อมรับ connection จริงๆ
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s     # ตรวจทุก 5 วินาที
+      timeout: 5s      # รอ response 5 วินาที
+      retries: 10      # ลองซ้ำ 10 ครั้ง (รวม 50 วินาที)
+    restart: unless-stopped
+
+  # ── 4. Redis 
+  # หน้าที่: เก็บ OTP ชั่วคราว (หมดอายุอัตโนมัติ 5 นาที)
+  redis:
+    image: redis:7-alpine
+    container_name: ebcs-redis
+    restart: unless-stopped
+
+  # ── 5. phpMyAdmin 
+  # หน้าที่: UI สำหรับดู/จัดการ MySQL ผ่าน browser
+  # เปิดที่: http://localhost:8080
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: ebcs-pma
+    ports:
+      - "8080:80"                      # เปิด port 8080
+    environment:
+      PMA_HOST: mysql                  # ชี้ไปที่ container mysql
+      PMA_PORT: 3306
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped

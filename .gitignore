@@ -1,0 +1,20 @@
+#รายชื่อไฟล์ที่ git ห้ามจำ
+.env
+
+# ข้อมูล MySQL จริง
+volumes/
+
+# ไฟล์แนบผู้ใช้
+uploads/*
+!uploads/ .gitkeep
+
+#Python
+__pycache__/
+*.pyc
+.venv/
+
+# ระบบ / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
