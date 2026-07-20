@@ -1,0 +1,1071 @@
+# ════════════════════════════════════════════════════════
+# routes/admin.py — API สำหรับเจ้าหน้าที่ กสทช.
+#
+# ทุก endpoint ในไฟล์นี้:
+# 1. ต้องมี JWT token ของ admin เท่านั้น
+# 2. ถ้าใช้ token ของผู้ประกอบการจะได้ 403 Forbidden
+# 3. ทุกการแก้ไขบันทึกลง audit_logs อัตโนมัติ
+# ════════════════════════════════════════════════════════
+
+import json
+from datetime import datetime, date
+
+from flask import Blueprint, jsonify, request, send_file
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+
+from ..db import get_db
+
+admin_bp = Blueprint("admin", __name__)
+
+
+# ════════════════════════════════════════════════════════
+# Helper Functions
+# ════════════════════════════════════════════════════════
+
+def date_to_str(d):
+    """แปลง date/datetime เป็น string สำหรับ JSON"""
+    if d is None:
+        return None
+    if isinstance(d, (date, datetime)):
+        return d.strftime("%Y-%m-%d")
+    return str(d)
+
+
+def require_admin(f):
+    """
+    Decorator ตรวจสอบว่าเป็น token ของ admin
+    ใช้แบบนี้:
+        @admin_bp.route("/...")
+        @jwt_required()
+        @require_admin
+        def my_route():
+            ...
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        claims = get_jwt()
+        if claims.get("role") != "admin":
+            return jsonify({
+                "success": False,
+                "error": {
+                    "code": "FORBIDDEN",
+                    "message": "เฉพาะเจ้าหน้าที่เท่านั้น"
+                }
+            }), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def save_audit_log(db, admin_email, action, table_name,
+                   record_id=None, changes=None):
+    """
+    บันทึก Audit Log ทุกครั้งที่แอดมินแก้ไขข้อมูล
+    เรียกใช้หลังทุก INSERT/UPDATE/DELETE
+
+    ตัวอย่าง changes:
+    {
+        "phone": {"old": "0812345678", "new": "0898765432"}
+    }
+    """
+    with db.cursor() as cur:
+        cur.execute("""
+            INSERT INTO audit_logs
+                (admin_email, action, table_name, record_id, changes)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            admin_email,
+            action,
+            table_name,
+            str(record_id) if record_id else None,
+            json.dumps(changes, ensure_ascii=False) if changes else None
+        ))
+
+
+# ════════════════════════════════════════════════════════
+# 5.1 รายการยื่นแบบทั้งหมด + Dashboard Cards
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/submissions", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_submissions():
+    """
+    ดูรายการยื่นแบบทั้งหมด พร้อม Dashboard Cards
+
+    Request:  GET /api/admin/submissions
+    Query:    ?year=2568&status=pending_payment&search=ไทยวิทยุ&page=1
+
+    Response:
+    - items:      รายการใบยื่น (แบ่งหน้า)
+    - summary:    ตัวเลขสำหรับ Dashboard Cards 4 ใบ
+    - pagination: ข้อมูลการแบ่งหน้า
+    """
+
+    # ── รับ query parameters ─────────────────────────
+    year       = request.args.get("year", type=int)
+    status     = request.args.get("status")
+    search     = request.args.get("search", "").strip()
+    page       = request.args.get("page", 1, type=int)
+    per_page   = request.args.get("per_page", 50, type=int)
+    offset     = (page - 1) * per_page
+
+    # ── สร้าง WHERE clause แบบ dynamic ──────────────
+    # สร้างเงื่อนไขตามที่ส่งมา (ไม่ส่งมา = ไม่กรอง)
+    conditions = []
+    params     = []
+
+    if year:
+        conditions.append("s.fiscal_year = %s")
+        params.append(year)
+
+    if status:
+        conditions.append("s.status = %s")
+        params.append(status)
+
+    if search:
+        # ค้นหาทั้งชื่อบริษัทและเลขภาษี
+        conditions.append(
+            "(s.operator_name LIKE %s OR s.tax_id LIKE %s)"
+        )
+        params.append(f"%{search}%")
+        params.append(f"%{search}%")
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            # ── ดึงรายการ (แบ่งหน้า) ─────────────────
+            cur.execute(f"""
+                SELECT
+                    s.id, s.tax_id, s.operator_name,
+                    s.fiscal_year, s.ref_no,
+                    s.net_amount, s.submitted_at, s.created_at,
+                    CASE WHEN r.id IS NOT NULL THEN 'paid'
+                         ELSE s.status END AS actual_status
+                FROM submissions s
+                LEFT JOIN receipt r ON r.submission_id = s.id
+                {where}
+                ORDER BY s.created_at DESC
+                LIMIT %s OFFSET %s
+            """, params + [per_page, offset])
+            items = cur.fetchall()
+
+            # ── นับทั้งหมดสำหรับ pagination ─────────
+            cur.execute(f"""
+                SELECT COUNT(*) as total
+                FROM submissions s
+                LEFT JOIN receipt r ON r.submission_id = s.id
+                {where}
+            """, params)
+            total = cur.fetchone()["total"]
+
+            # ── Dashboard Cards (นับแยกแต่ละสถานะ) ──
+            # ถ้ากรองปีอยู่ Dashboard ก็แสดงเฉพาะปีนั้น
+            dash_where = "WHERE s.fiscal_year = %s" if year else ""
+            dash_params = [year] if year else []
+
+            cur.execute(f"""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN s.status = 'draft' THEN 1 ELSE 0 END) as draft,
+                    SUM(CASE WHEN s.status = 'pending_payment'
+                             AND r.id IS NULL THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as paid
+                FROM submissions s
+                LEFT JOIN receipt r ON r.submission_id = s.id
+                {dash_where}
+            """, dash_params)
+            summary = cur.fetchone()
+
+    # แปลงวันที่และตัวเลขก่อนส่งกลับ
+    for item in items:
+        item["submitted_at"] = date_to_str(item["submitted_at"])
+        item["created_at"]   = date_to_str(item["created_at"])
+        item["net_amount"]   = float(item["net_amount"] or 0)
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "items": items,
+            "summary": {
+                "total":   int(summary["total"]   or 0),
+                "draft":   int(summary["draft"]   or 0),
+                "pending": int(summary["pending"] or 0),
+                "paid":    int(summary["paid"]    or 0)
+            },
+            "pagination": {
+                "page":        page,
+                "per_page":    per_page,
+                "total":       total,
+                "total_pages": -(-total // per_page)  # ceiling division
+            }
+        }
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 5.2 ดู/แก้ไขรายละเอียดใบยื่น
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/submissions/<submission_id>", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_submission_detail(submission_id):
+    """
+    ดูรายละเอียดใบยื่นแบบครบทุก Step
+    Request: GET /api/admin/submissions/<id>
+    """
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            # ดึงใบยื่นหลัก
+            cur.execute("""
+                SELECT s.*,
+                       CASE WHEN r.id IS NOT NULL THEN 'paid'
+                            ELSE s.status END AS actual_status
+                FROM submissions s
+                LEFT JOIN receipt r ON r.submission_id = s.id
+                WHERE s.id = %s
+            """, (submission_id,))
+            submission = cur.fetchone()
+
+            if not submission:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบใบยื่นแบบ"}
+                }), 404
+
+            # ดึงใบอนุญาต
+            cur.execute("""
+                SELECT l.*, GROUP_CONCAT(
+                    JSON_OBJECT(
+                        'id',          li.id,
+                        'income_type', li.income_type,
+                        'label',       li.label,
+                        'amount',      li.amount
+                    ) SEPARATOR ','
+                ) as incomes_raw
+                FROM licenses l
+                LEFT JOIN license_incomes li ON li.license_id = l.id
+                WHERE l.submission_id = %s
+                GROUP BY l.id
+            """, (submission_id,))
+            licenses = cur.fetchall()
+
+            # แปลง incomes_raw (string) เป็น list
+            for lic in licenses:
+                raw = lic.pop("incomes_raw", None)
+                try:
+                    lic["incomes"] = json.loads(
+                        f"[{raw}]"
+                    ) if raw else []
+                except Exception:
+                    lic["incomes"] = []
+                lic["fee_amount"] = float(lic["fee_amount"] or 0)
+
+            # ดึงรายได้อื่น
+            cur.execute(
+                "SELECT * FROM other_incomes WHERE submission_id = %s",
+                (submission_id,)
+            )
+            other_incomes = cur.fetchall()
+
+            # ดึงไฟล์แนบ
+            cur.execute(
+                "SELECT * FROM document_attachments WHERE submission_id = %s",
+                (submission_id,)
+            )
+            attachments = cur.fetchall()
+
+            # ดึงใบแจ้งหนี้และใบเสร็จ
+            cur.execute(
+                "SELECT * FROM invoice WHERE submission_id = %s LIMIT 1",
+                (submission_id,)
+            )
+            invoice = cur.fetchone()
+
+            cur.execute(
+                "SELECT * FROM receipt WHERE submission_id = %s LIMIT 1",
+                (submission_id,)
+            )
+            receipt = cur.fetchone()
+
+    # แปลงวันที่
+    for key in ["period_start", "period_end", "due_date",
+                "submitted_at", "created_at", "updated_at"]:
+        if submission.get(key):
+            submission[key] = date_to_str(submission[key])
+
+    for field in ["net_amount", "fund_amount", "vat_amount",
+                  "extra_amount", "total_income"]:
+        if submission.get(field) is not None:
+            submission[field] = float(submission[field])
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "submission":    submission,
+            "licenses":      licenses,
+            "other_incomes": [
+                {**o, "amount": float(o["amount"] or 0)}
+                for o in other_incomes
+            ],
+            "attachments": [
+                {
+                    "id":          a["id"],
+                    "doc_type":    a["doc_type"],
+                    "file_name":   a["file_name"],
+                    "file_size":   a["file_size"],
+                    "uploaded_at": date_to_str(a["uploaded_at"])
+                }
+                for a in attachments
+            ],
+            "invoice": invoice,
+            "receipt":  receipt
+        }
+    }), 200
+
+
+@admin_bp.route("/submissions/<submission_id>", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_submission(submission_id):
+    """
+    แอดมินแก้ไขใบยื่น — ทำได้ทุกสถานะ
+    Request: PUT /api/admin/submissions/<id>
+    ทุกการแก้ไขบันทึกลง audit_logs อัตโนมัติ
+    """
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            # ดึงค่าเดิมก่อนแก้ (เพื่อ audit log)
+            cur.execute(
+                "SELECT * FROM submissions WHERE id = %s",
+                (submission_id,)
+            )
+            old = cur.fetchone()
+
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบใบยื่นแบบ"}
+                }), 404
+
+            # ── อัปเดตข้อมูลที่ส่งมา ─────────────────
+            updatable = [
+                "operator_name", "total_income", "deduction_amount",
+                "fund_amount", "vat_amount", "extra_amount", "net_amount",
+                "auditor_name", "auditor_license", "auditor_office",
+                "audited_date"
+            ]
+
+            # สร้าง SET clause เฉพาะ field ที่ส่งมา
+            set_parts = []
+            set_params = []
+            changes = {}
+
+            for field in updatable:
+                if field in data:
+                    set_parts.append(f"{field} = %s")
+                    set_params.append(data[field])
+                    # บันทึกการเปลี่ยนแปลง
+                    if str(old.get(field)) != str(data[field]):
+                        changes[field] = {
+                            "old": str(old.get(field)),
+                            "new": str(data[field])
+                        }
+
+            if set_parts:
+                cur.execute(
+                    f"UPDATE submissions SET {', '.join(set_parts)} WHERE id = %s",
+                    set_params + [submission_id]
+                )
+
+        # บันทึก Audit Log
+        if changes:
+            save_audit_log(
+                db, admin_email,
+                "แก้ไขใบยื่นแบบ",
+                "submissions",
+                submission_id,
+                changes
+            )
+
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
+    }), 200
+
+
+@admin_bp.route("/submissions", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_submissions():
+    """
+    ลบใบยื่นหลายรายการพร้อมกัน
+    Request: DELETE /api/admin/submissions
+    Body:    { "ids": ["uuid1", "uuid2"] }
+    CASCADE จะลบ licenses, incomes, attachments ที่เชื่อมอยู่ด้วย
+    """
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+    ids         = data.get("ids", [])
+
+    if not ids:
+        return jsonify({
+            "success": False,
+            "error": {"code": "MISSING_IDS",
+                      "message": "กรุณาระบุ id ที่ต้องการลบ"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
+            for sid in ids:
+                cur.execute(
+                    "DELETE FROM submissions WHERE id = %s",
+                    (sid,)
+                )
+
+        # Audit Log
+        save_audit_log(
+            db, admin_email,
+            f"ลบใบยื่นแบบ {len(ids)} รายการ",
+            "submissions",
+            None,
+            {"deleted_ids": ids}
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"deleted": len(ids)}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 5.3 จัดการผู้ประกอบการ (Taxpayer CRUD)
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/taxpayers", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_taxpayers():
+    """ดูรายการผู้ประกอบการทั้งหมด"""
+
+    search = request.args.get("search", "").strip()
+    year   = request.args.get("year", type=int)
+    page   = request.args.get("page", 1, type=int)
+
+    conditions = []
+    params     = []
+
+    if search:
+        conditions.append(
+            "(tax_id LIKE %s OR operator_name LIKE %s)"
+        )
+        params += [f"%{search}%", f"%{search}%"]
+
+    if year:
+        conditions.append("fiscal_year = %s")
+        params.append(year)
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(f"""
+                SELECT id, tax_id, operator_name, phone,
+                       fiscal_year, ref_no, period_start,
+                       period_end, due_date, updated_at
+                FROM taxpayer_master
+                {where}
+                ORDER BY fiscal_year DESC, operator_name
+                LIMIT 100 OFFSET %s
+            """, params + [(page - 1) * 100])
+            taxpayers = cur.fetchall()
+
+    for t in taxpayers:
+        t["period_start"] = date_to_str(t["period_start"])
+        t["period_end"]   = date_to_str(t["period_end"])
+        t["due_date"]     = date_to_str(t["due_date"])
+        t["updated_at"]   = date_to_str(t["updated_at"])
+
+    return jsonify({
+        "success": True,
+        "data": {"taxpayers": taxpayers, "total": len(taxpayers)}
+    }), 200
+
+
+@admin_bp.route("/taxpayers", methods=["POST"])
+@jwt_required()
+@require_admin
+def create_taxpayer():
+    """เพิ่มผู้ประกอบการใหม่"""
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    required = ["tax_id", "operator_name", "fiscal_year"]
+    for field in required:
+        if not data.get(field):
+            return jsonify({
+                "success": False,
+                "error": {"code": "MISSING_FIELDS",
+                          "message": f"กรุณากรอก {field}"}
+            }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO taxpayer_master
+                        (tax_id, operator_name, phone, fiscal_year,
+                         ref_no, period_start, period_end, due_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    data["tax_id"],
+                    data["operator_name"],
+                    data.get("phone"),
+                    data["fiscal_year"],
+                    data.get("ref_no"),
+                    data.get("period_start"),
+                    data.get("period_end"),
+                    data.get("due_date")
+                ))
+
+                cur.execute(
+                    "SELECT id FROM taxpayer_master WHERE tax_id = %s AND fiscal_year = %s",
+                    (data["tax_id"], data["fiscal_year"])
+                )
+                new_id = cur.fetchone()["id"]
+
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE",
+                                  "message": "มีข้อมูลปีบัญชีนี้อยู่แล้ว"}
+                    }), 400
+                raise
+
+        save_audit_log(
+            db, admin_email, "เพิ่มผู้ประกอบการ",
+            "taxpayer_master", new_id, data
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": new_id}
+    }), 201
+
+
+@admin_bp.route("/taxpayers/<taxpayer_id>", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_taxpayer(taxpayer_id):
+    """แก้ไขข้อมูลผู้ประกอบการ"""
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            cur.execute(
+                "SELECT * FROM taxpayer_master WHERE id = %s",
+                (taxpayer_id,)
+            )
+            old = cur.fetchone()
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบผู้ประกอบการ"}
+                }), 404
+
+            updatable = ["operator_name", "phone", "ref_no",
+                         "period_start", "period_end", "due_date"]
+            set_parts  = []
+            set_params = []
+            changes    = {}
+
+            for field in updatable:
+                if field in data:
+                    set_parts.append(f"{field} = %s")
+                    set_params.append(data[field])
+                    if str(old.get(field)) != str(data[field]):
+                        changes[field] = {
+                            "old": str(old.get(field)),
+                            "new": str(data[field])
+                        }
+
+            if set_parts:
+                cur.execute(
+                    f"UPDATE taxpayer_master SET {', '.join(set_parts)} WHERE id = %s",
+                    set_params + [taxpayer_id]
+                )
+
+        if changes:
+            save_audit_log(
+                db, admin_email, "แก้ไขผู้ประกอบการ",
+                "taxpayer_master", taxpayer_id, changes
+            )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
+    }), 200
+
+
+@admin_bp.route("/taxpayers/<taxpayer_id>/phone", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_phone(taxpayer_id):
+    """
+    แก้ไขเบอร์โทร — แยก endpoint เพราะเป็นจุดอ่อนไหว
+    ดู audit log จะเห็นชัดว่า "แก้เบอร์" ไม่ปนกับการแก้อื่น
+    """
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+    new_phone   = data.get("phone", "").strip()
+
+    if not new_phone or not new_phone.isdigit() or len(new_phone) != 10:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_PHONE",
+                      "message": "เบอร์โทรต้องเป็นตัวเลข 10 หลัก"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            cur.execute(
+                "SELECT id, phone FROM taxpayer_master WHERE id = %s",
+                (taxpayer_id,)
+            )
+            taxpayer = cur.fetchone()
+
+            if not taxpayer:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบผู้ประกอบการ"}
+                }), 404
+
+            old_phone = taxpayer["phone"]
+            cur.execute(
+                "UPDATE taxpayer_master SET phone = %s WHERE id = %s",
+                (new_phone, taxpayer_id)
+            )
+
+        # บันทึก audit log เฉพาะการแก้เบอร์
+        save_audit_log(
+            db, admin_email,
+            "แก้ไขเบอร์โทร",
+            "taxpayer_master",
+            taxpayer_id,
+            {"phone": {"old": old_phone, "new": new_phone}}
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขเบอร์โทรสำเร็จ"}
+    }), 200
+
+
+@admin_bp.route("/taxpayers/<taxpayer_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_taxpayer(taxpayer_id):
+    """ลบผู้ประกอบการ"""
+
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "DELETE FROM taxpayer_master WHERE id = %s",
+                (taxpayer_id,)
+            )
+
+        save_audit_log(
+            db, admin_email, "ลบผู้ประกอบการ",
+            "taxpayer_master", taxpayer_id
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบสำเร็จ"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 5.4 จัดการใบอนุญาต (Licensee CRUD)
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/licensees", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_licensees():
+    """ดูรายการใบอนุญาตทั้งหมด"""
+
+    search = request.args.get("search", "").strip()
+    status = request.args.get("status")
+    page   = request.args.get("page", 1, type=int)
+
+    conditions = []
+    params     = []
+
+    if search:
+        conditions.append(
+            "(license_no LIKE %s OR company_name LIKE %s OR tax_id LIKE %s)"
+        )
+        params += [f"%{search}%"] * 3
+
+    if status:
+        conditions.append("license_status = %s")
+        params.append(status)
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(f"""
+                SELECT id, license_no, tax_id, company_name,
+                       licensee_type, license_status,
+                       start_date, end_date, updated_at
+                FROM licensee_master
+                {where}
+                ORDER BY license_no
+                LIMIT 100 OFFSET %s
+            """, params + [(page - 1) * 100])
+            licensees = cur.fetchall()
+
+    for lic in licensees:
+        lic["start_date"] = date_to_str(lic["start_date"])
+        lic["end_date"]   = date_to_str(lic["end_date"])
+        lic["updated_at"] = date_to_str(lic["updated_at"])
+
+    return jsonify({
+        "success": True,
+        "data": {"licensees": licensees, "total": len(licensees)}
+    }), 200
+
+
+@admin_bp.route("/licensees", methods=["POST"])
+@jwt_required()
+@require_admin
+def create_licensee():
+    """เพิ่มใบอนุญาตใหม่"""
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    required = ["license_no", "tax_id", "company_name"]
+    for field in required:
+        if not data.get(field):
+            return jsonify({
+                "success": False,
+                "error": {"code": "MISSING_FIELDS",
+                          "message": f"กรุณากรอก {field}"}
+            }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO licensee_master
+                        (license_no, tax_id, company_name,
+                         licensee_type, license_status,
+                         start_date, end_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    data["license_no"],
+                    data["tax_id"],
+                    data["company_name"],
+                    data.get("licensee_type"),
+                    data.get("license_status", "active"),
+                    data.get("start_date"),
+                    data.get("end_date")
+                ))
+                cur.execute(
+                    "SELECT id FROM licensee_master WHERE license_no = %s",
+                    (data["license_no"],)
+                )
+                new_id = cur.fetchone()["id"]
+
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE",
+                                  "message": "เลขใบอนุญาตนี้มีในระบบแล้ว"}
+                    }), 400
+                raise
+
+        save_audit_log(
+            db, admin_email, "เพิ่มใบอนุญาต",
+            "licensee_master", new_id, data
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": new_id}
+    }), 201
+
+
+@admin_bp.route("/licensees/<licensee_id>", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_licensee(licensee_id):
+    """แก้ไขใบอนุญาต"""
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            cur.execute(
+                "SELECT * FROM licensee_master WHERE id = %s",
+                (licensee_id,)
+            )
+            old = cur.fetchone()
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบใบอนุญาต"}
+                }), 404
+
+            updatable = ["company_name", "licensee_type",
+                         "license_status", "start_date", "end_date"]
+            set_parts  = []
+            set_params = []
+            changes    = {}
+
+            for field in updatable:
+                if field in data:
+                    set_parts.append(f"{field} = %s")
+                    set_params.append(data[field])
+                    if str(old.get(field)) != str(data[field]):
+                        changes[field] = {
+                            "old": str(old.get(field)),
+                            "new": str(data[field])
+                        }
+
+            if set_parts:
+                cur.execute(
+                    f"UPDATE licensee_master SET {', '.join(set_parts)} WHERE id = %s",
+                    set_params + [licensee_id]
+                )
+
+        if changes:
+            save_audit_log(
+                db, admin_email, "แก้ไขใบอนุญาต",
+                "licensee_master", licensee_id, changes
+            )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
+    }), 200
+
+
+@admin_bp.route("/licensees/<licensee_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_licensee(licensee_id):
+    """ลบใบอนุญาต"""
+
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "DELETE FROM licensee_master WHERE id = %s",
+                (licensee_id,)
+            )
+
+        save_audit_log(
+            db, admin_email, "ลบใบอนุญาต",
+            "licensee_master", licensee_id
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบสำเร็จ"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 5.5 บันทึกรับเงิน (เปลี่ยน status → paid)
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/receipts", methods=["POST"])
+@jwt_required()
+@require_admin
+def create_receipt():
+    """
+    บันทึกรับเงินจากผู้ประกอบการ
+    เมื่อบันทึกแล้ว status ของ submissions = paid อัตโนมัติ
+    (คำนวณจากการมีอยู่ของ receipt ไม่ใช่ dropdown)
+    """
+
+    admin_email = get_jwt_identity()
+    data        = request.get_json()
+
+    required = ["submission_id", "amount", "received_at"]
+    for field in required:
+        if not data.get(field):
+            return jsonify({
+                "success": False,
+                "error": {"code": "MISSING_FIELDS",
+                          "message": f"กรุณากรอก {field}"}
+            }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+
+            # ตรวจว่าใบยื่นมีอยู่จริง
+            cur.execute(
+                "SELECT id, status FROM submissions WHERE id = %s",
+                (data["submission_id"],)
+            )
+            submission = cur.fetchone()
+
+            if not submission:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND",
+                              "message": "ไม่พบใบยื่นแบบ"}
+                }), 404
+
+            try:
+                cur.execute("""
+                    INSERT INTO receipt
+                        (submission_id, receipt_no,
+                         amount, received_at, recorded_by)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    data["submission_id"],
+                    data.get("receipt_no"),
+                    float(data["amount"]),
+                    data["received_at"],
+                    admin_email
+                ))
+
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE",
+                                  "message": "บันทึกรับเงินไปแล้ว"}
+                    }), 400
+                raise
+
+        save_audit_log(
+            db, admin_email,
+            "บันทึกรับเงิน",
+            "receipt",
+            data["submission_id"],
+            {
+                "amount":      data["amount"],
+                "received_at": data["received_at"],
+                "receipt_no":  data.get("receipt_no")
+            }
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "message": "บันทึกรับเงินสำเร็จ สถานะใบยื่นเปลี่ยนเป็น paid แล้ว"
+        }
+    }), 201
+
+
+# ════════════════════════════════════════════════════════
+# 5.6 Audit Logs
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/audit-logs", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_audit_logs():
+    """
+    ดูประวัติการแก้ไขทั้งหมด
+    Request: GET /api/admin/audit-logs?page=1&table=submissions
+    เรียงจากล่าสุดก่อนเสมอ
+    """
+
+    page       = request.args.get("page", 1, type=int)
+    table_name = request.args.get("table")
+    per_page   = 50
+
+    conditions = []
+    params     = []
+
+    if table_name:
+        conditions.append("table_name = %s")
+        params.append(table_name)
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(f"""
+                SELECT id, admin_email, action, table_name,
+                       record_id, changes, created_at
+                FROM audit_logs
+                {where}
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, params + [per_page, (page - 1) * per_page])
+            logs = cur.fetchall()
+
+            cur.execute(
+                f"SELECT COUNT(*) as total FROM audit_logs {where}",
+                params
+            )
+            total = cur.fetchone()["total"]
+
+    for log in logs:
+        log["created_at"] = date_to_str(log["created_at"])
+        # changes ใน MySQL เก็บเป็น string แปลงกลับเป็น dict
+        if log.get("changes") and isinstance(log["changes"], str):
+            try:
+                log["changes"] = json.loads(log["changes"])
+            except Exception:
+                pass
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "logs":        logs,
+            "total":       total,
+            "total_pages": -(-total // per_page)
+        }
+    }), 200

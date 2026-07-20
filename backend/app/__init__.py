@@ -41,8 +41,8 @@ def create_app():
     app.register_blueprint(operator_bp, url_prefix="/api/operator")
 
     # Admin routes: /api/admin/submissions, /api/admin/taxpayers ฯลฯ
-    # from .routes.admin import admin_bp
-    # app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    from .routes.admin import admin_bp
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     # Upload routes: /api/upload
     # from .routes.upload import upload_bp
