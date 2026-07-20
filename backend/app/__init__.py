@@ -25,7 +25,7 @@ def create_app():
     def health():
         return jsonify({
             "success": True,
-            "data": {"status": "ok", "message": "e-BCS API พร้อมใช้งาน"}
+            "data": {"status": "ok", "message": "e-BCS API Ready!"}
         })
     
       # ลงทะเบียน Blueprints (Routes) 
@@ -33,8 +33,8 @@ def create_app():
     # เปิด comment ทีละตัวเมื่อเขียนไฟล์นั้นเสร็จ
 
     # Auth routes: /api/auth/request-otp, /api/auth/verify-otp ฯลฯ
-    # from .auth import auth_bp
-    # app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    from .auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     # Operator routes: /api/operator/autofill, /api/operator/licenses ฯลฯ
     # from .routes.operator import operator_bp

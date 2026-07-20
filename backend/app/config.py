@@ -17,7 +17,7 @@ class Config:
         # "redis" คือชื่อ container ใน docker-compose
     REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
         # OTP หมดอายุใน 300 วินาที (5 นาที)
-    OTP_EXPIRATION_SECONDS = int(os.environ.get("OTP_EXPIRATION_SECONDS", 300))
+    OTP_EXPIRE_SECONDS = int(os.environ.get("OTP_EXPIRATION_SECONDS", 300))
         # กรอก OTP ผิดได้ไม่เกิน 5 ครั้ง (ป้องกันการลองสุ่ม)
     OTP_MAX_ATTEMPTS = int(os.environ.get("OTP_MAX_ATTEMPTS", 5))
         # ขอ OTP ได้ไม่เกิน 3 ครั้งต่อนาที (ป้องกัน spam SMS)
