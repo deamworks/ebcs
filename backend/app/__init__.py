@@ -37,8 +37,8 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     # Operator routes: /api/operator/autofill, /api/operator/licenses ฯลฯ
-    # from .routes.operator import operator_bp
-    # app.register_blueprint(operator_bp, url_prefix="/api/operator")
+    from .routes.operator import operator_bp
+    app.register_blueprint(operator_bp, url_prefix="/api/operator")
 
     # Admin routes: /api/admin/submissions, /api/admin/taxpayers ฯลฯ
     # from .routes.admin import admin_bp
