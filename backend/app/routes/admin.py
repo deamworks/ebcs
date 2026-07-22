@@ -105,7 +105,7 @@ def save_audit_log(db, admin_email, action, table_name,
 
     ตัวอย่าง changes:
     {
-        "phone": {"old": "0812345678", "new": "0898765432"}
+
     }
     """
     with db.cursor() as cur:
@@ -289,7 +289,7 @@ def get_submission_detail(submission_id):
                         'amount',      li.amount
                     ) SEPARATOR ','
                 ) as incomes_raw
-                FROM licenses l
+                FROM licensee_master l
                 LEFT JOIN license_incomes li ON li.license_id = l.id
                 WHERE l.submission_id = %s
                 GROUP BY l.id
@@ -527,7 +527,7 @@ def get_taxpayers():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(f"""
-                SELECT id, tax_id, operator_name, phone,
+                SELECT id, tax_id, operator_name,
                        fiscal_year, ref_no, period_start,
                        period_end, due_date, updated_at
                 FROM taxpayer_master
@@ -572,13 +572,12 @@ def create_taxpayer():
             try:
                 cur.execute("""
                     INSERT INTO taxpayer_master
-                        (tax_id, operator_name, phone, fiscal_year,
+                        (tax_id, operator_name, fiscal_year,
                          ref_no, period_start, period_end, due_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["tax_id"],
                     data["operator_name"],
-                    data.get("phone"),
                     data["fiscal_year"],
                     data.get("ref_no"),
                     data.get("period_start"),
@@ -637,7 +636,7 @@ def update_taxpayer(taxpayer_id):
                               "message": "ไม่พบผู้ประกอบการ"}
                 }), 404
 
-            updatable = ["operator_name", "phone", "ref_no",
+            updatable = ["operator_name", "ref_no",
                          "period_start", "period_end", "due_date"]
             set_parts  = []
             set_params = []
@@ -669,64 +668,6 @@ def update_taxpayer(taxpayer_id):
     return jsonify({
         "success": True,
         "data": {"message": "แก้ไขสำเร็จ"}
-    }), 200
-
-
-@admin_bp.route("/taxpayers/<taxpayer_id>/phone", methods=["PUT"])
-@jwt_required()
-@require_admin
-def update_phone(taxpayer_id):
-    """
-    แก้ไขเบอร์โทร — แยก endpoint เพราะเป็นจุดอ่อนไหว
-    ดู audit log จะเห็นชัดว่า "แก้เบอร์" ไม่ปนกับการแก้อื่น
-    """
-
-    admin_email = get_jwt_identity()
-    data        = request.get_json()
-    new_phone   = data.get("phone", "").strip()
-
-    if not new_phone or not new_phone.isdigit() or len(new_phone) != 10:
-        return jsonify({
-            "success": False,
-            "error": {"code": "INVALID_PHONE",
-                      "message": "เบอร์โทรต้องเป็นตัวเลข 10 หลัก"}
-        }), 400
-
-    with get_db() as db:
-        with db.cursor() as cur:
-
-            cur.execute(
-                "SELECT id, phone FROM taxpayer_master WHERE id = %s",
-                (taxpayer_id,)
-            )
-            taxpayer = cur.fetchone()
-
-            if not taxpayer:
-                return jsonify({
-                    "success": False,
-                    "error": {"code": "NOT_FOUND",
-                              "message": "ไม่พบผู้ประกอบการ"}
-                }), 404
-
-            old_phone = taxpayer["phone"]
-            cur.execute(
-                "UPDATE taxpayer_master SET phone = %s WHERE id = %s",
-                (new_phone, taxpayer_id)
-            )
-
-        # บันทึก audit log เฉพาะการแก้เบอร์
-        save_audit_log(
-            db, admin_email,
-            "แก้ไขเบอร์โทร",
-            "taxpayer_master",
-            taxpayer_id,
-            {"phone": {"old": old_phone, "new": new_phone}}
-        )
-        db.commit()
-
-    return jsonify({
-        "success": True,
-        "data": {"message": "แก้ไขเบอร์โทรสำเร็จ"}
     }), 200
 
 

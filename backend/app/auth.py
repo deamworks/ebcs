@@ -38,14 +38,7 @@ def generate_otp(length=6):
     return "".join(random.choices(string.digits, k=length))
 
 
-def mask_phone(phone):
-    """
-    ซ่อนเบอร์โทรบางส่วน
-    เช่น 0812345678 → 081-xxx-5678
-    """
-    if not phone or len(phone) != 10:
-        return phone
-    return f"{phone[:3]}-xxx-{phone[6:]}"
+
 
 
 def mask_email(email):
@@ -79,16 +72,7 @@ def check_rate_limit(tax_id):
     return True
 
 
-def send_sms(phone, otp):
-    """
-    ส่ง OTP ทาง SMS
-    SMS_MODE=mock → พิมพ์ลง log แทน
-    """
-    if Config.SMS_MODE == "mock":
-        print(f"[OTP SMS] {phone} → {otp}", flush=True)
-        return True
-    # TODO: เพิ่ม SMS provider จริงตรงนี้
-    return True
+
 
 
 def send_email(email, otp, operator_name=""):
@@ -203,7 +187,7 @@ def check_taxpayer():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT tax_id, operator_name, phone, email
+                SELECT tax_id, operator_name, email
                 FROM   taxpayer_master
                 WHERE  tax_id = %s
                 ORDER BY fiscal_year DESC
@@ -224,35 +208,21 @@ def check_taxpayer():
         }), 404
 
     # สร้าง list ช่องทางที่มี
-    channels = []
-
-    phone = taxpayer.get("phone") or ""
     email = taxpayer.get("email") or ""
 
-    if phone:
-        channels.append({
-            "type":    "sms",
-            "display": mask_phone(phone)
-        })
-
-    if email:
-        channels.append({
-            "type":    "email",
-            "display": mask_email(email)
-        })
-
-    # ถ้าไม่มีทั้งคู่
-    if not channels:
+    if not email:
         return jsonify({
             "success": False,
             "error": {
-                "code":    "NO_CONTACT",
+                "code":    "NO_EMAIL",
                 "message": (
-                    "ไม่พบเบอร์โทรหรืออีเมลในระบบ "
-                    "กรุณาติดต่อเจ้าหน้าที่"
+                    "ไม่พบอีเมลในระบบ "
+                    "กรุณาติดต่อเจ้าหน้าที่ กสทช. โทร 02-271-7600"
                 )
             }
         }), 404
+
+    channels = [{"type": "email", "display": mask_email(email)}]
 
     return jsonify({
         "success": True,
@@ -309,11 +279,11 @@ def request_otp():
                       "message": "เลขผู้เสียภาษีไม่ถูกต้อง"}
         }), 400
 
-    if channel not in ("sms", "email"):
+    if channel != "email":
         return jsonify({
             "success": False,
             "error": {"code": "INVALID_CHANNEL",
-                      "message": "channel ต้องเป็น sms หรือ email"}
+                      "message": "channel ต้องเป็น email เท่านั้น"}
         }), 400
 
     # ตรวจ rate limit
@@ -333,7 +303,7 @@ def request_otp():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT operator_name, phone, email
+                SELECT operator_name, email
                 FROM   taxpayer_master
                 WHERE  tax_id = %s
                 ORDER BY fiscal_year DESC
@@ -348,22 +318,13 @@ def request_otp():
                       "message": "ไม่พบข้อมูลในระบบ"}
         }), 404
 
-    # ตรวจว่า channel ที่เลือกมีข้อมูลจริงไหม
-    phone = taxpayer.get("phone") or ""
     email = taxpayer.get("email") or ""
 
-    if channel == "sms" and not phone:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NO_PHONE",
-                      "message": "ไม่มีเบอร์โทรในระบบ"}
-        }), 400
-
-    if channel == "email" and not email:
+    if not email:
         return jsonify({
             "success": False,
             "error": {"code": "NO_EMAIL",
-                      "message": "ไม่มีอีเมลในระบบ"}
+                      "message": "ไม่มีอีเมลในระบบ กรุณาติดต่อเจ้าหน้าที่"}
         }), 400
 
     # สร้าง OTP และเก็บใน Redis
@@ -374,22 +335,18 @@ def request_otp():
         f"otp_attempts:{tax_id}", Config.OTP_EXPIRE_SECONDS, 0
     )
 
-    # ส่ง OTP ตาม channel ที่เลือก
-    if channel == "sms":
-        send_sms(phone, otp)
-        message = f"ส่งรหัส OTP ไปยังเบอร์ {mask_phone(phone)} แล้ว"
-    else:
-        sent = send_email(
-            email, otp,
-            operator_name=taxpayer.get("operator_name", "")
-        )
-        if not sent:
-            return jsonify({
-                "success": False,
-                "error": {"code": "EMAIL_ERROR",
-                          "message": "ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่"}
-            }), 500
-        message = f"ส่งรหัส OTP ไปยังอีเมล {mask_email(email)} แล้ว"
+    # ส่ง OTP ทาง Email
+    sent = send_email(
+        email, otp,
+        operator_name=taxpayer.get("operator_name", "")
+    )
+    if not sent:
+        return jsonify({
+            "success": False,
+            "error": {"code": "EMAIL_ERROR",
+                      "message": "ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่"}
+        }), 500
+    message = f"ส่งรหัส OTP ไปยังอีเมล {mask_email(email)} แล้ว"
 
     return jsonify({
         "success": True,

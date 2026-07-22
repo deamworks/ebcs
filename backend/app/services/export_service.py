@@ -253,7 +253,7 @@ def export_taxpayer_report(db, year=None, report_date=None):
             SELECT
                 tax_id, operator_name, ref_no,
                 fiscal_year, period_start, period_end,
-                due_date, phone
+                due_date
             FROM taxpayer_master
             {where}
             ORDER BY fiscal_year DESC, operator_name
@@ -371,7 +371,7 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
     params     = []
 
     if year:
-        conditions.append("YEAR(start_date) = %s")
+        conditions.append("fiscal_year = %s")
         params.append(year)
 
     if status:
@@ -390,9 +390,9 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
     with db.cursor() as cur:
         cur.execute(f"""
             SELECT
-                license_no, tax_id, company_name,
-                licensee_type, license_status,
-                start_date, end_date, YEAR(start_date) AS fiscal_year
+                license_no, tax_id, operator_name,
+                license_type, license_status,
+                license_start, license_end, fiscal_year
             FROM licensee_master
             {where}
             ORDER BY license_no
@@ -468,12 +468,12 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
             "",  # รอบ - ยังไม่มีใน schema
             "",  # สถานะ (สถานะแนบเอกสาร) - ยังไม่มีใน schema
             row["tax_id"] or "",
-            row["company_name"],
+            row["operator_name"],
             license_counts.get(row["tax_id"], 1),
             row["license_no"],
-            row["licensee_type"] or "",
-            to_thai_date(row["start_date"]),
-            to_thai_date(row["end_date"]),
+            row["license_type"] or "",
+            to_thai_date(row["license_start"]),
+            to_thai_date(row["license_end"]),
             status_labels.get(
                 row["license_status"], row["license_status"]
             ),
@@ -577,11 +577,11 @@ def export_payment_report(db, year=None, report_date=None):
                 CASE WHEN r.id IS NOT NULL THEN 'paid' ELSE s.status END AS actual_status,
                 r.receipt_no, r.received_at, r.amount AS receipt_amount,
                 inv.invoice_no, inv.issued_at, inv.amount AS invoice_amount,
-                COUNT(l.id) AS license_count
+                (SELECT COUNT(*) FROM licensee_master lm
+                 WHERE lm.tax_id = s.tax_id) AS license_count
             FROM submissions s
-            LEFT JOIN receipt r   ON r.submission_id   = s.id
+            LEFT JOIN receipt r   ON r.submission_id = s.id
             LEFT JOIN invoice inv ON inv.submission_id = s.id
-            LEFT JOIN licenses l  ON l.submission_id   = s.id
             {where}
             GROUP BY s.id, r.id, inv.id
             ORDER BY s.fiscal_year DESC, s.operator_name

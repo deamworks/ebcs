@@ -210,14 +210,14 @@ def _get_next_ref_no(cur, fiscal_year_be: int) -> str:
 
     # INSERT ... ON DUPLICATE KEY UPDATE เพื่อ upsert แถว counter
     cur.execute("""
-        INSERT INTO ref_no_counters (prefix, last_seq)
+        INSERT INTO ref_no_counters (fiscal_year, last_seq)
         VALUES (%s, 1)
         ON DUPLICATE KEY UPDATE last_seq = last_seq + 1
-    """, (prefix,))
+    """, (fiscal_year_be,))
 
     cur.execute(
-        "SELECT last_seq FROM ref_no_counters WHERE prefix = %s",
-        (prefix,)
+        "SELECT last_seq FROM ref_no_counters WHERE fiscal_year = %s",
+        (fiscal_year_be,)
     )
     row = cur.fetchone()
     seq = row["last_seq"] if isinstance(row, dict) else row[0]
@@ -376,16 +376,16 @@ def parse_licensee_excel(file_stream):
 
 def import_licensees(db, rows):
     """
-    Upsert licenses  unique: license_no
+    Upsert licensee_master  unique: license_no
     คืน: {"inserted": n, "updated": n}
     """
     inserted = updated = 0
     cur = db.cursor()
     for row in rows:
-        cur.execute("SELECT id FROM licenses WHERE license_no=%s", (row["license_no"],))
+        cur.execute("SELECT id FROM licensee_master WHERE license_no=%s", (row["license_no"],))
         if cur.fetchone():
             cur.execute("""
-                UPDATE licenses SET
+                UPDATE licensee_master SET
                     tax_id=%s, fiscal_year=%s, ref_code=%s,
                     sub_type=%s, round_type=%s, sub_status=%s,
                     operator_name=%s, license_count=%s,
@@ -408,7 +408,7 @@ def import_licensees(db, rows):
             updated += 1
         else:
             cur.execute("""
-                INSERT INTO licenses (
+                INSERT INTO licensee_master (
                     tax_id, fiscal_year, ref_code, sub_type, round_type,
                     sub_status, operator_name, license_count, license_no,
                     license_type, license_start, license_end, license_status,
@@ -435,7 +435,7 @@ def import_licensees(db, rows):
 
 
 # ════════════════════════════════════════════════════════
-# CONTACTS  →  อัปเดต address + phone + email ใน taxpayer_master
+# CONTACTS  →  อัปเดต address + email ใน taxpayer_master
 # ════════════════════════════════════════════════════════
 # โครงสร้างไฟล์จริง (header แถว 5, ข้อมูลเริ่มแถว 6) 32 คอลัมน์:
 #  col 0   ลำดับ
@@ -467,12 +467,12 @@ def import_licensees(db, rows):
 #  col 26  อำเภอ (ชส.)
 #  col 27  จังหวัด (ชส.)
 #  col 28  รหัสไปรษณีย์ (ชส.)
-#  col 29  โทรศัพท์ (ชส.)           → phone
+#  col 29  โทรศัพท์ (ชส.)           → ไม่ import
 #  col 30  อีเมล (ชส.)              → email
 #  col 31  (ว่าง)
 #
 # ที่อยู่ที่ใช้ = col 24-28 รวมกัน ("ที่อยู่ที่ติดต่อได้ ชส.")
-# phone = col 29, email = col 30
+# email = col 30
 
 def _parse_contact_row(row: list, row_num: int):
     errors = []
@@ -495,7 +495,6 @@ def _parse_contact_row(row: list, row_num: int):
         "tax_id":        tax_id,
         "operator_name": _s(5),
         "address":       address,
-        "phone":         _s(29),
         "email":         _s(30),
     }, None
 
@@ -522,7 +521,7 @@ def parse_contact_excel(file_stream):
 
 def import_contacts(db, rows):
     """
-    อัปเดต address + phone + email ใน taxpayer_master
+    อัปเดต address + email ใน taxpayer_master
     ใช้ tax_id เป็น key — อัปเดตทุก fiscal_year ของ tax_id นั้น
     คืน: {"inserted": 0, "updated": n, "not_found": n}
     """
@@ -545,9 +544,6 @@ def import_contacts(db, rows):
         if row.get("address") is not None:
             set_parts.append("address = %s")
             params.append(row["address"])
-        if row.get("phone") is not None:
-            set_parts.append("phone = %s")
-            params.append(row["phone"])
         if row.get("email") is not None:
             set_parts.append("email = %s")
             params.append(row["email"])

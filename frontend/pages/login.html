@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ — e-BCS กสทช.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+
+<div class="login-page">
+
+  <!-- Logo -->
+  <div class="login-logo">
+    <div class="brand-badge"><span>e</span>BCS</div>
+    <div class="brand-sub">ระบบนำส่งเงินรายปีเข้ากองทุนวิจัยและพัฒนา กสทช.</div>
+  </div>
+
+  <!-- Card -->
+  <div class="login-card">
+
+    <div class="login-card-header">
+      <h2>เข้าสู่ระบบผู้ประกอบการ</h2>
+      <p>ยืนยันตัวตนด้วยรหัส OTP ทางอีเมล</p>
+    </div>
+
+    <div class="login-card-body">
+
+      <!-- Error -->
+      <div class="login-error" id="loginError"></div>
+
+      <!-- ── Step 1: กรอกเลขประจำตัวผู้เสียภาษี ── -->
+      <div class="login-step active" id="stepTaxId">
+        <label class="login-label" for="taxIdInput">
+          เลขประจำตัวผู้เสียภาษี (13 หลัก)
+        </label>
+        <input
+          type="text" id="taxIdInput"
+          class="login-input"
+          placeholder=""
+          maxlength="13"
+          inputmode="numeric"
+          autocomplete="off"
+        >
+        <span class="login-input-hint">กรอกเลขประจำตัวผู้เสียภาษี 13 หลักของนิติบุคคล</span>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btnCheckTaxId" onclick="handleCheckTaxId()">
+          ตรวจสอบข้อมูล
+        </button>
+      </div>
+
+      <!-- ── Step 2: ยืนยัน operator + ขอ OTP ── -->
+      <div class="login-step" id="stepRequestOtp">
+
+        <div class="operator-info-box" id="operatorInfoBox">
+          <div class="oi-name" id="operatorName">—</div>
+          <div class="oi-email">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span id="operatorEmail">—</span>
+          </div>
+        </div>
+
+        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:18px; line-height:1.7;">
+          ระบบจะส่งรหัส OTP ไปยังอีเมลด้านบน
+          รหัสมีอายุ <strong>5 นาที</strong>
+        </p>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btnRequestOtp" onclick="handleRequestOtp()">
+          ส่งรหัส OTP ทางอีเมล
+        </button>
+        <button
+          class="btn btn-secondary btn-block"
+          style="margin-top:8px;"
+          onclick="goToStep('stepTaxId')">
+          ← แก้ไขเลขประจำตัวผู้เสียภาษี
+        </button>
+      </div>
+
+      <!-- ── Step 3: กรอก OTP ── -->
+      <div class="login-step" id="stepVerifyOtp">
+
+        <label class="login-label" for="otpInput">
+          รหัส OTP (6 หลัก)
+        </label>
+        <input
+          type="text" id="otpInput"
+          class="login-input otp-input"
+          placeholder="● ● ● ● ● ●"
+          maxlength="6"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+        >
+
+        <div class="otp-meta">
+          <span>
+            หมดอายุใน
+            <span class="otp-countdown" id="otpCountdown">05:00</span>
+          </span>
+          <button class="otp-resend" id="btnResend" onclick="handleResendOtp()" disabled>
+            ส่งรหัสใหม่
+          </button>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btnVerifyOtp" onclick="handleVerifyOtp()">
+          เข้าสู่ระบบ
+        </button>
+        <button
+          class="btn btn-secondary btn-block"
+          style="margin-top:8px;"
+          onclick="goToStep('stepRequestOtp')">
+          ← ย้อนกลับ
+        </button>
+      </div>
+
+    </div><!-- /card-body -->
+  </div><!-- /card -->
+
+  <div class="login-footer">
+    สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ (กสทช.)
+  </div>
+
+</div><!-- /login-page -->
+
+<script src="../js/api-client.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/login.js"></script>
+</body>
+</html>

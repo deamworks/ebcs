@@ -1,0 +1,154 @@
+/* ════════════════════════════════════════════════════
+   css/login.css — หน้า Login OTP ผู้ประกอบการ
+   ════════════════════════════════════════════════════ */
+
+/* ── Layout ────────────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #1a2b6b 0%, var(--primary) 40%, #3D52A8 100%);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+
+/* ── Logo bar ──────────────────────────────────────── */
+.login-logo {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; margin-bottom: 28px; text-align: center;
+}
+.login-logo .brand-badge {
+  background: #fff;
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 18px;
+  font-size: 22px; font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+.login-logo .brand-badge span { color: var(--accent); }
+.login-logo .brand-sub {
+  font-size: 12px; color: rgba(255,255,255,0.7);
+  letter-spacing: 0.05em;
+}
+
+/* ── Card ──────────────────────────────────────────── */
+.login-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  width: 100%; max-width: 420px;
+  overflow: hidden;
+}
+.login-card-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
+  padding: 20px 24px;
+  color: #fff;
+}
+.login-card-header h2 {
+  font-size: 16px; font-weight: 600; margin-bottom: 4px;
+}
+.login-card-header p {
+  font-size: 12px; color: rgba(255,255,255,0.75);
+}
+.login-card-body { padding: 24px; }
+
+/* ── Steps (tax_id → email → otp) ─────────────────── */
+.login-step { display: none; }
+.login-step.active { display: block; }
+
+/* ── Input ─────────────────────────────────────────── */
+.login-label {
+  display: block; font-size: 12.5px;
+  color: var(--text-secondary); font-weight: 500;
+  margin-bottom: 6px;
+}
+.login-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-family: var(--font); font-size: 14px;
+  color: var(--text-primary); background: var(--surface);
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 4px;
+}
+.login-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(90,139,250,0.15);
+}
+.login-input.error { border-color: var(--danger); }
+.login-input-hint {
+  font-size: 11.5px; color: var(--text-muted);
+  margin-bottom: 18px; display: block;
+}
+
+/* ── OTP Input ─────────────────────────────────────── */
+.otp-input {
+  text-align: center;
+  letter-spacing: 0.5em;
+  font-size: 28px; font-weight: 700;
+  color: var(--primary);
+}
+
+/* ── Error message ─────────────────────────────────── */
+.login-error {
+  display: none;
+  background: #FEF2F2; border: 1px solid #FCA5A5;
+  border-left: 3px solid var(--danger);
+  color: #991B1B; border-radius: var(--radius-sm);
+  padding: 9px 12px; font-size: 12.5px; margin-bottom: 14px;
+  line-height: 1.5;
+}
+.login-error.show { display: block; }
+
+/* ── Operator info box ─────────────────────────────── */
+.operator-info-box {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-light);
+  border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 18px;
+}
+.operator-info-box .oi-name {
+  font-size: 14px; font-weight: 600; color: var(--primary);
+  margin-bottom: 3px;
+}
+.operator-info-box .oi-email {
+  font-size: 12px; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* ── Countdown ─────────────────────────────────────── */
+.otp-meta {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 18px;
+  font-size: 12px; color: var(--text-muted);
+}
+.otp-countdown { color: var(--warning); font-weight: 600; }
+.otp-resend {
+  color: var(--accent); cursor: pointer; font-weight: 500;
+  background: none; border: none; font-family: var(--font);
+  font-size: 12px; padding: 0;
+}
+.otp-resend:disabled { color: var(--text-muted); cursor: not-allowed; }
+.otp-resend:not(:disabled):hover { text-decoration: underline; }
+
+/* ── Loading spinner ───────────────────────────────── */
+.btn-loading {
+  position: relative; pointer-events: none;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* ── Footer ────────────────────────────────────────── */
+.login-footer {
+  text-align: center; margin-top: 20px;
+  font-size: 11.5px; color: rgba(255,255,255,0.55);
+}
