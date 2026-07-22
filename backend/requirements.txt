@@ -29,3 +29,5 @@ redis==5.0.7
 
 # อ่าน/เขียน Excel (Import + Export)
 openpyxl==3.1.4
+
+Flask-Mail==0.10.0

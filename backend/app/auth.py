@@ -1,15 +1,21 @@
 # ════════════════════════════════════════════════════════
 # auth.py — ระบบยืนยันตัวตน
 #
-# มี 2 ส่วนหลัก:
-# 1. OTP สำหรับผู้ประกอบการ (เบอร์โทร → SMS → กรอก OTP)
-# 2. JWT สำหรับเจ้าหน้าที่ (Email + Password)
+# Flow ผู้ประกอบการ:
+#   1. check-taxpayer  → ตรวจเลขภาษี คืน phone+email masked
+#   2. request-otp     → เลือก channel (sms/email) ส่ง OTP
+#   3. verify-otp      → ตรวจ OTP → ได้ JWT token
+#
+# Flow เจ้าหน้าที่:
+#   admin/login → Email + Password → JWT token
 # ════════════════════════════════════════════════════════
 
-import os
 import random
 import string
+import smtplib
 from datetime import timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text      import MIMEText
 
 import bcrypt
 import redis
@@ -17,287 +23,525 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token
 
 from .config import Config
-from .db import get_db
+from .db     import get_db
 
-# Blueprint คือกลุ่ม routes ที่แยกไฟล์
-# url_prefix="/api/auth" ตั้งใน __init__.py ตอนลงทะเบียน
-auth_bp = Blueprint("auth", __name__)
-
-# เชื่อม Redis สำหรับเก็บ OTP
-# decode_responses=True ทำให้ได้ string กลับมาแทน bytes
+auth_bp      = Blueprint("auth", __name__)
 redis_client = redis.from_url(Config.REDIS_URL, decode_responses=True)
-# redis_client = redis.from_url("redis://redis:6379/0", decode_responses=True)
 
 
 # ════════════════════════════════════════════════════════
-# ฟังก์ชันช่วยเหลือ (Helper Functions)
+# Helper Functions
 # ════════════════════════════════════════════════════════
 
 def generate_otp(length=6):
-    """
-    สร้างรหัส OTP ตัวเลขสุ่ม 6 หลัก
-    ตัวอย่าง: "482916"
-    """
-    # random.choices สุ่มตัวเลข 0-9 จำนวน length ตัว แล้วต่อเป็น string
+    """สุ่ม OTP ตัวเลข 6 หลัก"""
     return "".join(random.choices(string.digits, k=length))
-
-
-def send_otp_sms(phone, otp):
-    """
-    ส่ง OTP ทาง SMS
-    ตอนนี้ใช้ mock mode (พิมพ์ลง console แทนส่งจริง)
-    พอได้ SMS Provider จริง เพิ่ม elif SMS_MODE == "live" ได้เลย
-    """
-    #     # mock: แสดง OTP ใน terminal แทนส่ง SMS
-    #     # ตอน dev ดู OTP ได้จาก: docker logs ebcs-api
-    if Config.SMS_MODE == "mock":
-        # เพิ่ม flush=True เพื่อบังคับให้ print ออกมาทันที
-        print(f"[OTP MOCK] เบอร์: {phone} → รหัส: {otp}", flush=True)
-        return True
-
-    elif Config.SMS_MODE == "live":
-        # TODO: เพิ่มโค้ดส่ง SMS จริงตรงนี้เมื่อได้ provider
-        # ตัวอย่าง ThaiBulkSMS:
-        # import requests
-        # requests.post("https://www.thaibulksms.com/api/...", data={...})
-        pass
-
-    return True
 
 
 def mask_phone(phone):
     """
-    ซ่อนเบอร์โทรบางส่วนก่อนแสดงผล
-    เช่น "0812345678" → "081-xxx-5678"
-    ป้องกันคนอื่นเห็นเบอร์เต็มบนหน้าจอ
+    ซ่อนเบอร์โทรบางส่วน
+    เช่น 0812345678 → 081-xxx-5678
     """
-    if len(phone) != 10:
+    if not phone or len(phone) != 10:
         return phone
     return f"{phone[:3]}-xxx-{phone[6:]}"
 
 
-def check_rate_limit(phone):
+def mask_email(email):
     """
-    ตรวจว่าขอ OTP บ่อยเกินไปไหม
-    จำกัด OTP_RATE_LIMIT_PER_MIN ครั้งต่อนาที (ค่า default = 3)
-    ป้องกัน spam SMS ที่เสียค่าใช้จ่าย
+    ซ่อนอีเมลบางส่วน
+    เช่น somchai@nbtc.go.th → so***@nbtc.go.th
     """
-    # key ใน Redis สำหรับนับจำนวนครั้ง
-    rate_key = f"rate:{phone}"
+    if not email or "@" not in email:
+        return email
+    local, domain = email.split("@", 1)
+    # แสดงแค่ 2 ตัวแรก ที่เหลือซ่อน
+    visible = local[:2] if len(local) >= 2 else local
+    return f"{visible}***@{domain}"
 
-    # ดึงจำนวนครั้งที่ขอแล้ว
-    count = redis_client.get(rate_key)
+
+def check_rate_limit(tax_id):
+    """
+    ตรวจ rate limit: ขอ OTP ได้ไม่เกิน 3 ครั้ง/นาที
+    คืน True = ผ่าน, False = เกินจำนวน
+    """
+    rate_key = f"rate:{tax_id}"
+    count    = redis_client.get(rate_key)
 
     if count and int(count) >= Config.OTP_RATE_LIMIT_PER_MIN:
-        # เกินจำนวนที่อนุญาต
         return False
 
-    # เพิ่มตัวนับ และตั้ง expire 60 วินาที
     pipe = redis_client.pipeline()
-    pipe.incr(rate_key)          # เพิ่มค่าขึ้น 1
-    pipe.expire(rate_key, 60)    # หมดอายุใน 60 วินาที
+    pipe.incr(rate_key)
+    pipe.expire(rate_key, 60)
     pipe.execute()
-
     return True
 
 
+def send_sms(phone, otp):
+    """
+    ส่ง OTP ทาง SMS
+    SMS_MODE=mock → พิมพ์ลง log แทน
+    """
+    if Config.SMS_MODE == "mock":
+        print(f"[OTP SMS] {phone} → {otp}", flush=True)
+        return True
+    # TODO: เพิ่ม SMS provider จริงตรงนี้
+    return True
+
+
+def send_email(email, otp, operator_name=""):
+    """
+    ส่ง OTP ทาง Email (Exchange กสทช.)
+    MAIL_SERVER=mock → พิมพ์ลง log แทน
+    """
+    if Config.MAIL_SERVER == "mock":
+        print(f"[OTP EMAIL] {email} → {otp}", flush=True)
+        return True
+
+    try:
+        msg            = MIMEMultipart("alternative")
+        msg["Subject"] = f"รหัส OTP ระบบ e-BCS กสทช. : {otp}"
+        msg["From"]    = (
+            f"{Config.MAIL_FROM_NAME} <{Config.MAIL_FROM}>"
+        )
+        msg["To"] = email
+
+        html = f"""
+        <div style="font-family:sans-serif; max-width:480px;
+                    margin:0 auto; padding:24px;
+                    border:1px solid #ddd; border-radius:8px;">
+            <h2 style="color:#1E2D5E; margin-top:0;">
+                ระบบ e-BCS กสทช.
+            </h2>
+            <p>เรียน {operator_name or 'ผู้ประกอบการ'}</p>
+            <p>รหัส OTP สำหรับเข้าสู่ระบบของท่านคือ:</p>
+            <div style="background:#EEF2FF; padding:20px;
+                        text-align:center; border-radius:8px;
+                        margin:20px 0;">
+                <span style="font-size:40px; font-weight:bold;
+                             color:#1E2D5E; letter-spacing:10px;">
+                    {otp}
+                </span>
+            </div>
+            <p style="color:#555;">
+                รหัสนี้มีอายุ <strong>5 นาที</strong> เท่านั้น<br>
+                หากท่านไม่ได้ขอรหัสนี้ กรุณาเพิกเฉย
+            </p>
+            <hr style="border:none; border-top:1px solid #eee;">
+            <p style="color:#999; font-size:12px; margin-bottom:0;">
+                สำนักงาน กสทช.
+            </p>
+        </div>
+        """
+
+        msg.attach(MIMEText(html, "html", "utf-8"))
+
+        with smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT) as server:
+            if Config.MAIL_USE_TLS:
+                server.starttls()
+            if Config.MAIL_USERNAME:
+                server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
+            server.sendmail(Config.MAIL_FROM, email, msg.as_string())
+
+        return True
+
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}", flush=True)
+        return False
+
+
 # ════════════════════════════════════════════════════════
-# Routes: ผู้ประกอบการ (OTP)
+# ขั้นที่ 1: ตรวจเลขภาษี
+# ════════════════════════════════════════════════════════
+
+@auth_bp.route("/check-taxpayer", methods=["POST"])
+def check_taxpayer():
+    """
+    ตรวจสอบเลขภาษีว่ามีในระบบไหม
+    และคืน channel ที่รับ OTP ได้
+
+    Request:
+        POST /api/auth/check-taxpayer
+        { "tax_id": "0123456789012" }
+
+    Response:
+        {
+            "success": true,
+            "data": {
+                "operator_name": "บริษัท ABC จำกัด",
+                "channels": [
+                    {"type": "sms",   "display": "081-xxx-5678"},
+                    {"type": "email", "display": "ab***@nbtc.go.th"}
+                ]
+            }
+        }
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_REQUEST",
+                      "message": "กรุณาส่งข้อมูล JSON"}
+        }), 400
+
+    # รับและทำความสะอาด tax_id
+    tax_id = str(data.get("tax_id", "")).strip()
+    tax_id = tax_id.replace("-", "").replace(" ", "")
+
+    if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "INVALID_TAX_ID",
+                "message": "เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก"
+            }
+        }), 400
+
+    # ค้นหาใน DB (ใช้ปีล่าสุดอัตโนมัติ)
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT tax_id, operator_name, phone, email
+                FROM   taxpayer_master
+                WHERE  tax_id = %s
+                ORDER BY fiscal_year DESC
+                LIMIT 1
+            """, (tax_id,))
+            taxpayer = cur.fetchone()
+
+    if not taxpayer:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "NOT_FOUND",
+                "message": (
+                    "ไม่พบข้อมูลในระบบ "
+                    "กรุณาติดต่อเจ้าหน้าที่ กสทช. โทร 02-271-7600"
+                )
+            }
+        }), 404
+
+    # สร้าง list ช่องทางที่มี
+    channels = []
+
+    phone = taxpayer.get("phone") or ""
+    email = taxpayer.get("email") or ""
+
+    if phone:
+        channels.append({
+            "type":    "sms",
+            "display": mask_phone(phone)
+        })
+
+    if email:
+        channels.append({
+            "type":    "email",
+            "display": mask_email(email)
+        })
+
+    # ถ้าไม่มีทั้งคู่
+    if not channels:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "NO_CONTACT",
+                "message": (
+                    "ไม่พบเบอร์โทรหรืออีเมลในระบบ "
+                    "กรุณาติดต่อเจ้าหน้าที่"
+                )
+            }
+        }), 404
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "operator_name": taxpayer["operator_name"],
+            "channels":      channels
+            # channels มี 1 หรือ 2 ตัวเลือก
+            # Frontend นำไปแสดง radio button ให้เลือก
+        }
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# ขั้นที่ 2: ส่ง OTP ตาม channel ที่เลือก
 # ════════════════════════════════════════════════════════
 
 @auth_bp.route("/request-otp", methods=["POST"])
 def request_otp():
     """
-    ขั้นตอนที่ 1: ผู้ประกอบการขอ OTP
-    
-    Request:  POST /api/auth/request-otp
-              Body: { "phone": "0812345678" }
-    
-    Response: { "success": true, "data": { "message": "...", "expires_in": 300 } }
+    ส่ง OTP ทาง SMS หรือ Email ตามที่เลือก
+
+    Request:
+        POST /api/auth/request-otp
+        {
+            "tax_id":  "0123456789012",
+            "channel": "sms"   หรือ  "email"
+        }
+
+    Response:
+        {
+            "success": true,
+            "data": {
+                "message":    "ส่งรหัส OTP ไปยังเบอร์ 081-xxx-5678 แล้ว",
+                "expires_in": 300
+            }
+        }
     """
-
-    # ── รับข้อมูลจาก request ──────────────────────────
     data = request.get_json()
-
-    # ตรวจว่าส่ง JSON มาไหม
     if not data:
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_REQUEST", "message": "กรุณาส่งข้อมูล JSON"}
+            "error": {"code": "INVALID_REQUEST",
+                      "message": "กรุณาส่งข้อมูล JSON"}
         }), 400
 
-    phone = data.get("phone", "").strip()
+    tax_id  = str(data.get("tax_id",  "")).strip().replace("-", "")
+    channel = str(data.get("channel", "")).strip().lower()
 
-    # ── Validate เบอร์โทร ─────────────────────────────
-    # ต้องเป็นตัวเลขล้วน 10 หลัก
-    if not phone or not phone.isdigit() or len(phone) != 10:
+    # Validate
+    if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_TAX_ID",
+                      "message": "เลขผู้เสียภาษีไม่ถูกต้อง"}
+        }), 400
+
+    if channel not in ("sms", "email"):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_CHANNEL",
+                      "message": "channel ต้องเป็น sms หรือ email"}
+        }), 400
+
+    # ตรวจ rate limit
+    if not check_rate_limit(tax_id):
         return jsonify({
             "success": False,
             "error": {
-                "code": "INVALID_PHONE",
-                "message": "เบอร์โทรต้องเป็นตัวเลข 10 หลัก"
-            }
-        }), 400
-
-    # ── ตรวจ Rate Limit ───────────────────────────────
-    if not check_rate_limit(phone):
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "RATE_LIMIT",
-                "message": f"ขอ OTP ได้สูงสุด {Config.OTP_RATE_LIMIT_PER_MIN} ครั้งต่อนาที กรุณารอสักครู่"
+                "code":    "RATE_LIMIT",
+                "message": (
+                    f"ขอ OTP ได้สูงสุด "
+                    f"{Config.OTP_RATE_LIMIT_PER_MIN} ครั้งต่อนาที"
+                )
             }
         }), 429
 
-    # ── ค้นหาเบอร์ใน Database ────────────────────────
+    # ดึงข้อมูลติดต่อ
     with get_db() as db:
         with db.cursor() as cur:
-            cur.execute(
-                "SELECT tax_id, operator_name FROM taxpayer_master WHERE phone = %s LIMIT 1",
-                (phone,)
-            )
+            cur.execute("""
+                SELECT operator_name, phone, email
+                FROM   taxpayer_master
+                WHERE  tax_id = %s
+                ORDER BY fiscal_year DESC
+                LIMIT 1
+            """, (tax_id,))
             taxpayer = cur.fetchone()
 
-    # ถ้าไม่พบเบอร์นี้ในระบบ
     if not taxpayer:
         return jsonify({
             "success": False,
-            "error": {
-                "code": "PHONE_NOT_FOUND",
-                "message": "ไม่พบเบอร์นี้ในระบบ กรุณาติดต่อเจ้าหน้าที่ กสทช. โทร 02-271-7600"
-            }
+            "error": {"code": "NOT_FOUND",
+                      "message": "ไม่พบข้อมูลในระบบ"}
         }), 404
 
-    # ── สร้าง OTP และเก็บใน Redis ────────────────────
-    otp = generate_otp()
+    # ตรวจว่า channel ที่เลือกมีข้อมูลจริงไหม
+    phone = taxpayer.get("phone") or ""
+    email = taxpayer.get("email") or ""
 
-    # key รูปแบบ: "otp:0812345678"
-    otp_key = f"otp:{phone}"
+    if channel == "sms" and not phone:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_PHONE",
+                      "message": "ไม่มีเบอร์โทรในระบบ"}
+        }), 400
 
-    # เก็บ OTP ใน Redis ตั้ง expire ตาม config (300 วินาที = 5 นาที)
+    if channel == "email" and not email:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_EMAIL",
+                      "message": "ไม่มีอีเมลในระบบ"}
+        }), 400
+
+    # สร้าง OTP และเก็บใน Redis
+    otp     = generate_otp()
+    otp_key = f"otp:{tax_id}"
     redis_client.setex(otp_key, Config.OTP_EXPIRE_SECONDS, otp)
+    redis_client.setex(
+        f"otp_attempts:{tax_id}", Config.OTP_EXPIRE_SECONDS, 0
+    )
 
-    # เก็บตัวนับความผิดพลาด (เริ่มต้นที่ 0)
-    redis_client.setex(f"otp_attempts:{phone}", Config.OTP_EXPIRE_SECONDS, 0)
-
-    # ── ส่ง OTP ทาง SMS ──────────────────────────────
-    send_otp_sms(phone, otp)
+    # ส่ง OTP ตาม channel ที่เลือก
+    if channel == "sms":
+        send_sms(phone, otp)
+        message = f"ส่งรหัส OTP ไปยังเบอร์ {mask_phone(phone)} แล้ว"
+    else:
+        sent = send_email(
+            email, otp,
+            operator_name=taxpayer.get("operator_name", "")
+        )
+        if not sent:
+            return jsonify({
+                "success": False,
+                "error": {"code": "EMAIL_ERROR",
+                          "message": "ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่"}
+            }), 500
+        message = f"ส่งรหัส OTP ไปยังอีเมล {mask_email(email)} แล้ว"
 
     return jsonify({
         "success": True,
         "data": {
-            "message": f"ส่งรหัส OTP ไปยังเบอร์ {mask_phone(phone)} แล้ว",
+            "message":    message,
+            "channel":    channel,
             "expires_in": Config.OTP_EXPIRE_SECONDS
         }
     }), 200
 
 
+# ════════════════════════════════════════════════════════
+# ขั้นที่ 3: ตรวจ OTP → ได้ Token
+# ════════════════════════════════════════════════════════
+
 @auth_bp.route("/verify-otp", methods=["POST"])
 def verify_otp():
     """
-    ขั้นตอนที่ 2: ตรวจสอบ OTP ที่ผู้ประกอบการกรอก
-    
-    Request:  POST /api/auth/verify-otp
-              Body: { "phone": "0812345678", "otp": "482916" }
-    
-    Response: { "success": true, "data": { "token": "eyJ...", "operator": {...} } }
-    """
+    ตรวจสอบ OTP และออก JWT Token
 
+    Request:
+        POST /api/auth/verify-otp
+        {
+            "tax_id": "0123456789012",
+            "otp":    "123456"
+        }
+
+    Response:
+        {
+            "success": true,
+            "data": {
+                "token": "eyJ...",
+                "operator": {
+                    "tax_id":        "0123456789012",
+                    "operator_name": "บริษัท ABC จำกัด",
+                    "ref_no":        "BK6800001",
+                    "fiscal_year":   2568,
+                    "period_start":  "01/01/2568",
+                    "period_end":    "31/12/2568",
+                    "due_date":      "31/05/2569"
+                }
+            }
+        }
+    """
     data = request.get_json()
     if not data:
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_REQUEST", "message": "กรุณาส่งข้อมูล JSON"}
+            "error": {"code": "INVALID_REQUEST",
+                      "message": "กรุณาส่งข้อมูล JSON"}
         }), 400
 
-    phone = data.get("phone", "").strip()
-    otp_input = data.get("otp", "").strip()
+    tax_id    = str(data.get("tax_id", "")).strip().replace("-", "")
+    otp_input = str(data.get("otp",    "")).strip()
 
-    # ── Validate input ────────────────────────────────
-    if not phone or not otp_input:
+    if not tax_id or not otp_input:
         return jsonify({
             "success": False,
-            "error": {"code": "MISSING_FIELDS", "message": "กรุณากรอกเบอร์โทรและรหัส OTP"}
+            "error": {"code": "MISSING_FIELDS",
+                      "message": "กรุณากรอกเลขภาษีและรหัส OTP"}
         }), 400
 
-    # ── ดึง OTP จาก Redis ────────────────────────────
-    otp_key = f"otp:{phone}"
+    # ดึง OTP จาก Redis
+    otp_key    = f"otp:{tax_id}"
     stored_otp = redis_client.get(otp_key)
 
-    # OTP หมดอายุหรือไม่เคยขอ
     if not stored_otp:
         return jsonify({
             "success": False,
             "error": {
-                "code": "OTP_EXPIRED",
+                "code":    "OTP_EXPIRED",
                 "message": "รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่"
             }
         }), 400
 
-    # ── ตรวจจำนวนครั้งที่กรอกผิด ─────────────────────
-    attempts_key = f"otp_attempts:{phone}"
-    attempts = int(redis_client.get(attempts_key) or 0)
+    # ตรวจจำนวนครั้งที่กรอกผิด
+    attempts_key = f"otp_attempts:{tax_id}"
+    attempts     = int(redis_client.get(attempts_key) or 0)
 
     if attempts >= Config.OTP_MAX_ATTEMPTS:
-        # กรอกผิดครบจำนวนที่กำหนด ลบ OTP ทิ้ง ต้องขอใหม่
         redis_client.delete(otp_key)
         redis_client.delete(attempts_key)
         return jsonify({
             "success": False,
             "error": {
-                "code": "OTP_MAX_ATTEMPTS",
-                "message": f"กรอกรหัสผิดเกิน {Config.OTP_MAX_ATTEMPTS} ครั้ง กรุณาขอรหัสใหม่"
+                "code":    "OTP_MAX_ATTEMPTS",
+                "message": (
+                    f"กรอกรหัสผิดเกิน {Config.OTP_MAX_ATTEMPTS} ครั้ง "
+                    f"กรุณาขอรหัสใหม่"
+                )
             }
         }), 400
 
-    # ── เปรียบเทียบ OTP ───────────────────────────────
+    # เปรียบเทียบ OTP
     if otp_input != stored_otp:
-        # กรอกผิด เพิ่มตัวนับ
         redis_client.incr(attempts_key)
         remaining = Config.OTP_MAX_ATTEMPTS - attempts - 1
-
         return jsonify({
             "success": False,
             "error": {
-                "code": "OTP_INVALID",
+                "code":    "OTP_INVALID",
                 "message": f"รหัส OTP ไม่ถูกต้อง เหลืออีก {remaining} ครั้ง"
             }
         }), 400
 
-    # ── OTP ถูกต้อง ───────────────────────────────────
-    # ลบ OTP ออกจาก Redis ทันที (ใช้ได้ครั้งเดียว)
+    # OTP ถูกต้อง → ลบออก (ใช้ได้ครั้งเดียว)
     redis_client.delete(otp_key)
     redis_client.delete(attempts_key)
 
-    # ── ดึงข้อมูลผู้ประกอบการ ─────────────────────────
+    # ดึงข้อมูลผู้ประกอบการ (ปีล่าสุดอัตโนมัติ)
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT tax_id, operator_name, fiscal_year,
-                       ref_no, period_start, period_end, due_date
-                FROM   taxpayer_master
-                WHERE  phone = %s
+                SELECT
+                    tax_id, operator_name, fiscal_year,
+                    ref_no, period_start, period_end, due_date
+                FROM taxpayer_master
+                WHERE tax_id = %s
                 ORDER BY fiscal_year DESC
                 LIMIT 1
-            """, (phone,))
+            """, (tax_id,))
             taxpayer = cur.fetchone()
 
     if not taxpayer:
         return jsonify({
             "success": False,
-            "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
+            "error": {"code": "NOT_FOUND",
+                      "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # ── สร้าง JWT Token ───────────────────────────────
-    # identity คือข้อมูลที่เก็บไว้ใน token
-    # Flask จะถอดรหัสให้เองทุกครั้งที่มี request เข้ามา
+    # แปลงวันที่เป็นรูปแบบไทย DD/MM/YYYY (พ.ศ.)
+    def to_thai_date(val):
+        if not val:
+            return ""
+        try:
+            s = str(val)
+            parts = s.split("-")
+            y_ce = int(parts[0])
+            m    = int(parts[1])
+            d    = int(parts[2][:2])
+            return f"{d:02d}/{m:02d}/{y_ce + 543}"
+        except Exception:
+            return str(val)
+
+    # ออก JWT Token (อายุ 2 ชั่วโมง)
     token = create_access_token(
         identity=taxpayer["tax_id"],
         additional_claims={
-            "role": "operator",           # บอกว่าเป็นผู้ประกอบการ
+            "role":          "operator",
             "operator_name": taxpayer["operator_name"]
         },
-        expires_delta=timedelta(hours=2)  # token อายุ 2 ชั่วโมง
+        expires_delta=timedelta(hours=2)
     )
 
     return jsonify({
@@ -308,47 +552,49 @@ def verify_otp():
                 "tax_id":        taxpayer["tax_id"],
                 "operator_name": taxpayer["operator_name"],
                 "fiscal_year":   taxpayer["fiscal_year"],
-                "ref_no":        taxpayer["ref_no"],
-                "period_start":  str(taxpayer["period_start"]) if taxpayer["period_start"] else None,
-                "period_end":    str(taxpayer["period_end"]) if taxpayer["period_end"] else None,
-                "due_date":      str(taxpayer["due_date"]) if taxpayer["due_date"] else None,
+                "ref_no":        taxpayer["ref_no"] or "",
+                "period_start":  to_thai_date(taxpayer["period_start"]),
+                "period_end":    to_thai_date(taxpayer["period_end"]),
+                "due_date":      to_thai_date(taxpayer["due_date"]),
             }
         }
     }), 200
 
 
 # ════════════════════════════════════════════════════════
-# Routes: เจ้าหน้าที่ (JWT)
+# เจ้าหน้าที่: Login
 # ════════════════════════════════════════════════════════
 
 @auth_bp.route("/admin/login", methods=["POST"])
 def admin_login():
     """
     Login เจ้าหน้าที่ กสทช.
-    
-    Request:  POST /api/auth/admin/login
-              Body: { "email": "admin@nbtc.go.th", "password": "ChangeMe123!" }
-    
-    Response: { "success": true, "data": { "token": "eyJ...", "admin": {...} } }
-    """
 
+    Request:
+        POST /api/auth/admin/login
+        { "email": "admin@nbtc.go.th", "password": "..." }
+
+    Response:
+        { "token": "eyJ...", "admin": { "email": "...", "full_name": "..." } }
+    """
     data = request.get_json()
     if not data:
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_REQUEST", "message": "กรุณาส่งข้อมูล JSON"}
+            "error": {"code": "INVALID_REQUEST",
+                      "message": "กรุณาส่งข้อมูล JSON"}
         }), 400
 
-    email    = data.get("email", "").strip().lower()
-    password = data.get("password", "")
+    email    = str(data.get("email",    "")).strip().lower()
+    password = str(data.get("password", ""))
 
     if not email or not password:
         return jsonify({
             "success": False,
-            "error": {"code": "MISSING_FIELDS", "message": "กรุณากรอก Email และรหัสผ่าน"}
+            "error": {"code": "MISSING_FIELDS",
+                      "message": "กรุณากรอก Email และรหัสผ่าน"}
         }), 400
 
-    # ── ค้นหา Admin ใน Database ──────────────────────
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -359,29 +605,26 @@ def admin_login():
             """, (email,))
             admin = cur.fetchone()
 
-    # ── ตรวจสอบ Email + Password ──────────────────────
-    # สำคัญ: ตอบ error เหมือนกันทั้งกรณี email ผิดและ password ผิด
-    # ป้องกันการ "ดักรู้" ว่า email ไหนมีในระบบ
+    # ตอบ error เหมือนกันทั้งกรณี email/password ผิด
+    # ป้องกันการ probe ว่า email ไหนมีในระบบ
     if not admin or not admin["is_active"]:
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_CREDENTIALS", "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"}
+            "error": {"code": "INVALID_CREDENTIALS",
+                      "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"}
         }), 401
 
-    # bcrypt.checkpw เปรียบเทียบ password กับ hash ที่เก็บไว้
-    # hash ย้อนกลับเป็นรหัสจริงไม่ได้ ต้องตรวจแบบนี้เท่านั้น
-    password_match = bcrypt.checkpw(
+    if not bcrypt.checkpw(
         password.encode("utf-8"),
         admin["password_hash"].encode("utf-8")
-    )
-
-    if not password_match:
+    ):
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_CREDENTIALS", "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"}
+            "error": {"code": "INVALID_CREDENTIALS",
+                      "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"}
         }), 401
 
-    # ── อัปเดตเวลา Login ล่าสุด ──────────────────────
+    # อัปเดตเวลา login ล่าสุด
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
@@ -390,14 +633,14 @@ def admin_login():
             )
         db.commit()
 
-    # ── สร้าง JWT Token ───────────────────────────────
+    # ออก JWT Token (อายุ 8 ชั่วโมง)
     token = create_access_token(
         identity=admin["email"],
         additional_claims={
-            "role": "admin",              # บอกว่าเป็น admin
+            "role":      "admin",
             "full_name": admin["full_name"]
         },
-        expires_delta=timedelta(hours=8)  # admin token อายุ 8 ชั่วโมง
+        expires_delta=timedelta(hours=8)
     )
 
     return jsonify({

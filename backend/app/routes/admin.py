@@ -7,21 +7,60 @@
 # 3. ทุกการแก้ไขบันทึกลง audit_logs อัตโนมัติ
 # ════════════════════════════════════════════════════════
 
+import io
 import json
 from datetime import datetime, date
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from ..db import get_db
+from ..services.export_service import (
+    export_taxpayer_report,
+    export_licensee_report,
+    export_payment_report,
+    export_license_report,   # backward compat alias
+)
+from ..services.import_service import (
+    parse_taxpayer_excel, import_taxpayers,
+    parse_licensee_excel, import_licensees,
+    parse_contact_excel,  import_contacts,
+)
 
 admin_bp = Blueprint("admin", __name__)
 
 
-# ════════════════════════════════════════════════════════
-# Helper Functions
-# ════════════════════════════════════════════════════════
+def send_excel_file(output, thai_filename):
+    """
+    ส่งไฟล์ Excel พร้อมชื่อไฟล์ภาษาไทย
 
+    HTTP header อนุญาตเฉพาะ ASCII ใน filename=""
+    → ใช้ filename="report.xlsx" เป็น fallback
+    → ใช้ filename*=UTF-8''<encoded> สำหรับชื่อจริง (RFC 5987)
+
+    Postman: ดูชื่อไฟล์ได้ที่ "Save Response > Save to a file"
+             จะเห็นชื่อภาษาไทยจาก filename* อัตโนมัติ
+    """
+    from urllib.parse import quote
+    from flask import Response
+
+    if not thai_filename.lower().endswith(".xlsx"):
+        thai_filename += ".xlsx"
+
+    # encode ชื่อภาษาไทยสำหรับ RFC 5987
+    encoded_name = quote(thai_filename, encoding="utf-8", safe="")
+
+    response = Response(
+        output.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    # filename= ต้องเป็น ASCII เท่านั้น — ใช้ report.xlsx เป็น fallback
+    # filename*= ใช้ UTF-8 encoded — client ที่รองรับ RFC 5987 จะใช้อันนี้แทน
+    response.headers["Content-Disposition"] = (
+        "attachment; filename=\"report.xlsx\"; "
+        f"filename*=UTF-8''{encoded_name}"
+    )
+    return response
 def date_to_str(d):
     """แปลง date/datetime เป็น string สำหรับ JSON"""
     if d is None:
@@ -1067,5 +1106,255 @@ def get_audit_logs():
             "logs":        logs,
             "total":       total,
             "total_pages": -(-total // per_page)
+        }
+    }), 200
+
+# ════════════════════════════════════════════════════════
+# Import Excel
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/import/taxpayers", methods=["POST"])
+@jwt_required()
+@require_admin
+def import_taxpayers_route():
+    """
+    Import Excel ผู้ประกอบการ
+    mode=preview → ตรวจข้อมูล ยังไม่บันทึก
+    mode=commit  → บันทึกจริง
+    """
+    admin_email = get_jwt_identity()
+
+    if "file" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE",
+                      "message": "กรุณาแนบไฟล์ Excel"}
+        }), 400
+
+    file = request.files["file"]
+    mode = request.form.get("mode", "preview")
+
+    rows, errors = parse_taxpayer_excel(file.stream)
+
+    if mode == "preview":
+        return jsonify({
+            "success": True,
+            "data": {
+                "mode":         "preview",
+                "total_rows":   len(rows) + len(errors),
+                "valid_rows":   len(rows),
+                "error_rows":   len(errors),
+                "errors":       errors[:20],
+                "preview_data": rows[:5]
+            }
+        }), 200
+
+    if errors:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "VALIDATION_ERROR",
+                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
+                "errors":  errors[:20]
+            }
+        }), 400
+
+    with get_db() as db:
+        result = import_taxpayers(db, rows)
+        save_audit_log(
+            db, admin_email,
+            f"Import ผู้ประกอบการ {len(rows)} แถว",
+            "taxpayer_master", None, result
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "mode":     "commit",
+            "inserted": result["inserted"],
+            "updated":  result["updated"],
+            "message":  (
+                f"Import สำเร็จ: "
+                f"เพิ่มใหม่ {result['inserted']} แถว, "
+                f"อัปเดต {result['updated']} แถว"
+            )
+        }
+    }), 200
+
+
+@admin_bp.route("/import/licensees", methods=["POST"])
+@jwt_required()
+@require_admin
+def import_licensees_route():
+    """Import Excel ใบอนุญาต"""
+    admin_email = get_jwt_identity()
+
+    if "file" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE",
+                      "message": "กรุณาแนบไฟล์ Excel"}
+        }), 400
+
+    file = request.files["file"]
+    mode = request.form.get("mode", "preview")
+
+    rows, errors = parse_licensee_excel(file.stream)
+
+    if mode == "preview":
+        return jsonify({
+            "success": True,
+            "data": {
+                "mode":         "preview",
+                "total_rows":   len(rows) + len(errors),
+                "valid_rows":   len(rows),
+                "error_rows":   len(errors),
+                "errors":       errors[:20],
+                "preview_data": rows[:5]
+            }
+        }), 200
+
+    if errors:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "VALIDATION_ERROR",
+                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
+                "errors":  errors[:20]
+            }
+        }), 400
+
+    with get_db() as db:
+        result = import_licensees(db, rows)
+        save_audit_log(
+            db, admin_email,
+            f"Import ใบอนุญาต {len(rows)} แถว",
+            "licensee_master", None, result
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "mode":     "commit",
+            "inserted": result["inserted"],
+            "updated":  result["updated"],
+            "message":  (
+                f"Import สำเร็จ: "
+                f"เพิ่มใหม่ {result['inserted']} แถว, "
+                f"อัปเดต {result['updated']} แถว"
+            )
+        }
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# Export Excel
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/export/taxpayers", methods=["GET"])
+@jwt_required()
+@require_admin
+def export_taxpayers():
+    """รายงานข้อมูลผู้ประกอบการ"""
+    year = request.args.get("year", type=int)
+    with get_db() as db:
+        output = export_taxpayer_report(db, year=year)
+    year_label = str(year) if year else "ทั้งหมด"
+    return send_excel_file(output, f"รายงานข้อมูลผู้ประกอบการ_{year_label}.xlsx")
+
+
+@admin_bp.route("/export/licensees", methods=["GET"])
+@jwt_required()
+@require_admin
+def export_licensees_report():
+    """รายงานข้อมูลใบอนุญาต"""
+    year   = request.args.get("year", type=int)
+    status = request.args.get("status")
+    with get_db() as db:
+        output = export_licensee_report(db, year=year, status=status)
+    year_label = str(year) if year else "ทั้งหมด"
+    return send_excel_file(output, f"รายงานข้อมูลใบอนุญาต_{year_label}.xlsx")
+
+
+@admin_bp.route("/export/payments", methods=["GET"])
+@jwt_required()
+@require_admin
+def export_payments():
+    """รายงานชำระเงินกองทุน"""
+    year = request.args.get("year", type=int)
+    with get_db() as db:
+        output = export_payment_report(db, year=year)
+    year_label = str(year) if year else "ทั้งหมด"
+    return send_excel_file(output, f"รายงานชำระเงินกองทุน_{year_label}.xlsx")
+
+@admin_bp.route("/import/contacts", methods=["POST"])
+@jwt_required()
+@require_admin
+def import_contacts_route():
+    """
+    Import Excel ที่อยู่ผู้ประกอบการ
+    คอลัมน์: เลขภาษี | ชื่อ | ที่อยู่ | เบอร์โทร | อีเมล
+    mode=preview → ตรวจข้อมูล ยังไม่บันทึก
+    mode=commit  → บันทึกจริง
+    """
+    admin_email = get_jwt_identity()
+
+    if "file" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE",
+                      "message": "กรุณาแนบไฟล์ Excel"}
+        }), 400
+
+    file = request.files["file"]
+    mode = request.form.get("mode", "preview")
+
+    rows, errors = parse_contact_excel(file.stream)
+
+    if mode == "preview":
+        return jsonify({
+            "success": True,
+            "data": {
+                "mode":         "preview",
+                "total_rows":   len(rows) + len(errors),
+                "valid_rows":   len(rows),
+                "error_rows":   len(errors),
+                "errors":       errors[:20],
+                "preview_data": rows[:5]
+            }
+        }), 200
+
+    if errors:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "VALIDATION_ERROR",
+                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
+                "errors":  errors[:20]
+            }
+        }), 400
+
+    with get_db() as db:
+        result = import_contacts(db, rows)
+        save_audit_log(
+            db, admin_email,
+            f"Import ที่อยู่ผู้ประกอบการ {len(rows)} แถว",
+            "contact_master", None, result
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "mode":     "commit",
+            "inserted": result["inserted"],
+            "updated":  result["updated"],
+            "message":  (
+                f"Import สำเร็จ: "
+                f"เพิ่มใหม่ {result['inserted']} แถว, "
+                f"อัปเดต {result['updated']} แถว"
+            )
         }
     }), 200
