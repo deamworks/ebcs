@@ -3,12 +3,12 @@
 // Depends on: api-client.js, auth.js, calc.js
 // ════════════════════════════════════════════════════
 
-//  Guard: ต้อง login ก่อน
+// ── Guard: ต้อง login ก่อน ──────────────────────────
 (function() {
   if (!auth.getToken()) window.location.href = '/pages/login.html';
 })();
 
-//  Format date ISO → DD/MM/YYYY พ.ศ.
+// ── Format date ISO → DD/MM/YYYY พ.ศ. ───────────────
 function isoToBE(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -158,6 +158,28 @@ async function autoFillFromAuth() {
     await loadLicenses(info.fiscal_year, taxId);
     if (msgEl && !info.existing_submission) msgEl.textContent = '';
 
+     // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
+     await new Promise(r => setTimeout(r, 80));
+     if (typeof loadDraft === 'function') {
+       const hasDraft = loadDraft(taxId, String(info.fiscal_year));
+       if (hasDraft) {
+         appState._draftLoaded = true;
+         if (typeof generateRows === 'function') generateRows();
+         const fin = document.getElementById('total-income-financial');
+         if (fin && appState.financialIncome) fin.value = appState.financialIncome;
+         if (appState.auditor) {
+           const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+           setVal('auditorName',    appState.auditor.name);
+           setVal('auditorRegNo',   appState.auditor.regNo);
+           setVal('auditorCompany', appState.auditor.company);
+         }
+
+       }
+     }
+     // บันทึก key ให้ถูกต้องทันที
+     if (typeof saveDraftNow === 'function') saveDraftNow(taxId, String(info.fiscal_year));
+
+
   } catch (err) {
     if (msgEl) { msgEl.textContent = `❌ ${err.message}`; msgEl.style.color = '#dc2626'; }
   }
@@ -269,8 +291,8 @@ async function saveSubmissionToSupabase() {
 
       licenses.push({
         license_no: d.no       || '',
-        income:     d.income   || 0,    
-        deduction:  d.deduction || 0, 
+        income:     d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
+        deduction:  d.deduction || 0,  // [FIX] ส่ง deduction แยก
         incomes,
       });
     }
@@ -315,6 +337,9 @@ async function saveSubmissionToSupabase() {
     } else {
       throw new Error(result?.error?.message || result?.message || 'บันทึกไม่สำเร็จ');
     }
+
+    // ลบ draft หลัง submit สำเร็จ
+    if (typeof clearDraft === 'function') clearDraft();
 
     return {
       success:          true,

@@ -42,7 +42,8 @@
 .income-summary-box-value input { flex:1; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:6px 8px; font-family:var(--font); font-size:15px; font-weight:600; text-align:right; color:var(--primary); outline:none; }
 .income-summary-box-value input[readonly] { background:#f5f7fa; border-color:var(--border); }
 .income-summary-box-unit { font-size:12px; color:var(--text-muted); flex-shrink:0; }
-.license-count-badge { display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:99px; padding:4px 12px; font-size:var(--fs-xs); color:var(--primary); font-weight:600; margin-bottom:12px; }
+.license-count-badge { display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:99px; padding:5px 14px; font-size:14px !important; color:var(--primary); font-weight:600; margin-bottom:12px; gap:2px; }
+.license-count-badge span, .license-count-badge input { font-size:14px !important; }
 /* ── Income/Deduct Tables ─── */
 .income-table-wrap,.table-wrap { overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border); margin-top:8px; }
 .income-table, table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -75,7 +76,7 @@ tbody tr:hover td { background:var(--accent-bg); }
 .doc-row-file { font-size:12px; color:var(--text-muted); word-break:break-all; }
 /* ── Modal ─── */
 .modal-tbl-body td { padding:8px 12px; border-bottom:1px solid var(--border); }
-.td-header { background:#f0fdf4; font-weight:600; color:var(--primary); padding:7px 15px; }
+.td-header { background:#f0fdf4; font-weight:700; color:#2C3D8F; padding:8px 15px; text-align:left !important; }
 .td-indent { padding-left:28px !important; }
 .td-center { text-align:center; }
 .input-val { border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:5px 8px; font-family:var(--font); font-size:13px; width:140px; text-align:right; outline:none; }
@@ -754,8 +755,11 @@ tbody tr:hover td { background:var(--accent-bg); }
 /* td-header (หมวดย่อยใน modal) — คงสีเขียวอ่อนไว้ ไม่ใช่ thead */
 .modal-tbl-body tr.td-header-row td,
 td.td-header {
-  background: #f0fdf4 !important;
-  color: #1e2d5e !important;
+  background: #eef1fb !important;
+  color: #2C3D8F !important;
+  text-align: left !important;
+  font-weight: 700;
+  padding: 8px 15px !important;
 }
 
 /* 4. step 3 — deduct table header */
@@ -778,11 +782,25 @@ td.td-header {
   border-color: #16233f !important;
 }
 
-/* 6. phase 3 license list header — ปรับสีให้ตรงกัน */
-#phase3 [style*="grid-template-columns"] {
+/* 6. phase 3 — header row เท่านั้น (div แรกใน border container) */
+#phase3 .border > div:first-child[style*="grid-template-columns"],
+#phase3 div[style*="border-radius:6px"] > div:first-child[style*="grid-template-columns"] {
   background: #1e2d5e !important;
   color: #fff !important;
 }
+
+/* phase 3 — data rows: พื้นขาว ตัวอักษรปกติ */
+#p3-license-rows > div {
+  background: #fff !important;
+}
+#p3-license-rows > div:nth-child(even) {
+  background: #f5f7fb !important;
+}
+#p3-license-rows > div:hover {
+  background: #eef1f9 !important;
+}
+/* p3 col2 → see rules below */
+
 
 /* 7. doc-upload-header สีน้ำเงินเข้ม (มีอยู่แล้ว แต่ reinforce) */
 .doc-upload-header {
@@ -837,3 +855,59 @@ td.td-header {
 .income-input {
   text-align: right !important;
 }
+
+
+/* Phase 3 colors managed in step5-summary.js */
+
+/* ════════════════════════════════════════════════════
+   Step 1 + Step 3 table — ทุก td center
+   (override .step-card-body * { text-align:left })
+   ════════════════════════════════════════════════════ */
+
+#license-table-body td,
+#license-table-body th,
+#deduct-table-body td,
+#deduct-table-body th {
+  text-align: center !important;
+}
+
+/* input ในตาราง Step 1 (ช่องรายการ) — center ด้วย */
+#license-table-body input[type="text"] {
+  text-align: center !important;
+}
+
+/* ── Modal income table additional fixes ── */
+
+/* td-indent ชิดซ้าย */
+.td-indent {
+  text-align: left !important;
+}
+
+/* input-val + modal-calc-input ขนาดสม่ำเสมอ */
+.input-val,
+.modal-calc-input {
+  width: 140px !important;
+  padding: 5px 10px !important;
+  border: 1px solid #c8d0db !important;
+  border-radius: 4px !important;
+  font-size: 13px !important;
+  text-align: right !important;
+  background: #fff !important;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.input-val:focus,
+.modal-calc-input:focus {
+  border-color: #2C3D8F !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(44,61,143,0.12) !important;
+}
+
+/* Phase 3 table — col alignment */
+#p3-license-rows > div > div         { text-align: center !important; }
+#p3-license-rows > div > div:nth-child(1) { text-align: center !important; }
+#p3-license-rows > div > div:nth-child(2) { text-align: center !important; color: #2C3D8F !important; font-weight: 600 !important; }
+#p3-license-rows > div > div:nth-child(3) { text-align: center !important; }
+#p3-license-rows > div > div:nth-child(4) { text-align: center !important; }
+#p3-license-rows > div > div:nth-child(5) { text-align: right  !important; }
+
+.form-input { text-align: left !important; }

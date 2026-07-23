@@ -7,6 +7,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * บังคับรูปแบบ "เลขที่ใบอนุญาต" ให้เป็น xx-xxxxxx-xxxx-xx เสมอ (2-6-4-2 ตัวอักษร
+ * คั่นด้วย "-") โดยแปลงค่าที่พิมพ์แบบ real-time ทุกครั้งที่มีการกด (เหมือน mask
+ * ของช่องกรอกเลขบัตรเครดิต) — ตัดอักขระที่ไม่ใช่ตัวอักษร/เลขออก แปลงเป็นตัวพิมพ์
+ * ใหญ่ จำกัดความยาวไม่เกิน 14 ตัวอักษร (ไม่รวม "-") แล้วแทรก "-" ให้ตรงตำแหน่ง
+ * พร้อมรักษาตำแหน่ง cursor เดิมไว้ไม่ให้กระโดดไปท้ายสุดทุกครั้งที่พิมพ์
+ *
  * @param {HTMLInputElement} inputEl - input element ของช่องเลขที่ใบอนุญาต
  * @returns {string} ค่าที่จัดรูปแบบแล้ว สำหรับส่งต่อให้ updateRowText()
  */
@@ -151,17 +157,17 @@ function generateRows() {
     const statusMap = { active:'ปกติ', cancelled:'ยกเลิก', revoked:'เพิกถอน', ended:'สิ้นสุด' };
     const statusLabel = statusMap[rowData.licenseStatus || 'active'] || (rowData.licenseStatus || 'ปกติ');
     row.innerHTML = `
-      <td>${i}</td>
-      <td style="font-size:12.5px;font-family:'Sarabun';letter-spacing:0.4px;">${rowData.no || '—'}</td>
-      <td style="font-size:12.5px;">${rowData.type || '—'}</td>
-      <td><input type="text" class="form-input" value="${rowData.station}" oninput="updateRowText(${i}, 'station', this.value)" placeholder="ช่องรายการ" style="width:100%;font-family:'Sarabun';"></td>
+      <td style="text-align:center;">${i}</td>
+      <td style="text-align:center;font-size:12.5px;font-family:'Sarabun';letter-spacing:0.4px;">${rowData.no || '—'}</td>
+      <td style="text-align:center;font-size:12.5px;">${rowData.type || '—'}</td>
+      <td style="text-align:center;"><input type="text" class="form-input" value="${rowData.station}" oninput="updateRowText(${i}, 'station', this.value)" placeholder="ช่องรายการ" style="width:100%;font-family:'Sarabun';text-align:center;"></td>
       <td style="font-size:12.5px;">${rowData.startDate || '—'}</td>
       <td style="font-size:12.5px;">${rowData.endDate || '—'}</td>
       <td style="font-size:12px;">${statusLabel}</td>
-      <td><button type="button" class="btn btn-primary btn-sm" onclick="openIncomeModal(${i})" title="กรอกรายได้" style="padding:4px 8px;">
+      <td style="text-align:center;"><button type="button" class="btn btn-primary btn-sm" onclick="openIncomeModal(${i})" title="กรอกรายได้" style="padding:4px 8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button></td>
-      <td id="row-income-display-${i}" style="color:${rowData.income > 0 ? '#2C3D8F' : '#bbb'}; font-weight:${rowData.income > 0 ? '600' : 'normal'};">
+      <td id="row-income-display-${i}" style="text-align:center;color:${rowData.income > 0 ? '#2C3D8F' : '#bbb'}; font-weight:${rowData.income > 0 ? '600' : 'normal'};">
         ${rowData.income > 0 ? fmt(rowData.income) + ' บาท' : '—'}
       </td>
     `;
@@ -209,15 +215,15 @@ function generateDeductRows() {
     const rowData = appState.rowsData[i] || { income: 0, deduction: 0, no: '', type: '', station: '' };
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${i}</td>
-      <td><span style="font-weight:600; color:#1565c0;">${rowData.no || '—'}</span></td>
-      <td>${rowData.type || '—'}</td>
-      <td>${rowData.station || '—'}</td>
-      <td>${fmt(rowData.income)} บาท</td>
-      <td><button type="button" class="btn btn-primary btn-sm" onclick="openDeductModal(${i})" title="กรอกค่าลดหย่อน" style="padding:4px 8px;">
+      <td style="text-align:center;">${i}</td>
+      <td style="text-align:center;"><span style="font-weight:600;color:#2C3D8F;">${rowData.no || '—'}</span></td>
+      <td style="text-align:center;">${rowData.type || '—'}</td>
+      <td style="text-align:center;">${rowData.station || '—'}</td>
+      <td style="text-align:center;">${fmt(rowData.income)} บาท</td>
+      <td style="text-align:center;"><button type="button" class="btn btn-primary btn-sm" onclick="openDeductModal(${i})" title="กรอกค่าลดหย่อน" style="padding:4px 8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
       </button></td>
-      <td id="deduct-display-${i}" style="font-weight:600; color:#c62828;">${rowData.deduction > 0 ? fmt(rowData.deduction) + ' บาท' : '—'}</td>
+      <td id="deduct-display-${i}" style="text-align:center;font-weight:600;color:#c62828;">${rowData.deduction > 0 ? fmt(rowData.deduction) + ' บาท' : '—'}</td>
     `;
     tbody.appendChild(row);
   }

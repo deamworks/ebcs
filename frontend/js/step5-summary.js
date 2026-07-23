@@ -61,11 +61,11 @@ function renderStep5AndSummary() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;font-size:11px;color:#1565c0;font-weight:600;">${d.no || '—'}</td>
+      <td style="text-align:center;font-size:11px;color:#2C3D8F;font-weight:600;">${d.no || '—'}</td>
       <td style="text-align:right;">${fmt(d.income)}</td>
       <td style="text-align:right;color:#c62828;">${d.deduction > 0 ? fmt(d.deduction) : '0.00'}</td>
       <td style="text-align:right;font-weight:500;">${fmt(aft)}</td>
-      <td style="text-align:right;color:#1565c0;font-weight:600;">${fmt(fund)}</td>
+      <td style="text-align:right;color:#2C3D8F;font-weight:600;">${fmt(fund)}</td>
       <td style="text-align:right;">${fmt(vat)}</td>
       <td style="text-align:right;color:${penalty > 0 ? '#c62828' : '#444'};font-weight:${penalty > 0 ? '600' : 'normal'};">
         ${penalty > 0 ? fmt(penalty) : '0.00'}
@@ -76,7 +76,7 @@ function renderStep5AndSummary() {
   }
 
   const totalTr = document.createElement('tr');
-  totalTr.style.background = '#e8eaf6';
+  totalTr.style.background = '#e8edf5';
   totalTr.style.fontWeight = '700';
   //  ยอดสุทธิรวมต้องปัดทศนิยมครั้งเดียวจาก fund+vat+เงินเพิ่ม รวมทุกใบ
   // (ไม่ใช่บวกค่า net ที่ปัดเศษแล้วของแต่ละใบ) ตามนโยบายปัดเศษใน README
@@ -87,7 +87,7 @@ function renderStep5AndSummary() {
     <td style="text-align:right;color:#1a237e;">${fmt(sumBizIncome)}</td>
     <td style="text-align:right;color:#c62828;">${fmt(sumDeduction)}</td>
     <td style="text-align:right;color:#1a237e;">${fmt(Math.max(0, sumBizIncome - sumDeduction))}</td>
-    <td style="text-align:right;color:#1565c0;">${fmt(sumFund)}</td>
+    <td style="text-align:right;color:#2C3D8F;">${fmt(sumFund)}</td>
     <td style="text-align:right;color:#1a237e;">${fmt(sumVat)}</td>
     <td style="text-align:right;color:#c62828;">${fmt(sumPenalty)}</td>
     <td style="text-align:right;color:#e65100;font-size:13.5px;background:#ffe082;">${fmt(grandTotalNet)}</td>
@@ -173,7 +173,7 @@ function confirmFundPayment() {
                   font-size:11.5px;padding:7px 10px;background:${bg};
                   border-bottom:1px solid #e8eaf0;align-items:center;">
         <div>${i}</div>
-        <div style="color:#1565c0;font-weight:600;">${d.no || '—'}</div>
+        <div style="color:#2C3D8F;font-weight:600;">${d.no || '—'}</div>
         <div>${d.type || '—'}</div>
         <div style="text-align:center;">${statusHtml}</div>
         <div style="text-align:right;font-weight:600;">${fmt(d.income)}</div>

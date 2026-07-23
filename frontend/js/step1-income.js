@@ -257,13 +257,21 @@ function saveIncomeData() {
     `row-income-display-${activeModalRowIdx}`
   );
   if (displayTd) {
-    displayTd.innerHTML = rowIncome > 0
-      ? `<span style="color:#1565c0;font-weight:600;">${fmt(rowIncome)}</span>
-         <span style="font-size:11px;color:#555;">บาท</span>`
-      : '<span style="color:#888;font-size:11.5px;">ไม่มีรายได้</span>';
+    if (hasIncome === 'no') {
+      displayTd.style.color = '#888';
+      displayTd.style.fontWeight = 'normal';
+      displayTd.innerHTML = '<span style="color:#888;font-size:11.5px;">ไม่มีรายได้</span>';
+    } else {
+      displayTd.style.color = rowIncome > 0 ? '#2C3D8F' : '#bbb';
+      displayTd.style.fontWeight = rowIncome > 0 ? '600' : 'normal';
+      displayTd.innerHTML = rowIncome > 0
+        ? `<span style="color:#2C3D8F;font-weight:600;">${fmt(rowIncome)}</span> <span style="font-size:11px;color:#555;">บาท</span>`
+        : '—';
+    }
   }
 
   sumAllLicensesIncome();
+  if (typeof saveDraft === 'function') saveDraft();
   closeIncomeModal();
   showToast('บันทึกยอดรายได้เรียบร้อยแล้ว');
 }

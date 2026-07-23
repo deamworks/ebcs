@@ -22,6 +22,10 @@ function calcOtherTotal() {
   const outTotal = document.getElementById('otherGrandTotal');
   if (outTotal) outTotal.value = fmt(sum);
 
+  // auto-save ทุกครั้งที่มีการเปลี่ยนแปลง
+  if (typeof saveStep2ToState === 'function') saveStep2ToState();
+  if (typeof saveDraft === 'function') saveDraft();
+
   return sum;
 }
 
@@ -62,4 +66,52 @@ function addCustomOtherIncomeRow(label = '', value = '') {
 function removeCustomOtherIncomeRow(rowId) {
   const row = document.getElementById(rowId);
   if (row) { row.remove(); calcOtherTotal(); }
+}
+
+// ════════════════════════════════════════════════════
+// Save / Restore Step 2 ↔ appState
+// ════════════════════════════════════════════════════
+
+/** บันทึกค่า Step 2 ทั้งหมดลง appState (เรียกจาก ui.js ก่อนออกจาก step) */
+function saveStep2ToState() {
+  // o1-o5
+  const inputs = {};
+  ['o1','o2','o3','o4','o5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) inputs[id] = el.value;
+  });
+  appState.step2Inputs = inputs;
+
+  // custom rows
+  const customRows = [];
+  document.querySelectorAll('.custom-other-income-item-row').forEach(row => {
+    const label = row.querySelector('.custom-other-label')?.value || '';
+    const value = row.querySelector('.custom-other-value')?.value || '';
+    customRows.push({ label, value });
+  });
+  appState.step2CustomRows = customRows;
+}
+
+/** restore ค่า Step 2 จาก appState กลับเข้าฟอร์ม */
+function restoreStep2FromState() {
+  if (!appState.step2Inputs && !appState.step2CustomRows) return;
+
+  // o1-o5
+  if (appState.step2Inputs) {
+    ['o1','o2','o3','o4','o5'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && appState.step2Inputs[id] !== undefined) {
+        el.value = appState.step2Inputs[id];
+      }
+    });
+  }
+
+  // custom rows — สร้างใหม่จาก appState
+  const container = document.getElementById('custom-other-income-container');
+  if (container && appState.step2CustomRows?.length > 0) {
+    container.innerHTML = '';
+    appState.step2CustomRows.forEach(row => addCustomOtherIncomeRow(row.label, row.value));
+  }
+
+  calcOtherTotal();
 }

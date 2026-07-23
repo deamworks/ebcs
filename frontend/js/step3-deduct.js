@@ -38,14 +38,12 @@ function generateDeductRows() {
 
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${i}</td>
-      <td><span style="font-weight:600;color:#1e2d5e;">
-        ${rowData.no || '—'}
-      </span></td>
-      <td>${rowData.type || '—'}</td>
-      <td>${rowData.station || '—'}</td>
-      <td>${fmt(rowData.income)} บาท</td>
-      <td>
+      <td style="text-align:center;">${i}</td>
+      <td style="text-align:center;"><span style="font-weight:600;color:#2C3D8F;">${rowData.no || '—'}</span></td>
+      <td style="text-align:center;">${rowData.type || '—'}</td>
+      <td style="text-align:center;">${rowData.station || '—'}</td>
+      <td style="text-align:center;">${fmt(rowData.income)} บาท</td>
+      <td style="text-align:center;">
         <button type="button" class="btn btn-primary btn-sm"
           onclick="openDeductModal(${i})" title="กรอกค่าลดหย่อน"
           style="padding:4px 8px;">
@@ -59,10 +57,7 @@ function generateDeductRows() {
           </svg>
         </button>
       </td>
-      <td id="deduct-display-${i}"
-        style="font-weight:600;color:#c62828;">
-        ${rowData.deduction > 0 ? fmt(rowData.deduction) + ' บาท' : '—'}
-      </td>`;
+      <td id="deduct-display-${i}" style="text-align:center;font-weight:600;color:#c62828;">${rowData.deduction > 0 ? fmt(rowData.deduction) + ' บาท' : '—'}</td>`;
 
     tbody.appendChild(row);
   }
@@ -279,6 +274,7 @@ function saveDeductData() {
   const totalDeductionInput = document.getElementById('totalDeduction');
   if (totalDeductionInput) totalDeductionInput.value = fmt(grandSum);
 
+  if (typeof saveDraft === 'function') saveDraft();
   closeDeductModal();
   showToast('บันทึกรายละเอียดค่าลดหย่อนสิทธิ์เรียบร้อยแล้ว');
 }

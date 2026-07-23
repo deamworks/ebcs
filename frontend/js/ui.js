@@ -4,6 +4,67 @@
  * และการเปลี่ยน Step / Phase ต่างๆ
  */
 
+
+// ════════════════════════════════════════════════════
+// localStorage — บันทึก/โหลด appState อัตโนมัติ
+// key: ebcs_draft_{tax_id}_{fiscal_year}
+// ════════════════════════════════════════════════════
+
+/** key สำหรับ localStorage ของ user นี้ */
+function _draftKey() {
+  const taxId = appState.taxId || appState.taxid || 'unknown';
+  const year  = appState.year  || 'unknown';
+  return `ebcs_draft_${taxId}_${year}`;
+}
+
+/** บันทึก appState ลง localStorage */
+function saveDraft() {
+  try {
+    const snapshot = {
+      taxId:            appState.taxId,
+      taxid:            appState.taxid,
+      licensee:         appState.licensee,
+      refNo:            appState.refNo,
+      year:             appState.year,
+      period:           appState.period,
+      dueDate:          appState.dueDate,
+      rowsData:         appState.rowsData,
+      step2Inputs:      appState.step2Inputs      || {},
+      step2CustomRows:  appState.step2CustomRows  || [],
+      auditor:          appState.auditor          || {},
+      financialIncome:  appState.financialIncome  || '',
+      customOtherIncome: appState.customOtherIncome || [],
+      _savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(_draftKey(), JSON.stringify(snapshot));
+  } catch(e) {
+    console.warn('[saveDraft] localStorage error:', e);
+  }
+}
+
+/** โหลด draft จาก localStorage กลับเข้า appState */
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(_draftKey());
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    Object.assign(appState, data);
+    console.log('[loadDraft] โหลด draft สำเร็จ บันทึกเมื่อ:', data._savedAt);
+    return true;
+  } catch(e) {
+    console.warn('[loadDraft] error:', e);
+    return false;
+  }
+}
+
+/** ลบ draft ออกจาก localStorage (เรียกหลัง submit สำเร็จ) */
+function clearDraft() {
+  try {
+    localStorage.removeItem(_draftKey());
+    console.log('[clearDraft] ลบ draft แล้ว');
+  } catch(e) {}
+}
+
 // ค่าคงที่
 
 /** Step ทั้งหมดในฟอร์ม (ใช้ตอนซ่อน/แสดง stepContent) */
@@ -23,8 +84,74 @@ function goBack() {
 
 // Step Navigation
 
+/** บันทึกค่าจากฟอร์มปัจจุบันลง appState ก่อนออกจาก Step */
+function saveCurrentStepState(currentStep) {
+  // ── Step 1: รายได้รวมตามงบการเงิน ──────────────────────────────────────
+  if (currentStep === 1) {
+    const fin = document.getElementById('total-income-financial');
+    if (fin) appState.financialIncome = fin.value;
+  }
+
+  // ── Step 2: รายได้อื่น (o1-o5 + custom rows) ────────────────────────────
+  if (currentStep === 2 && typeof saveStep2ToState === 'function') {
+    saveStep2ToState();
+  }
+
+  // ── Step 4: ข้อมูลผู้สอบบัญชี ───────────────────────────────────────────
+  if (currentStep === 4) {
+    appState.auditor = {
+      name:    document.getElementById('auditorName')?.value    || '',
+      regNo:   document.getElementById('auditorRegNo')?.value   || '',
+      company: document.getElementById('auditorCompany')?.value || '',
+      date:    document.getElementById('auditorDate')?.value    || '',
+    };
+  }
+
+  // บันทึกลง localStorage ทุกครั้งที่ออกจาก step
+  saveDraft();
+}
+
+/** restore ค่าที่บันทึกไว้กลับเข้าฟอร์มเมื่อเข้า Step */
+function restoreStepState(n) {
+  // ── Step 1: restore รายได้รวมตามงบการเงิน ─────────────────────────────
+  if (n === 1) {
+    // โหลด draft จาก localStorage ถ้ายังไม่เคยโหลด
+    if (!appState._draftLoaded && appState.taxId) {
+      const loaded = loadDraft();
+      if (loaded) {
+        appState._draftLoaded = true;
+        // re-render ตาราง Step 1 จาก rowsData ที่โหลดมา
+        if (typeof generateRows === 'function') generateRows();
+      }
+    }
+    const fin = document.getElementById('total-income-financial');
+    if (fin && appState.financialIncome) fin.value = appState.financialIncome;
+  }
+
+  // ── Step 2: restore รายได้อื่น ───────────────────────────────────────────
+  if (n === 2 && typeof restoreStep2FromState === 'function') {
+    restoreStep2FromState();
+  }
+
+  // ── Step 4: restore ข้อมูลผู้สอบบัญชี ──────────────────────────────────
+  if (n === 4 && appState.auditor) {
+    const a = appState.auditor;
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('auditorName',    a.name);
+    set('auditorRegNo',   a.regNo);
+    set('auditorCompany', a.company);
+    set('auditorDate',    a.date);
+  }
+}
+
+/** track step ปัจจุบัน */
+let _currentStep = 1;
+
 /** สลับไปแสดง Step ที่กำหนดและอัปเดต Stepper */
 function goToStep(n) {
+  // บันทึกค่าจาก step ปัจจุบันก่อนออก
+  saveCurrentStepState(_currentStep);
+
   // ซ่อนทุก Step ก่อน แล้วแสดงเฉพาะ Step ที่เลือก
   ALL_STEPS.forEach(i => {
     const el = document.getElementById(`stepContent${i}`);
@@ -48,6 +175,10 @@ function goToStep(n) {
   // Hook: คำนวณและแสดงสรุปเมื่อเข้า Step 5
   if (n === 5 && typeof renderStep5AndSummary === 'function') renderStep5AndSummary();
 
+  // Restore ค่าเมื่อเข้า step
+  restoreStepState(n);
+
+  _currentStep = n;
   window.scrollTo(0, 0);
 }
 
