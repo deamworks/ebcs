@@ -4,12 +4,13 @@
 # ทุก endpoint ในไฟล์นี้:
 # 1. ต้องมี JWT token (ได้จากการ verify OTP)
 # 2. ดึง tax_id จาก token อัตโนมัติ (ปลอมเป็นคนอื่นไม่ได้)
-# 3. ตอบ JSON format เดียวกันทุกตัว
+# 3. ตอบ JSON format เดียวกันทุกตัว: { success, data } หรือ { success, error }
 # ════════════════════════════════════════════════════════
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
+from functools import wraps
 
 from ..db import get_db
 
@@ -21,11 +22,7 @@ operator_bp = Blueprint("operator", __name__)
 # ════════════════════════════════════════════════════════
 
 def date_to_str(d):
-    """
-    แปลง date object เป็น string
-    เพราะ JSON ไม่รู้จัก date object โดยตรง
-    ตัวอย่าง: date(2025, 1, 1) → "2025-01-01"
-    """
+    """แปลง date/datetime → "YYYY-MM-DD" string (JSON safe)"""
     if d is None:
         return None
     if isinstance(d, (date, datetime)):
@@ -34,38 +31,101 @@ def date_to_str(d):
 
 
 def require_operator(f):
-    """
-    Decorator ตรวจสอบว่าเป็น token ของผู้ประกอบการ
-    ใช้แบบนี้:
-        @operator_bp.route("/...")
-        @jwt_required()
-        @require_operator
-        def my_route():
-            ...
-    """
-    from functools import wraps
-
+    """Decorator ตรวจสอบว่าเป็น token ของผู้ประกอบการ (role = operator)"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        # ดึงข้อมูลจาก JWT token
         claims = get_jwt()
-
-        # ตรวจว่า role เป็น operator
         if claims.get("role") != "operator":
             return jsonify({
                 "success": False,
-                "error": {
-                    "code": "FORBIDDEN",
-                    "message": "ไม่มีสิทธิ์เข้าถึง"
-                }
+                "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์เข้าถึง"}
             }), 403
-
         return f(*args, **kwargs)
     return decorated
 
 
 # ════════════════════════════════════════════════════════
+# [FIX] Progressive Rate Fund Calculation
+# ────────────────────────────────────────────────────────
+# เดิม: flat 2% — ผิด ไม่ตรงกับ calc.js ฝั่ง frontend
+# แก้:  progressive 7 ขั้นบันได เหมือนกัน RATE_TABLE ใน calc.js
+# ════════════════════════════════════════════════════════
+
+RATE_TABLE = [
+    (100_000_000,    0.00125),
+    (500_000_000,    0.0025),
+    (1_000_000_000,  0.005),
+    (10_000_000_000, 0.0075),
+    (25_000_000_000, 0.01),
+    (50_000_000_000, 0.0125),
+    (float("inf"),   0.02),
+]
+
+VAT_RATE     = 0.07
+PENALTY_RATE = 0.015  # 1.5% ต่อเดือน
+
+
+def calc_progressive_fund(income: float) -> float:
+    """คำนวณเงินนำส่งกองทุนแบบขั้นบันได (ตรงกับ calc.js)"""
+    if not income or income <= 0:
+        return 0.0
+    fund = 0.0
+    prev = 0.0
+    for up_to, rate in RATE_TABLE:
+        if income <= prev:
+            break
+        taxable = min(income, up_to) - prev
+        fund   += taxable * rate
+        prev    = up_to
+        if income <= up_to:
+            break
+    return round(fund, 2)
+
+
+def calculate_fund(total_income: float, deduction_amount: float, due_date) -> dict:
+    """
+    คำนวณเงินที่ต้องนำส่งกองทุน (progressive rate — ตรงกับ calc.js)
+
+    สูตร:
+      net_income   = total_income - deduction_amount
+      fund_amount  = progressive rate ตาม RATE_TABLE
+      vat_amount   = fund_amount × 7%
+      extra_amount = fund_amount × 1.5% × จำนวนเดือนที่ล่าช้า (ถ้ามี)
+      net_amount   = fund + vat + extra
+    """
+    net_income = max(0.0, total_income - deduction_amount)
+    fund_amount = calc_progressive_fund(net_income)
+    vat_amount  = round(fund_amount * VAT_RATE, 2)
+
+    # เงินเพิ่มกรณีชำระล่าช้า
+    extra_amount = 0.0
+    if due_date and fund_amount > 0:
+        today = date.today()
+        if isinstance(due_date, str):
+            due_date = datetime.strptime(due_date, "%Y-%m-%d").date()
+        elif isinstance(due_date, datetime):
+            due_date = due_date.date()
+        if today > due_date:
+            diff_days   = (today - due_date).days
+            months_late = -(-diff_days // 30)  # ceil division
+            extra_amount = round(fund_amount * PENALTY_RATE * months_late, 2)
+
+    net_amount = round(fund_amount + vat_amount + extra_amount, 2)
+
+    return {
+        "total_income":     round(total_income, 2),
+        "deduction_amount": round(deduction_amount, 2),
+        "net_income":       round(net_income, 2),
+        "fund_amount":      fund_amount,
+        "vat_amount":       vat_amount,
+        "extra_amount":     extra_amount,
+        "net_amount":       net_amount,
+    }
+
+
+# ════════════════════════════════════════════════════════
 # 4.1 Auto-fill ข้อมูลบริษัท
+# GET /api/operator/autofill?year=2568
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/autofill", methods=["GET"])
@@ -73,39 +133,40 @@ def require_operator(f):
 @require_operator
 def autofill():
     """
-    ดึงข้อมูลบริษัทตอนผู้ประกอบการ Login แล้ว
+    ดึงข้อมูลบริษัทหลัง login สำเร็จ
+    tax_id ดึงจาก JWT — ไม่รับจาก query param (ปลอมไม่ได้)
 
-    Request:  GET /api/operator/autofill?year=2568
-    Response: ข้อมูลบริษัท + เช็คว่าเคยยื่นปีนี้ไหม
-
-    tax_id ดึงจาก JWT token อัตโนมัติ
-    ไม่ต้องส่งมาใน request (ปลอมเป็นคนอื่นไม่ได้)
+    [FIX] Response: { success, data: { ...fields } }
+          Frontend อ่านได้ถูกต้องที่ info.data.xxx
     """
-
-    # ดึง tax_id จาก token
     tax_id = get_jwt_identity()
-
-    # รับปีบัญชีจาก query parameter
-    year = request.args.get("year", type=int)
-    if not year:
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "MISSING_YEAR",
-                "message": "กรุณาระบุปีบัญชี"
-            }
-        }), 400
+    year   = request.args.get("year", type=int)
 
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ── ดึงข้อมูลผู้ประกอบการ ──────────────────────
+            # ถ้าไม่ระบุปี → ดึงปีล่าสุดอัตโนมัติ
+            if not year:
+                cur.execute("""
+                    SELECT fiscal_year FROM taxpayer_master
+                    WHERE  tax_id = %s
+                    ORDER  BY fiscal_year DESC LIMIT 1
+                """, (tax_id,))
+                row = cur.fetchone()
+                if row:
+                    year = row["fiscal_year"]
+                else:
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการในระบบ"}
+                    }), 404
+
+            # ดึงข้อมูล taxpayer
             cur.execute("""
                 SELECT tax_id, operator_name, fiscal_year,
                        ref_no, period_start, period_end, due_date
                 FROM   taxpayer_master
-                WHERE  tax_id = %s
-                AND    fiscal_year = %s
+                WHERE  tax_id = %s AND fiscal_year = %s
                 LIMIT 1
             """, (tax_id, year))
             taxpayer = cur.fetchone()
@@ -113,19 +174,14 @@ def autofill():
             if not taxpayer:
                 return jsonify({
                     "success": False,
-                    "error": {
-                        "code": "NOT_FOUND",
-                        "message": f"ไม่พบข้อมูลผู้ประกอบการสำหรับปี {year}"
-                    }
+                    "error": {"code": "NOT_FOUND", "message": f"ไม่พบข้อมูลผู้ประกอบการสำหรับปี {year}"}
                 }), 404
 
-            # ── เช็คว่าเคยยื่นปีนี้ไหม ─────────────────────
-            # ถ้าเคยยื่นแล้ว แจ้งเตือนผู้ใช้ก่อนดำเนินการต่อ
+            # เช็คว่าเคยยื่นปีนี้ไหม
             cur.execute("""
                 SELECT id, status, submitted_at
                 FROM   submissions
-                WHERE  tax_id = %s
-                AND    fiscal_year = %s
+                WHERE  tax_id = %s AND fiscal_year = %s
                 LIMIT 1
             """, (tax_id, year))
             existing = cur.fetchone()
@@ -140,8 +196,6 @@ def autofill():
             "period_start":  date_to_str(taxpayer["period_start"]),
             "period_end":    date_to_str(taxpayer["period_end"]),
             "due_date":      date_to_str(taxpayer["due_date"]),
-
-            # ถ้าเคยยื่นแล้ว ส่งข้อมูลมาด้วยให้ Frontend แจ้งเตือน
             "existing_submission": {
                 "id":           existing["id"],
                 "status":       existing["status"],
@@ -153,6 +207,7 @@ def autofill():
 
 # ════════════════════════════════════════════════════════
 # 4.2 ดึงรายการใบอนุญาต
+# GET /api/operator/licenses?year=2568
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/licenses", methods=["GET"])
@@ -160,57 +215,65 @@ def autofill():
 @require_operator
 def get_licenses():
     """
-    ดึงรายการใบอนุญาตทั้งหมดของบริษัท
+    ดึงใบอนุญาตทั้งหมดของบริษัท (ทุกสถานะ)
+    tax_id ดึงจาก JWT เสมอ — ไม่ใช้ tax_id จาก query (ปลอมไม่ได้)
 
-    Request:  GET /api/operator/licenses?year=2568
-    Response: รายการใบอนุญาตทุกสถานะ (active, ended, cancelled, revoked)
-
-    ดึงทุกสถานะ ไม่กรองเฉพาะ active เพราะ:
-    - ใบที่หมดอายุก็อาจต้องชำระย้อนหลัง
-    - ผู้ประกอบการต้องเห็นภาพรวมทั้งหมด
+    [FIX] Response: { success, data: { licenses: [...], total: n } }
     """
-
     tax_id = get_jwt_identity()
-    year = request.args.get("year", type=int)
+    year   = request.args.get("year", type=int)
 
-    # แปลงสถานะเป็นภาษาไทยสำหรับแสดงผล
     status_labels = {
         "active":    "ได้รับอนุญาต",
         "ended":     "สิ้นสุดระยะเวลาอนุญาต",
         "cancelled": "ยกเลิกประกอบกิจการ",
-        "revoked":   "เพิกถอนใบอนุญาต"
+        "revoked":   "เพิกถอนใบอนุญาต",
     }
 
     with get_db() as db:
         with db.cursor() as cur:
-            cur.execute("""
-                SELECT id, license_no, licensee_type,
-                       license_status, start_date, end_date
-                FROM   licensee_master
-                WHERE  tax_id = %s
-                ORDER BY license_status, license_no
-            """, (tax_id,))
+            if year:
+                cur.execute("""
+                    SELECT id, license_no, license_type,
+                           license_status, license_start, license_end
+                    FROM   licensee_master
+                    WHERE  tax_id = %s AND fiscal_year = %s
+                    ORDER  BY license_status, license_no
+                """, (tax_id, year))
+            else:
+                cur.execute("""
+                    SELECT id, license_no, license_type,
+                           license_status, license_start, license_end
+                    FROM   licensee_master
+                    WHERE  tax_id = %s
+                    ORDER  BY license_status, license_no
+                """, (tax_id,))
             licenses = cur.fetchall()
 
-    # เพิ่ม status_label ภาษาไทยในแต่ละใบ
+    result = []
     for lic in licenses:
-        lic["status_label"] = status_labels.get(
-            lic["license_status"], lic["license_status"]
-        )
-        lic["start_date"] = date_to_str(lic["start_date"])
-        lic["end_date"]   = date_to_str(lic["end_date"])
+        result.append({
+            "id":            lic["id"],
+            "license_no":    lic["license_no"],
+            "license_type":  lic["license_type"],
+            "license_status": lic["license_status"],
+            "status_label":  status_labels.get(lic["license_status"], lic["license_status"]),
+            "license_start": date_to_str(lic["license_start"]),
+            "license_end":   date_to_str(lic["license_end"]),
+        })
 
     return jsonify({
         "success": True,
         "data": {
-            "licenses": licenses,
-            "total":    len(licenses)
+            "licenses": result,
+            "total":    len(result)
         }
     }), 200
 
 
 # ════════════════════════════════════════════════════════
-# 4.3 บันทึกใบยื่นแบบ (Step 1-4)
+# 4.3 บันทึกใบยื่นแบบ (POST)
+# POST /api/operator/submissions
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/submissions", methods=["POST"])
@@ -218,39 +281,39 @@ def get_licenses():
 @require_operator
 def create_submission():
     """
-    บันทึกข้อมูลใบยื่นแบบครั้งแรก (สร้างเป็น draft)
+    บันทึกข้อมูลใบยื่นแบบ (สร้าง draft)
 
-    Request:  POST /api/operator/submissions
-    Body: {
-        "fiscal_year": 2568,
+    Body ที่ Frontend ส่งมา (index.js saveSubmissionToSupabase):
+    {
+        "fiscal_year":      2568,
+        "total_income":     1000000,
+        "deduction_amount": 200000,
+        "fund_amount":      ...,      ← Frontend คำนวณมา (ใช้ verify เท่านั้น)
+        "vat_amount":       ...,
+        "extra_amount":     ...,
+        "net_amount":       ...,
+        "auditor_name":     "...",
+        "auditor_license":  "...",
+        "auditor_office":   "...",
+        "audited_date":     "2568-...",
         "licenses": [
             {
-                "license_no": "B1-2567-001",
-                "licensee_type": "กระจายเสียง",
-                "fee_amount": 150000,
-                "incomes": [
-                    {"income_type": "ads", "label": "รายได้ค่าโฆษณา", "amount": 100000},
-                    {"income_type": "rental", "label": "รายได้ค่าเช่าเวลา", "amount": 50000}
-                ]
+                "license_no":  "...",
+                "income":      500000,
+                "deduction":   100000,
+                "incomes": [{ "field_key": "f1_1", "label": "...", "amount": 100000, "is_custom": false }]
             }
         ],
         "other_incomes": [
-            {"income_type": "foreign", "label": "รายได้จากต่างประเทศ", "amount": 50000}
-        ],
-        "deduction_amount": 20000,
-        "auditor": {
-            "name": "นายสมชาย ตรวจดี",
-            "license": "12345",
-            "office": "สำนักงานสอบบัญชี ABC",
-            "audited_date": "2026-03-15"
-        }
+            { "field_key": "o1", "label": "...", "amount": 50000, "is_custom": false }
+        ]
     }
 
-    สำคัญมาก: ใช้ Transaction
-    ถ้าบันทึกใบอนุญาตครบ 2 จาก 3 ใบแล้ว error
-    → ยกเลิกทั้งหมด ไม่ให้ข้อมูลครึ่งๆ กลางๆ
+    [FIX] เดิม:
+      - รับ auditor เป็น nested object → แก้เป็น flat fields
+      - ใช้ db.insert_id() (MySQL) → แก้เป็น RETURNING id (PostgreSQL)
+      - คำนวณ fund ด้วย flat 2% → แก้เป็น progressive rate
     """
-
     tax_id = get_jwt_identity()
     data   = request.get_json()
 
@@ -260,12 +323,16 @@ def create_submission():
             "error": {"code": "INVALID_REQUEST", "message": "กรุณาส่งข้อมูล JSON"}
         }), 400
 
-    # ── รับค่าจาก request ────────────────────────────
     fiscal_year      = data.get("fiscal_year")
     licenses_data    = data.get("licenses", [])
     other_incomes    = data.get("other_incomes", [])
     deduction_amount = float(data.get("deduction_amount", 0))
-    auditor          = data.get("auditor", {})
+
+    # [FIX] รับ auditor เป็น flat fields (ตรงกับที่ Frontend ส่งมา)
+    auditor_name    = data.get("auditor_name", "")
+    auditor_license = data.get("auditor_license", "")
+    auditor_office  = data.get("auditor_office", "")
+    audited_date    = data.get("audited_date")
 
     if not fiscal_year:
         return jsonify({
@@ -273,8 +340,7 @@ def create_submission():
             "error": {"code": "MISSING_FIELDS", "message": "กรุณาระบุปีบัญชี"}
         }), 400
 
-    # ── ดึงข้อมูล snapshot จาก taxpayer_master ───────
-    # เก็บข้อมูลบริษัท ณ วันที่ยื่น ไม่เปลี่ยนตาม master
+    # ดึง snapshot taxpayer ณ วันที่ยื่น
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -292,25 +358,25 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # ── คำนวณรายได้รวม ───────────────────────────────
+    # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
-        float(lic.get("fee_amount", 0))
+        float(lic.get("income", 0))
         for lic in licenses_data
     )
 
-    # ── คำนวณเงินกองทุน VAT และเงินเพิ่ม ─────────────
+    # [FIX] คำนวณ fund ด้วย progressive rate (ตรงกับ calc.js)
     calculation = calculate_fund(
         total_income     = total_income,
         deduction_amount = deduction_amount,
         due_date         = taxpayer["due_date"]
     )
 
-    # ── บันทึกลงฐานข้อมูลแบบ Transaction ────────────
-    # Transaction = ทำทั้งหมดสำเร็จ หรือยกเลิกทั้งหมด
+    # บันทึกลง DB แบบ Transaction
     with get_db() as db:
         with db.cursor() as cur:
 
             # 1. สร้างใบยื่นหลัก
+            # [FIX] ใช้ RETURNING id แทน insert_id() (psycopg2/PostgreSQL)
             cur.execute("""
                 INSERT INTO submissions (
                     tax_id, ref_no, fiscal_year,
@@ -325,6 +391,7 @@ def create_submission():
                     %s, %s, %s, %s,
                     %s, %s, %s, %s
                 )
+                RETURNING id
             """, (
                 tax_id,
                 taxpayer["ref_no"],
@@ -339,76 +406,57 @@ def create_submission():
                 calculation["vat_amount"],
                 calculation["extra_amount"],
                 calculation["net_amount"],
-                auditor.get("name"),
-                auditor.get("license"),
-                auditor.get("office"),
-                auditor.get("audited_date")
+                auditor_name,
+                auditor_license,
+                auditor_office,
+                audited_date,
             ))
-
-            # ดึง id ของใบยื่นที่เพิ่งสร้าง
-            submission_id = db.insert_id()
-
-            # แต่ MySQL UUID ต้องดึงแบบนี้
-            cur.execute("SELECT LAST_INSERT_ID() as lid")
-            # ใช้ UUID จากการ SELECT กลับมา
-            cur.execute(
-                "SELECT id FROM submissions WHERE tax_id = %s AND fiscal_year = %s ORDER BY created_at DESC LIMIT 1",
-                (tax_id, fiscal_year)
-            )
-            sub_row = cur.fetchone()
-            submission_id = sub_row["id"]
+            submission_id = cur.fetchone()["id"]  # [FIX] RETURNING id
 
             # 2. บันทึกใบอนุญาตทีละใบ
             for lic in licenses_data:
                 cur.execute("""
-                    INSERT INTO licenses (
+                    INSERT INTO submission_licenses (
                         submission_id, license_no,
-                        licensee_type, license_status, fee_amount
-                    ) VALUES (%s, %s, %s, %s, %s)
+                        income, deduction
+                    ) VALUES (%s, %s, %s, %s)
+                    RETURNING id
                 """, (
                     submission_id,
-                    lic.get("license_no"),
-                    lic.get("licensee_type"),
-                    lic.get("license_status", "active"),
-                    float(lic.get("fee_amount", 0))
+                    lic.get("license_no", ""),
+                    float(lic.get("income", 0)),
+                    float(lic.get("deduction", 0)),
                 ))
-
-                # ดึง id ของใบอนุญาตที่เพิ่งสร้าง
-                cur.execute(
-                    "SELECT id FROM licenses WHERE submission_id = %s AND license_no = %s LIMIT 1",
-                    (submission_id, lic.get("license_no"))
-                )
-                lic_row = cur.fetchone()
-                license_id = lic_row["id"]
+                license_id = cur.fetchone()["id"]
 
                 # 3. บันทึกรายได้ย่อยของใบอนุญาตนี้
-                for income in lic.get("incomes", []):
+                for income_item in lic.get("incomes", []):
                     cur.execute("""
                         INSERT INTO license_incomes (
-                            license_id, income_type, label, amount
-                        ) VALUES (%s, %s, %s, %s)
+                            license_id, field_key, label, amount, is_custom
+                        ) VALUES (%s, %s, %s, %s, %s)
                     """, (
                         license_id,
-                        income.get("income_type"),
-                        income.get("label"),
-                        float(income.get("amount", 0))
+                        income_item.get("field_key", ""),
+                        income_item.get("label", ""),
+                        float(income_item.get("amount", 0)),
+                        bool(income_item.get("is_custom", False)),
                     ))
 
             # 4. บันทึกรายได้อื่น (Step 2)
             for other in other_incomes:
                 cur.execute("""
                     INSERT INTO other_incomes (
-                        submission_id, income_type, label, amount
-                    ) VALUES (%s, %s, %s, %s)
+                        submission_id, field_key, label, amount, is_custom
+                    ) VALUES (%s, %s, %s, %s, %s)
                 """, (
                     submission_id,
-                    other.get("income_type"),
-                    other.get("label"),
-                    float(other.get("amount", 0))
+                    other.get("field_key", ""),
+                    other.get("label", ""),
+                    float(other.get("amount", 0)),
+                    bool(other.get("is_custom", False)),
                 ))
 
-        # Commit: บันทึกทุกอย่างพร้อมกัน
-        # ถ้ามี error บรรทัดไหน จะ rollback ทั้งหมดอัตโนมัติ (ดูใน db.py)
         db.commit()
 
     return jsonify({
@@ -422,87 +470,45 @@ def create_submission():
 
 
 # ════════════════════════════════════════════════════════
-# 4.4 แก้ไขใบยื่นแบบ (ก่อน Submit)
+# 4.4 แก้ไขใบยื่นแบบ (PUT) — ทำได้เฉพาะ status = draft
+# PUT /api/operator/submissions/<submission_id>
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/submissions/<submission_id>", methods=["PUT"])
 @jwt_required()
 @require_operator
 def update_submission(submission_id):
-    """
-    แก้ไขข้อมูลใบยื่น — ทำได้เฉพาะตอน status = draft เท่านั้น
-
-    Request:  PUT /api/operator/submissions/<id>
-    Body: เหมือน POST แต่ส่งแค่ field ที่ต้องการแก้
-    """
-
     tax_id = get_jwt_identity()
     data   = request.get_json()
 
-    # ── ตรวจสอบว่าใบยื่นนี้เป็นของ tax_id นี้จริง ───
-    # และยังเป็น draft อยู่
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT id, status, tax_id
-                FROM   submissions
-                WHERE  id = %s
-                LIMIT 1
+                SELECT id, status, tax_id, due_date
+                FROM   submissions WHERE id = %s LIMIT 1
             """, (submission_id,))
             submission = cur.fetchone()
 
-    # ไม่พบใบยื่น
     if not submission:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}
-        }), 404
-
-    # ตรวจว่าเป็นของตัวเอง (ป้องกันแก้ใบของคนอื่น)
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
     if submission["tax_id"] != tax_id:
-        return jsonify({
-            "success": False,
-            "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์แก้ไขใบยื่นนี้"}
-        }), 403
-
-    # ตรวจว่ายังเป็น draft อยู่
+        return jsonify({"success": False, "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์แก้ไขใบยื่นนี้"}}), 403
     if submission["status"] != "draft":
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "ALREADY_SUBMITTED",
-                "message": "ใบยื่นนี้ยืนยันแล้ว ไม่สามารถแก้ไขได้ กรุณาติดต่อเจ้าหน้าที่"
-            }
-        }), 400
+        return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ใบยื่นนี้ยืนยันแล้ว ไม่สามารถแก้ไขได้"}}), 400
 
-    # ── อัปเดตข้อมูล ─────────────────────────────────
-    deduction_amount = float(data.get("deduction_amount", 0))
-    auditor          = data.get("auditor", {})
     licenses_data    = data.get("licenses", [])
+    other_incomes    = data.get("other_incomes", [])
+    deduction_amount = float(data.get("deduction_amount", 0))
+    auditor_name     = data.get("auditor_name", "")
+    auditor_license  = data.get("auditor_license", "")
+    auditor_office   = data.get("auditor_office", "")
+    audited_date     = data.get("audited_date")
 
-    # คำนวณใหม่
-    total_income = sum(
-        float(lic.get("fee_amount", 0))
-        for lic in licenses_data
-    )
+    total_income = sum(float(lic.get("income", 0)) for lic in licenses_data)
+    calculation  = calculate_fund(total_income, deduction_amount, submission["due_date"])
 
     with get_db() as db:
         with db.cursor() as cur:
-
-            # ดึง due_date สำหรับคำนวณเงินเพิ่ม
-            cur.execute(
-                "SELECT due_date FROM submissions WHERE id = %s",
-                (submission_id,)
-            )
-            sub = cur.fetchone()
-
-            calculation = calculate_fund(
-                total_income     = total_income,
-                deduction_amount = deduction_amount,
-                due_date         = sub["due_date"]
-            )
-
-            # อัปเดตใบยื่นหลัก
             cur.execute("""
                 UPDATE submissions SET
                     total_income     = %s,
@@ -517,130 +523,80 @@ def update_submission(submission_id):
                     audited_date     = %s
                 WHERE id = %s
             """, (
-                total_income,
-                deduction_amount,
-                calculation["fund_amount"],
-                calculation["vat_amount"],
-                calculation["extra_amount"],
-                calculation["net_amount"],
-                auditor.get("name"),
-                auditor.get("license"),
-                auditor.get("office"),
-                auditor.get("audited_date"),
-                submission_id
+                total_income, deduction_amount,
+                calculation["fund_amount"], calculation["vat_amount"],
+                calculation["extra_amount"], calculation["net_amount"],
+                auditor_name, auditor_license, auditor_office, audited_date,
+                submission_id,
             ))
 
-            # ลบใบอนุญาตเก่า แล้วเพิ่มใหม่ทั้งหมด
-            # (CASCADE จะลบ license_incomes ที่เชื่อมอยู่ด้วยอัตโนมัติ)
-            cur.execute(
-                "DELETE FROM licenses WHERE submission_id = %s",
-                (submission_id,)
-            )
+            # ลบใบอนุญาตเก่า + income เก่า (CASCADE)
+            cur.execute("DELETE FROM submission_licenses WHERE submission_id = %s", (submission_id,))
+            cur.execute("DELETE FROM other_incomes WHERE submission_id = %s", (submission_id,))
 
             for lic in licenses_data:
                 cur.execute("""
-                    INSERT INTO licenses (
-                        submission_id, license_no,
-                        licensee_type, license_status, fee_amount
-                    ) VALUES (%s, %s, %s, %s, %s)
-                """, (
-                    submission_id,
-                    lic.get("license_no"),
-                    lic.get("licensee_type"),
-                    lic.get("license_status", "active"),
-                    float(lic.get("fee_amount", 0))
-                ))
+                    INSERT INTO submission_licenses (submission_id, license_no, income, deduction)
+                    VALUES (%s, %s, %s, %s) RETURNING id
+                """, (submission_id, lic.get("license_no", ""),
+                      float(lic.get("income", 0)), float(lic.get("deduction", 0))))
+                license_id = cur.fetchone()["id"]
 
-                cur.execute(
-                    "SELECT id FROM licenses WHERE submission_id = %s AND license_no = %s LIMIT 1",
-                    (submission_id, lic.get("license_no"))
-                )
-                lic_row = cur.fetchone()
-                license_id = lic_row["id"]
-
-                for income in lic.get("incomes", []):
+                for income_item in lic.get("incomes", []):
                     cur.execute("""
-                        INSERT INTO license_incomes (
-                            license_id, income_type, label, amount
-                        ) VALUES (%s, %s, %s, %s)
-                    """, (
-                        license_id,
-                        income.get("income_type"),
-                        income.get("label"),
-                        float(income.get("amount", 0))
-                    ))
+                        INSERT INTO license_incomes (license_id, field_key, label, amount, is_custom)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (license_id, income_item.get("field_key", ""),
+                          income_item.get("label", ""), float(income_item.get("amount", 0)),
+                          bool(income_item.get("is_custom", False))))
+
+            for other in other_incomes:
+                cur.execute("""
+                    INSERT INTO other_incomes (submission_id, field_key, label, amount, is_custom)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (submission_id, other.get("field_key", ""),
+                      other.get("label", ""), float(other.get("amount", 0)),
+                      bool(other.get("is_custom", False))))
 
         db.commit()
 
     return jsonify({
         "success": True,
-        "data": {
-            "submission_id": submission_id,
-            "calculation":   calculation
-        }
+        "data": {"submission_id": submission_id, "calculation": calculation}
     }), 200
 
 
 # ════════════════════════════════════════════════════════
-# 4.5 ยืนยันการยื่นแบบ (Submit)
+# 4.5 ยืนยันการยื่นแบบ → draft → pending_payment
+# POST /api/operator/submissions/<submission_id>/submit
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/submissions/<submission_id>/submit", methods=["POST"])
 @jwt_required()
 @require_operator
 def submit_submission(submission_id):
-    """
-    ยืนยันการยื่นแบบ — จุดที่ "ย้อนกลับแก้ไขไม่ได้แล้ว"
-
-    Request:  POST /api/operator/submissions/<id>/submit
-    Body:     ไม่ต้องส่งอะไร
-
-    ผล: status เปลี่ยนจาก draft → pending_payment
-        submitted_at บันทึกเวลาปัจจุบัน
-    """
-
     tax_id = get_jwt_identity()
 
     with get_db() as db:
         with db.cursor() as cur:
-
-            # ตรวจสอบสิทธิ์และสถานะ
             cur.execute("""
                 SELECT id, status, tax_id, net_amount
-                FROM   submissions
-                WHERE  id = %s
-                LIMIT 1
+                FROM   submissions WHERE id = %s LIMIT 1
             """, (submission_id,))
             submission = cur.fetchone()
 
     if not submission:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}
-        }), 404
-
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
     if submission["tax_id"] != tax_id:
-        return jsonify({
-            "success": False,
-            "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์"}
-        }), 403
-
+        return jsonify({"success": False, "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์"}}), 403
     if submission["status"] != "draft":
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "ALREADY_SUBMITTED",
-                "message": "ยืนยันการยื่นแบบนี้ไปแล้ว"
-            }
-        }), 400
+        return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ยืนยันการยื่นแบบนี้ไปแล้ว"}}), 400
 
-    # ── เปลี่ยนสถานะเป็น pending_payment ─────────────
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
                 UPDATE submissions
-                SET    status       = 'pending_payment',
-                       submitted_at = NOW()
+                SET    status = 'pending_payment', submitted_at = NOW()
                 WHERE  id = %s
             """, (submission_id,))
         db.commit()
@@ -657,81 +613,55 @@ def submit_submission(submission_id):
 
 # ════════════════════════════════════════════════════════
 # 4.6 ดูรายละเอียดใบยื่น
+# GET /api/operator/submissions/<submission_id>
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/submissions/<submission_id>", methods=["GET"])
 @jwt_required()
 @require_operator
 def get_submission(submission_id):
-    """
-    ดูรายละเอียดใบยื่นแบบ + สถานะ
-
-    Request:  GET /api/operator/submissions/<id>
-    Response: ข้อมูลครบทุก Step
-    """
-
     tax_id = get_jwt_identity()
 
     with get_db() as db:
         with db.cursor() as cur:
-
-            # ดึงใบยื่นหลัก
             cur.execute("""
                 SELECT * FROM submissions
-                WHERE  id = %s AND tax_id = %s
-                LIMIT 1
+                WHERE  id = %s AND tax_id = %s LIMIT 1
             """, (submission_id, tax_id))
             submission = cur.fetchone()
 
             if not submission:
-                return jsonify({
-                    "success": False,
-                    "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}
-                }), 404
+                return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
 
-            # ดึงใบอนุญาต
             cur.execute("""
-                SELECT l.*, GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'income_type', li.income_type,
-                        'label',       li.label,
-                        'amount',      li.amount
+                SELECT sl.*, array_agg(
+                    json_build_object(
+                        'field_key', li.field_key,
+                        'label',     li.label,
+                        'amount',    li.amount,
+                        'is_custom', li.is_custom
                     )
-                ) as incomes_json
-                FROM   licenses l
-                LEFT JOIN license_incomes li ON li.license_id = l.id
-                WHERE  l.submission_id = %s
-                GROUP BY l.id
+                ) FILTER (WHERE li.id IS NOT NULL) AS incomes
+                FROM   submission_licenses sl
+                LEFT JOIN license_incomes li ON li.license_id = sl.id
+                WHERE  sl.submission_id = %s
+                GROUP  BY sl.id
             """, (submission_id,))
             licenses = cur.fetchall()
 
-            # ดึงรายได้อื่น
-            cur.execute(
-                "SELECT * FROM other_incomes WHERE submission_id = %s",
-                (submission_id,)
-            )
+            cur.execute("SELECT * FROM other_incomes WHERE submission_id = %s", (submission_id,))
             other_incomes = cur.fetchall()
 
-            # ดึงไฟล์แนบ
-            cur.execute(
-                "SELECT * FROM document_attachments WHERE submission_id = %s",
-                (submission_id,)
-            )
+            cur.execute("SELECT * FROM document_attachments WHERE submission_id = %s", (submission_id,))
             attachments = cur.fetchall()
 
-            # ตรวจสถานะ paid จากตาราง receipt
-            cur.execute(
-                "SELECT id FROM receipt WHERE submission_id = %s LIMIT 1",
-                (submission_id,)
-            )
+            cur.execute("SELECT id FROM receipt WHERE submission_id = %s LIMIT 1", (submission_id,))
             receipt = cur.fetchone()
 
-    # คำนวณสถานะจริง
     actual_status = submission["status"]
     if receipt and actual_status == "pending_payment":
         actual_status = "paid"
 
-    # แปลงวันที่
     for key in ["period_start", "period_end", "due_date", "submitted_at", "created_at"]:
         if submission.get(key):
             submission[key] = date_to_str(submission[key])
@@ -739,17 +669,13 @@ def get_submission(submission_id):
     return jsonify({
         "success": True,
         "data": {
-            "submission":   submission,
-            "status":       actual_status,
-            "licenses":     licenses,
-            "other_incomes": other_incomes,
-            "attachments":  [
-                {
-                    "id":          a["id"],
-                    "doc_type":    a["doc_type"],
-                    "file_name":   a["file_name"],
-                    "uploaded_at": date_to_str(a["uploaded_at"])
-                }
+            "submission":    dict(submission),
+            "status":        actual_status,
+            "licenses":      [dict(l) for l in licenses],
+            "other_incomes": [dict(o) for o in other_incomes],
+            "attachments":   [
+                {"id": a["id"], "doc_type": a["doc_type"],
+                 "file_name": a["file_name"], "uploaded_at": date_to_str(a["uploaded_at"])}
                 for a in attachments
             ]
         }
@@ -757,102 +683,24 @@ def get_submission(submission_id):
 
 
 # ════════════════════════════════════════════════════════
-# ฟังก์ชันคำนวณเงินกองทุน
-# ════════════════════════════════════════════════════════
-
-def calculate_fund(total_income, deduction_amount, due_date):
-    """
-    คำนวณเงินที่ต้องนำส่งกองทุน
-
-    สูตร:
-    1. เงินกองทุน = (รายได้รวม - ค่าลดหย่อน) × 2%
-    2. VAT        = เงินกองทุน × 7%
-    3. เงินเพิ่ม  = คำนวณตามจำนวนวันล่าช้า (ถ้ามี)
-    4. ยอดสุทธิ   = เงินกองทุน + VAT + เงินเพิ่ม
-    """
-
-    # ฐานในการคำนวณ
-    base = max(0, total_income - deduction_amount)
-
-    # เงินกองทุน 2%
-    fund_amount = round(base * 0.02, 2)
-
-    # VAT 7% ของเงินกองทุน
-    vat_amount = round(fund_amount * 0.07, 2)
-
-    # เงินเพิ่มกรณีชำระล่าช้า
-    extra_amount = 0.0
-    if due_date:
-        today = date.today()
-        # แปลง due_date เป็น date object ถ้าเป็น string
-        if isinstance(due_date, str):
-            due_date = datetime.strptime(due_date, "%Y-%m-%d").date()
-        elif isinstance(due_date, datetime):
-            due_date = due_date.date()
-
-        if today > due_date:
-            # จำนวนวันที่ล่าช้า
-            days_late = (today - due_date).days
-            # อัตราเงินเพิ่ม: 1.5% ต่อเดือน (คำนวณเป็นรายวัน)
-            extra_amount = round(fund_amount * 0.015 * (days_late / 30), 2)
-
-    # ยอดสุทธิ
-    net_amount = round(fund_amount + vat_amount + extra_amount, 2)
-
-    return {
-        "total_income":    round(total_income, 2),
-        "deduction_amount": round(deduction_amount, 2),
-        "base_income":     round(base, 2),
-        "fund_amount":     fund_amount,
-        "vat_amount":      vat_amount,
-        "extra_amount":    extra_amount,
-        "net_amount":      net_amount
-    }
-
-# ════════════════════════════════════════════════════════
-# ดูรายการใบยื่นทั้งหมดของตัวเอง
+# 4.7 ดูรายการใบยื่นทั้งหมดของตัวเอง
+# GET /api/operator/submissions
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/submissions", methods=["GET"])
 @jwt_required()
 @require_operator
 def get_my_submissions():
-    """
-    ดูรายการใบยื่นแบบทั้งหมดของผู้ประกอบการที่ Login อยู่
-
-    Request:  GET /api/operator/submissions
-    Response: รายการใบยื่นทุกปี เรียงจากล่าสุดก่อน
-
-    สิ่งที่ผู้ใช้จะเห็น:
-    - ปีบัญชีที่ยื่น
-    - สถานะ (ร่าง / รอชำระ / ชำระแล้ว)
-    - ยอดเงินสุทธิ
-    - วันที่ยื่น
-    - submission_id สำหรับคลิกเข้าดูรายละเอียด
-    """
-
-    # ดึง tax_id จาก JWT token
     tax_id = get_jwt_identity()
 
     with get_db() as db:
         with db.cursor() as cur:
-
-            # ดึงใบยื่นทั้งหมดของบริษัทนี้
-            # เรียงจากใหม่ไปเก่า (created_at DESC)
             cur.execute("""
                 SELECT
-                    s.id,
-                    s.fiscal_year,
-                    s.ref_no,
-                    s.status,
-                    s.total_income,
-                    s.net_amount,
-                    s.submitted_at,
-                    s.created_at,
-                    -- ตรวจว่ามีใบเสร็จไหม (ถ้ามี = paid จริงๆ)
-                    CASE WHEN r.id IS NOT NULL THEN 'paid'
-                         ELSE s.status
-                    END AS actual_status
+                    s.id, s.fiscal_year, s.ref_no, s.status,
+                    s.total_income, s.net_amount,
+                    s.submitted_at, s.created_at,
+                    CASE WHEN r.id IS NOT NULL THEN 'paid' ELSE s.status END AS actual_status
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
                 WHERE s.tax_id = %s
@@ -860,46 +708,28 @@ def get_my_submissions():
             """, (tax_id,))
             submissions = cur.fetchall()
 
-    # แปลงสถานะเป็นภาษาไทย
     status_labels = {
         "draft":           "ร่าง (ยังไม่ยืนยัน)",
         "pending_payment": "รอชำระเงิน",
-        "paid":            "ชำระแล้ว"
+        "paid":            "ชำระแล้ว",
     }
 
-    # จัดรูปแบบข้อมูลก่อนส่งกลับ
     result = []
     for sub in submissions:
         result.append({
             "id":           sub["id"],
             "fiscal_year":  sub["fiscal_year"],
             "ref_no":       sub["ref_no"],
-
-            # สถานะ code (draft/pending_payment/paid)
             "status":       sub["actual_status"],
-
-            # สถานะภาษาไทย
-            "status_label": status_labels.get(
-                sub["actual_status"], sub["actual_status"]
-            ),
-
-            # ยอดเงิน
+            "status_label": status_labels.get(sub["actual_status"], sub["actual_status"]),
             "total_income": float(sub["total_income"] or 0),
             "net_amount":   float(sub["net_amount"] or 0),
-
-            # วันที่
             "submitted_at": date_to_str(sub["submitted_at"]),
             "created_at":   date_to_str(sub["created_at"]),
-
-            # บอก Frontend ว่าแก้ไขได้ไหม
-            # draft = แก้ได้, อื่นๆ = ดูได้อย่างเดียว
-            "can_edit": sub["actual_status"] == "draft"
+            "can_edit":     sub["actual_status"] == "draft",
         })
 
     return jsonify({
         "success": True,
-        "data": {
-            "submissions": result,
-            "total":       len(result)
-        }
+        "data": {"submissions": result, "total": len(result)}
     }), 200

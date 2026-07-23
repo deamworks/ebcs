@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สถานะการนำส่ง — e-BCS กสทช.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/status.css">
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="topnav-brand">
+      <span class="brand-nbtc-text">NBTC กสทช.</span>
+      <div class="brand-ebcs"><span class="e-dot">e</span>-BCS</div>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span style="color:rgba(255,255,255,0.75);font-size:12px;padding:5px 8px;" id="nav-operator-name"></span>
+    <a href="/pages/index.html">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      หน้าหลัก
+    </a>
+    <button onclick="auth.logout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      ออกจากระบบ
+    </button>
+  </div>
+</nav>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-bar">
+  <div style="display:flex;align-items:center;gap:6px;">
+    <a href="/pages/index.html">หน้าหลัก</a>
+    <span>›</span>
+    <span>สถานะการนำส่ง</span>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <main class="main">
+
+    <!-- Loading -->
+    <div id="loadingState" class="status-loading">
+      <div class="status-spinner"></div>
+      <p>กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- Not submitted -->
+    <div id="notSubmittedState" class="status-card" style="display:none;">
+      <div class="status-icon status-icon-pending">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h2 class="status-title">ยังไม่ได้ยื่นแบบ</h2>
+      <p class="status-subtitle">ปีบัญชี <span id="notSubmitYear"></span></p>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;">
+        ท่านยังไม่ได้ยื่นแบบนำส่งเงินรายปีสำหรับปีบัญชีนี้
+      </p>
+      <a href="/pages/index.html" class="btn btn-primary btn-lg">
+        เริ่มยื่นแบบนำส่ง
+      </a>
+    </div>
+
+    <!-- Submitted -->
+    <div id="submittedState" style="display:none; max-width:760px; margin:0 auto;">
+
+      <!-- Status Banner -->
+      <div class="status-banner" id="statusBanner">
+        <div class="status-banner-icon" id="statusIcon"></div>
+        <div class="status-banner-text">
+          <div class="status-banner-title" id="statusTitle"></div>
+          <div class="status-banner-sub"   id="statusSub"></div>
+        </div>
+        <div class="status-banner-ref">
+          <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-bottom:3px;">รหัสอ้างอิง</div>
+          <div style="font-size:18px;font-weight:700;" id="statusRefNo"></div>
+        </div>
+      </div>
+
+      <!-- Info Card -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="section-header" style="margin:-24px -22px 16px;border-radius:12px 12px 0 0;">
+          ข้อมูลการยื่นแบบ
+        </div>
+        <div class="info-grid">
+          <div class="info-row"><span class="info-label">ชื่อผู้ประกอบการ</span><span id="infoName">—</span></div>
+          <div class="info-row"><span class="info-label">เลขประจำตัวผู้เสียภาษี</span><span id="infoTaxId">—</span></div>
+          <div class="info-row"><span class="info-label">ปีบัญชี</span><span id="infoYear">—</span></div>
+          <div class="info-row"><span class="info-label">รอบบัญชี</span><span id="infoPeriod">—</span></div>
+          <div class="info-row"><span class="info-label">วันครบกำหนดชำระ</span><span id="infoDue">—</span></div>
+          <div class="info-row"><span class="info-label">วันที่ยื่นแบบ</span><span id="infoSubmittedAt">—</span></div>
+        </div>
+      </div>
+
+      <!-- Amount Card -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="section-header" style="margin:-24px -22px 16px;border-radius:12px 12px 0 0;">
+          ยอดเงินนำส่ง
+        </div>
+        <div class="amount-grid">
+          <div class="amount-row">
+            <span class="amount-label">รายได้รวม</span>
+            <span class="amount-value" id="amtIncome">—</span>
+            <span class="amount-unit">บาท</span>
+          </div>
+          <div class="amount-row">
+            <span class="amount-label">เงินนำส่งกองทุน</span>
+            <span class="amount-value" id="amtFund">—</span>
+            <span class="amount-unit">บาท</span>
+          </div>
+          <div class="amount-row">
+            <span class="amount-label">VAT (7%)</span>
+            <span class="amount-value" id="amtVat">—</span>
+            <span class="amount-unit">บาท</span>
+          </div>
+          <div class="amount-row" id="penaltyRow" style="display:none;">
+            <span class="amount-label">เงินเพิ่ม</span>
+            <span class="amount-value text-danger" id="amtPenalty">—</span>
+            <span class="amount-unit">บาท</span>
+          </div>
+          <div class="amount-row amount-row-total">
+            <span class="amount-label">ยอดรวมสุทธิ</span>
+            <span class="amount-value" id="amtNet">—</span>
+            <span class="amount-unit">บาท</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receipt Card (แสดงเมื่อชำระแล้ว) -->
+      <div class="card" id="receiptCard" style="display:none; margin-bottom:14px;">
+        <div class="section-header" style="margin:-24px -22px 16px;border-radius:12px 12px 0 0;background:linear-gradient(135deg,#1e7d4a,#2d9e5f);">
+          ข้อมูลการชำระเงิน ✅
+        </div>
+        <div class="info-grid">
+          <div class="info-row"><span class="info-label">เลขที่ใบเสร็จ</span><span id="receiptNo">—</span></div>
+          <div class="info-row"><span class="info-label">วันที่รับชำระ</span><span id="receiptDate">—</span></div>
+          <div class="info-row"><span class="info-label">จำนวนเงิน</span><span id="receiptAmount">—</span></div>
+          <div class="info-row"><span class="info-label">เลขที่ใบแจ้งหนี้</span><span id="invoiceNo">—</span></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <a href="/pages/index.html" class="btn btn-secondary">
+          ← กลับหน้าหลัก
+        </a>
+        <button class="btn btn-primary" onclick="window.print()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          พิมพ์
+        </button>
+      </div>
+
+    </div><!-- /submittedState -->
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<script src="../js/api-client.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/status.js"></script>
+</body>
+</html>

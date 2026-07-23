@@ -1,0 +1,839 @@
+/* ════════════════════════════════════════════════════
+   css/index.css — หน้ากรอกรายได้ e-BCS (เขียนใหม่ ไม่มี Supabase)
+   ════════════════════════════════════════════════════ */
+:root {
+  --fs-xs:  11px; --fs-sm: 12px; --fs-md: 13px;
+  --fs-lg:  14px; --fs-xl: 15px; --fs-2xl: 20px;
+}
+/* ── Start Card ─── */
+.start-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); max-width:900px; margin:0 auto; overflow:hidden; }
+.start-card-header { background:linear-gradient(135deg,var(--primary),var(--primary-mid)); padding:16px 22px; display:flex; align-items:center; gap:14px; }
+.start-card-header-icon { background:rgba(255,255,255,.15); border-radius:var(--radius); width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.start-card-header-text h2 { color:#fff; font-size:15px; font-weight:700; margin-bottom:3px; }
+.start-card-header-text p  { color:rgba(255,255,255,.75); font-size:12px; }
+.start-card-body { padding:20px 22px 24px; }
+/* ── Form Fields ─── */
+.form-field { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+.form-field:last-child { border-bottom:none; }
+.form-field-label { font-size:12.5px; color:var(--text-secondary); font-weight:500; min-width:160px; flex-shrink:0; }
+.form-field-input { flex:1; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:7px 10px; font-family:var(--font); font-size:13px; background:var(--surface); outline:none; transition:border-color .15s; }
+.form-field-input:focus { border-color:var(--accent); }
+.form-field-input[readonly] { background:#f5f5f5; color:#555; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:8px; }
+.taxid-status { font-size:11.5px; margin-top:4px; display:block; }
+.btn-start { display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,var(--primary),var(--primary-mid)); color:#fff; border:none; border-radius:var(--radius); padding:12px 32px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 14px rgba(44,61,143,.3); transition:all .2s; }
+.btn-start:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(44,61,143,.4); }
+.start-btn-wrap { display:flex; justify-content:flex-end; margin-top:20px; }
+/* ── Phase 2 ─── */
+.phase2-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); overflow:hidden; }
+/* ── Step Card ─── */
+.step-card-header { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
+.step-card-num { width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; }
+.step-card-title { font-size:14px; font-weight:700; color:var(--primary); }
+.step-card-subtitle { font-size:11.5px; color:var(--text-secondary); margin-top:2px; }
+.step-card-body { padding:16px 20px; }
+.bottom-action { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-top:1px solid var(--border); background:var(--surface-2); }
+/* ── Income Summary ─── */
+.income-summary-row { display:flex; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
+.income-summary-box { flex:1; min-width:200px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:var(--radius); padding:12px 14px; }
+.income-summary-box.editable { background:#fff; }
+.income-summary-box-label { font-size:11.5px; color:var(--text-secondary); margin-bottom:5px; }
+.income-summary-box-value { display:flex; align-items:center; gap:6px; }
+.income-summary-box-value input { flex:1; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:6px 8px; font-family:var(--font); font-size:15px; font-weight:600; text-align:right; color:var(--primary); outline:none; }
+.income-summary-box-value input[readonly] { background:#f5f7fa; border-color:var(--border); }
+.income-summary-box-unit { font-size:12px; color:var(--text-muted); flex-shrink:0; }
+.license-count-badge { display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:99px; padding:4px 12px; font-size:var(--fs-xs); color:var(--primary); font-weight:600; margin-bottom:12px; }
+/* ── Income/Deduct Tables ─── */
+.income-table-wrap,.table-wrap { overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border); margin-top:8px; }
+.income-table, table { width:100%; border-collapse:collapse; font-size:13px; }
+.income-table thead tr, thead tr { background:var(--primary); color:#fff; }
+.income-table thead th, thead th { padding:9px 10px; font-weight:500; font-size:12px; }
+.income-table tbody td, tbody td { padding:8px 10px; border-bottom:1px solid var(--border); }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:var(--accent-bg); }
+.main-page-income-table tbody td { border-right:1px solid var(--border); }
+.main-page-income-table tbody td:last-child { border-right:none; }
+.main-page-indent { padding-left:20px !important; }
+.text-right-input { text-align:right; }
+.unit-baht { text-align:center; color:var(--text-muted); }
+.income-input { width:100%; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:5px 8px; font-family:var(--font); font-size:13px; text-align:right; outline:none; transition:border-color .15s; }
+.income-input:focus { border-color:var(--accent); }
+.income-input[readonly] { background:#f5f7fa; }
+/* ── Step 5 ─── */
+.s5-row { display:flex; align-items:center; gap:10px; font-size:var(--fs-md); }
+.s5-label { color:var(--text-secondary); flex-shrink:0; }
+.s5-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; }
+.s5-net-row { display:flex; justify-content:space-between; align-items:center; background:var(--primary); border-radius:var(--radius); padding:16px 20px; margin-bottom:14px; }
+.s5-net-label { font-size:14px; font-weight:600; color:#fff; }
+/* ── Doc Upload ─── */
+.doc-upload-header { display:grid; grid-template-columns:1fr 100px 1fr; background:var(--primary); color:#fff; font-size:12px; font-weight:600; padding:8px 12px; border-radius:var(--radius-sm) var(--radius-sm) 0 0; }
+.doc-row { display:grid; grid-template-columns:1fr 100px 1fr auto; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+.doc-row:last-child { border-bottom:none; }
+.doc-row:hover { background:var(--accent-bg); }
+.doc-row-name { color:var(--text-primary); }
+.doc-row-btn  { text-align:center; }
+.doc-row-file { font-size:12px; color:var(--text-muted); word-break:break-all; }
+/* ── Modal ─── */
+.modal-tbl-body td { padding:8px 12px; border-bottom:1px solid var(--border); }
+.td-header { background:#f0fdf4; font-weight:600; color:var(--primary); padding:7px 15px; }
+.td-indent { padding-left:28px !important; }
+.td-center { text-align:center; }
+.input-val { border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:5px 8px; font-family:var(--font); font-size:13px; width:140px; text-align:right; outline:none; }
+.input-val:focus { border-color:var(--accent); }
+/* ── Phase ─── */
+.phase-enter { animation:fadeIn .25s ease-out; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.btn-confirm { display:inline-flex; align-items:center; gap:6px; }
+.btn-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; display:none; }
+.btn-spinner.show { display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+/* ── Responsive ─── */
+@media(max-width:768px) {
+  .form-grid,.s5-grid { grid-template-columns:1fr; }
+  .income-summary-row { flex-direction:column; }
+}
+
+/* ── Phase 1 Info Card ─── */
+.ph1-info-card {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-light);
+  border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.ph1-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px 28px;
+}
+.ph1-info-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; padding: 4px 0;
+}
+.ph1-info-label {
+  color: var(--text-secondary); min-width: 130px;
+  flex-shrink: 0; font-weight: 500;
+}
+.ph1-info-value { color: var(--text-primary); font-weight: 600; }
+
+/* ── station input text left ─── */
+#license-table-body input[type="text"],
+.table-station-input { text-align: left !important; }
+
+/* ── modal licensee info ─── */
+.modal-info-section {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-light);
+  border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 14px;
+}
+.modal-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px 20px;
+}
+.modal-info-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.modal-info-label { color: var(--text-secondary); min-width: 110px; flex-shrink: 0; }
+
+
+/* ── CSS จาก index.html เดิม (ครบทุก class) ── */
+
+    /* ── Page-specific overrides ─────────────────────────────── */
+    @keyframes btn-spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
+    .btn-spinner {
+      display:inline-block;width:14px;height:14px;
+      border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;
+      border-radius:50%;animation:btn-spin .7s linear infinite;flex-shrink:0;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+    .phase-enter { animation:fadeIn .25s ease-out; }
+
+    /* ── Top nav redesign ────────────────────────────────────── */
+    .topnav {
+      background: #1e2d5e;
+      height: 60px; padding: 0 28px;
+      box-shadow: 0 2px 16px rgba(27,45,122,0.3);
+    }
+    .brand-nbtc-text { font-size:12px; color:rgba(255,255,255,0.65); letter-spacing:.04em; font-weight:400; }
+    .brand-ebcs {
+      background:#fff; color:#1e2d5e; border-radius:6px;
+      padding:4px 13px; font-size:15px; font-weight:700;
+      box-shadow:0 2px 8px rgba(0,0,0,0.15);
+      letter-spacing:.04em;
+    }
+    .brand-ebcs .e-dot { color:#2e86ab; }
+
+    /* ── Breadcrumb ──────────────────────────────────────────── */
+    .breadcrumb-bar {
+      background:#fff; border-bottom:1px solid #e2e8f0;
+      padding:9px 28px; font-size:12px; color:#555;
+    }
+    .breadcrumb-bar a { color:#1e2d5e; font-weight:500; text-decoration:none; }
+
+    /* ── Main layout ─────────────────────────────────────────── */
+    body { background:#f0f0f0; line-height: 1.7; }
+    .page-wrap { display:flex; min-height:calc(100vh - 95px); }
+    .main { flex:1; padding:24px 28px; max-width:1040px; margin:0 auto; width:100%; }
+
+    /* ── Phase 1: Start card ─────────────────────────────────── */
+    .start-card {
+      background:#fff; border-radius:16px;
+      border:1px solid #e2e8f0;
+      box-shadow:0 4px 24px rgba(44,61,143,0.08);
+      overflow:hidden; margin-bottom:20px;
+    }
+    .start-card-header {
+      background:#1e2d5e;
+      padding:20px 28px;
+      display:flex; align-items:center; gap:14px;
+    }
+    .start-card-header-icon {
+      width:44px;height:44px;border-radius:12px;
+      background:rgba(255,255,255,0.15);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .start-card-header-text h2 { font-size:16px;font-weight:700;color:#fff;margin-bottom:2px; }
+    .start-card-header-text p  { font-size:12px;color:rgba(255,255,255,0.7); }
+    .start-card-body { padding:28px 28px 24px; }
+
+    /* ref no banner */
+    .ref-banner {
+      background:#f5f7fa;
+      border:1px solid #c8d0db; border-radius:10px;
+      padding:12px 18px; margin-bottom:22px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .ref-banner-label { font-size:22px;color:#555;font-weight:700;min-width:80px; }
+    .ref-banner-value {
+      font-size:15px;font-weight:700;color:#1e2d5e;letter-spacing:.06em;
+      font-family:'Sarabun',monospace;
+    }
+    .ref-banner-value input {
+      background:transparent;border:none;outline:none;
+      font-size:15px;font-weight:700;color:#1e2d5e;letter-spacing:.06em;
+      font-family:'Sarabun',sans-serif;width:200px;
+    }
+
+    /* form grid */
+    .form-grid {
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:0 40px;
+    }
+    .form-field {
+      padding:10px 0;
+      border-bottom:1px solid #f0f0f0;
+      display:flex;align-items:center;gap:10px;
+    }
+    .form-field:last-child { border-bottom:none; }
+    .form-field-label {
+      font-size:12px;font-weight:500;color:#555;
+      min-width:126px;flex-shrink:0;
+    }
+    .form-field-input {
+      flex:1;
+      border:1px solid #e2e8f0; border-radius:8px;
+      padding:8px 12px; font-family:'Sarabun',sans-serif;
+      font-size:13px; color:#333;
+      background:#fff; transition:border-color .15s,box-shadow .15s;
+      width:100%;
+    }
+    .form-field-input:focus {
+      border-color:#2e86ab;outline:none;
+      box-shadow:0 0 0 3px rgba(90,139,250,0.12);
+    }
+    .form-field-input:read-only,
+    .form-field-input[disabled] {
+      background:#f8fbff;color:#333;cursor:default;
+    }
+    .form-field-input.auto-filled { background:#f5f7fa;color:#333;font-weight:500; }
+    select.form-field-input {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236A6E83' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .taxid-status { display:block; font-size:11px; margin-top:4px; }
+
+    /* start button */
+    .start-btn-wrap { padding:6px 0 0; display:flex; justify-content:flex-end; }
+    .btn-start {
+      background:#2e86ab;
+      color:#fff; border:none; border-radius:10px;
+      padding:11px 28px; font-family:'Sarabun',sans-serif;
+      font-size:14px; font-weight:600; cursor:pointer;
+      display:inline-flex;align-items:center;gap:8px;
+      box-shadow:0 4px 14px rgba(90,139,250,0.4);
+      transition:all .2s;
+    }
+    .btn-start:hover {
+      box-shadow:0 6px 20px rgba(90,139,250,0.5);
+      transform:translateY(-1px);
+    }
+
+    /* ── Info bar (Phase 2) ──────────────────────────────────── */
+    .info-bar {
+      background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+      padding:14px 20px;margin-bottom:16px;
+      display:flex;flex-wrap:wrap;gap:6px 28px;
+      box-shadow:0 2px 8px rgba(44,61,143,0.06);
+    }
+    .info-chip { display:flex;align-items:center;gap:6px;font-size:12px; }
+    .info-chip-label { color:#888;font-weight:500; }
+    .info-chip-value { color:#1e2d5e;font-weight:600; }
+    .info-chip-divider { width:1px;height:16px;background:#e2e8f0;align-self:center; }
+
+    /* ── Stepper redesign ────────────────────────────────────── */
+    .stepper-outer {
+      background:#fff;
+      padding:16px 20px 0;margin-bottom:16px;
+    }
+    .stepper { min-width:480px;padding-bottom:16px; }
+    .stepper::before { background:#f0f0f0; }
+    .step-circle {
+      width:36px;height:36px;border-radius:50%;
+      background:#f0f0f0;color:#888;
+      border:2px solid #e2e8f0;
+      font-size:13px;font-weight:700;
+    }
+    .step.active .step-circle {
+      background:#2e86ab;
+      border-color:#2e86ab;color:#fff;
+      box-shadow:0 4px 12px rgba(90,139,250,0.35);
+    }
+    .step.done .step-circle { background:#16a34a;border-color:#16a34a;color:#fff; }
+    .step-label { font-size:11px;color:#888;max-width:76px; }
+    .step.active .step-label { color:#1e2d5e;font-weight:600; }
+
+    /* ── Section header redesign ─────────────────────────────── */
+    .section-header {
+      background:#1e2d5e;
+      padding:11px 18px;font-size:13.5px;
+    }
+
+    /* ── Form section redesign ───────────────────────────────── */
+    .form-section {
+      background:#fff;border:1px solid #e2e8f0;
+      border-top:none;border-radius:0 0 12px 12px;
+      padding:18px 20px 20px;
+      box-shadow:0 4px 16px rgba(44,61,143,0.06);
+    }
+
+    /* ── Table redesign ──────────────────────────────────────── */
+    .table-wrap {
+      border-radius:10px;overflow-x:auto;overflow-y:hidden;
+      border:1px solid #e2e8f0;
+      box-shadow:0 2px 8px rgba(44,61,143,0.06);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead tr { background:#1e2d5e; }
+    thead th { padding:10px 11px;font-size:12px;letter-spacing:.02em; border:1px solid #16233f; }
+    tbody td { padding:9px 11px; border:1px solid #e2e8f0; }
+    tbody tr:hover td { background:#f5f7fa; }
+
+    /* ── Btn tweaks ──────────────────────────────────────────── */
+    .btn-primary {
+      background:#2e86ab;
+      box-shadow:0 3px 10px rgba(90,139,250,0.3);
+    }
+    .btn-primary:hover {
+      background:#236a8a;
+      box-shadow:0 4px 14px rgba(90,139,250,0.4);
+    }
+    .btn-secondary {
+      background:#fff;color:#1e2d5e;
+      border:1px solid #c8d0db;
+    }
+    .btn-secondary:hover { background:#f5f7fa; }
+    .btn-confirm {
+      background:#16a34a!important;
+      box-shadow:0 3px 10px rgba(30,125,74,0.3)!important;
+    }
+
+    /* ── Modal tweaks ────────────────────────────────────────── */
+    .modal-box { border-radius:16px; }
+    .modal-header { border-radius:16px 16px 0 0; background:#1e2d5e; }
+
+    /* ── Phase 3 confirm card ────────────────────────────────── */
+    .confirm-amount-card {
+      background:#1e2d5e;
+      border-radius:12px;padding:18px 22px;margin-bottom:14px;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+
+    /* ── Phase 4 success ─────────────────────────────────────── */
+    .success-icon-wrap {
+      background:#f0fdf4;
+      border-radius:50%;width:100px;height:100px;
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 20px;
+      box-shadow:0 4px 20px rgba(30,125,74,0.2);
+    }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    .toast { border-radius:10px;backdrop-filter:blur(8px); }
+
+    /* ── App alert ───────────────────────────────────────────── */
+    .modal-box { border-radius:16px; overflow:hidden; }
+
+    /* ── Income table anno ───────────────────────────────────── */
+    .step-anno { color:#1e2d5e; }
+    .anno-num { background:#2e86ab; }
+
+    /* flatpickr */
+    .flatpickr-calendar { border-radius:12px!important; box-shadow:0 8px 32px rgba(44,61,143,0.18)!important; }
+    .flatpickr-day.selected,.flatpickr-day.selected:hover { background:#2e86ab!important;border-color:#2e86ab!important; }
+    .flatpickr-day:hover { background:#f5f7fa!important; }
+
+    /* responsive */
+    @media(max-width:900px) {
+      .form-grid { grid-template-columns:1fr; }
+      .main { padding:16px 14px; }
+    }
+    @media(max-width:600px) {
+      .topnav { padding:0 14px; }
+      .start-card-body { padding:18px 14px; }
+    }
+  
+    :root {
+      --fs-xs:   11px; --fs-sm:   12px; --fs-base: 13px;
+      --fs-md:   14px; --fs-lg:   15px; --fs-xl:   18px; --fs-2xl: 22px;
+    }
+    body { font-size: var(--fs-base); }
+    .info-bar { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:0; margin-bottom:16px; box-shadow:0 2px 12px rgba(44,61,143,0.07); overflow:hidden; display:block !important; }
+    .info-bar-header { background:#1e2d5e; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .info-bar-header-title { font-size:12px; font-weight:600; color:#fff; display:flex; align-items:center; gap:7px; }
+    .info-bar-ref { font-size:var(--fs-md); font-weight:700; color:#fff; letter-spacing:.06em; background:rgba(255,255,255,0.15); padding:3px 12px; border-radius:6px; }
+    .info-bar-grid { display:grid; grid-template-columns:repeat(3,1fr); }
+    .info-bar-cell { padding:12px 20px; border-right:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0; }
+    .info-bar-cell:nth-child(3n) { border-right:none; }
+    .info-bar-cell:nth-last-child(-n+3) { border-bottom:none; }
+    .info-bar-cell-label { font-size:var(--fs-xs); color:#888; font-weight:500; margin-bottom:3px; text-transform:uppercase; letter-spacing:.04em; }
+    .info-bar-cell-value { font-size:var(--fs-base); color:#333; font-weight:500; }
+    .info-bar-cell-value.highlight { color:#1e2d5e; font-weight:700; }
+    .info-bar-cell-value.danger { color:#e53e3e; font-weight:600; }
+    .section-header { border-radius:14px 14px 0 0; display:flex; align-items:center; gap:8px; font-size:var(--fs-md); padding:12px 20px; }
+    .section-header-icon { width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .stepper-outer { background:#fff; padding:14px 20px 0; margin-bottom:0; overflow-x:auto; }
+    .stepper { min-width:480px; padding-bottom:14px; }
+    .step-label { font-size:var(--fs-xs); }
+    .form-section { border-radius:0 0 14px 14px; border:1px solid #e2e8f0; border-top:none; padding:20px 22px 22px; margin-bottom:16px; }
+    .step-anno { font-size:var(--fs-base); font-weight:600; color:#1e2d5e; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:8px; }
+    .anno-num { width:24px; height:24px; border-radius:50%; font-size:var(--fs-xs); font-weight:700; }
+    .form-label { font-size:var(--fs-sm); color:#555; min-width:160px; flex-shrink:0; font-weight:500; }
+    .form-input { font-size:var(--fs-base); border-radius:6px; padding:8px 12px; }
+    .form-unit { font-size:var(--fs-sm); color:#888; }
+    .s5-row { font-size:var(--fs-sm); gap:10px; }
+    .s5-label { font-size:var(--fs-sm); color:#555; min-width:200px; }
+    .s5-net-row { background:#1e2d5e; border-radius:10px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .s5-net-label { color:rgba(255,255,255,0.8); font-size:var(--fs-sm); }
+    .s5-net-value { color:#fff; font-size:var(--fs-xl); font-weight:700; }
+    .table-wrap { border-radius:12px; }
+    thead th { font-size:var(--fs-xs); padding:10px 12px; }
+    tbody td { font-size:var(--fs-sm); padding:9px 12px; }
+    .bottom-action { margin-top:16px; padding-top:14px; border-top:1px solid #f0f0f0; }
+    .btn { font-size:var(--fs-base); border-radius:8px; padding:8px 18px; }
+    .btn-sm { font-size:var(--fs-sm); padding:6px 14px; }
+    .auditor-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .auditor-field label { font-size:var(--fs-xs); font-weight:600; color:#555; text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:6px; }
+    .auditor-field input { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-family:'Sarabun',sans-serif; font-size:var(--fs-base); color:#333; transition:border-color .15s,box-shadow .15s; }
+    .auditor-field input:focus { border-color:#2e86ab; outline:none; box-shadow:0 0 0 3px rgba(90,139,250,0.12); }
+    .doc-upload-header { display:grid; grid-template-columns:1fr 110px 200px; background:#1e2d5e; color:#fff; padding:9px 16px; font-size:var(--fs-xs); font-weight:600; letter-spacing:.04em; text-transform:uppercase; border-radius:10px 10px 0 0; }
+    .doc-row { font-size:var(--fs-sm); padding:10px 16px; }
+    .p3-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; box-shadow:0 4px 16px rgba(44,61,143,0.07); margin-bottom:14px; }
+    .p3-card-hd { background:#1e2d5e; padding:12px 20px; display:flex; align-items:center; gap:10px; }
+    .p3-card-hd-title { font-size:var(--fs-md); font-weight:600; color:#fff; }
+    .p3-card-hd-sub { font-size:var(--fs-xs); color:rgba(255,255,255,0.7); margin-top:1px; }
+    .p3-card-body { padding:16px 20px; }
+    .p3-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 28px; font-size:var(--fs-sm); }
+    .p3-info-row { display:flex; gap:8px; align-items:flex-start; }
+    .p3-info-label { color:#888; min-width:130px; font-weight:500; }
+    .p3-info-value { color:#333; font-weight:600; }
+    .p3-amount-band { background:#1e2d5e; border-radius:12px; padding:18px 24px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+    .p3-amount-label { color:rgba(255,255,255,0.8); font-size:var(--fs-sm); }
+    .p3-amount-sub { color:rgba(255,255,255,0.6); font-size:var(--fs-xs); margin-top:3px; }
+    .p3-amount-value { font-size:var(--fs-2xl); font-weight:700; color:#fff; letter-spacing:.03em; }
+    .p3-amount-unit { color:rgba(255,255,255,0.7); font-size:var(--fs-sm); margin-top:2px; text-align:right; }
+    .p3-license-table { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    .p3-license-hd { display:grid; grid-template-columns:36px 1fr 130px 100px 140px; font-size:var(--fs-xs); font-weight:700; color:#555; background:#f8fbff; padding:8px 12px; border-bottom:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; }
+    .p3-license-row { display:grid; grid-template-columns:36px 1fr 130px 100px 140px; font-size:var(--fs-sm); padding:9px 12px; border-bottom:1px solid #f0f0f0; align-items:center; }
+    .p3-license-row:last-child { border-bottom:none; }
+    .p4-success-wrap { text-align:center; padding:40px 24px; }
+    .p4-icon { width:90px; height:90px; border-radius:50%; background:#f0fdf4; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 6px 24px rgba(30,125,74,0.2); }
+    .p4-title { font-size:var(--fs-xl); font-weight:700; color:#333; margin-bottom:6px; }
+    .p4-sub { font-size:var(--fs-base); color:#888; margin-bottom:28px; }
+    .p4-cards { display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom:28px; }
+    .p4-ref-card { background:#1e2d5e; border-radius:12px; padding:16px 28px; text-align:center; }
+    .p4-ref-label { font-size:var(--fs-xs); color:rgba(255,255,255,0.7); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em; }
+    .p4-ref-value { font-size:var(--fs-2xl); font-weight:700; color:#fff; letter-spacing:.06em; }
+    .p4-detail-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 22px; text-align:left; font-size:var(--fs-sm); min-width:220px; }
+    .p4-detail-row { display:flex; gap:10px; margin-bottom:6px; }
+    .p4-detail-row:last-child { margin-bottom:0; }
+    .p4-detail-label { color:#888; min-width:120px; }
+    .p4-detail-value { color:#333; font-weight:600; }
+    .p4-detail-value.success { color:#16a34a; font-size:var(--fs-md); font-weight:700; }
+    #step1-mismatch-banner { border-radius:8px !important; font-size:var(--fs-sm) !important; }
+    #penalty-alert-banner  { border-radius:8px !important; font-size:var(--fs-sm) !important; }
+    .income-table thead th { font-size:var(--fs-xs); }
+    .income-table tbody td { font-size:var(--fs-sm); }
+    /* ── Step 2: เส้นตาราง (grid lines) ───────────────────────── */
+    .income-table-wrap { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    .income-table thead th,
+    .income-table tbody td { border:1px solid #e2e8f0; }
+    .income-table thead th:first-child,
+    .income-table tbody td:first-child { border-left:none; }
+    .income-table thead th:last-child,
+    .income-table tbody td:last-child { border-right:none; }
+    .income-table thead tr th:first-child { border-top:none; }
+    .income-input { font-size:var(--fs-sm) !important; }
+    @media(max-width:900px){.info-bar-grid{grid-template-columns:1fr 1fr;}.auditor-grid{grid-template-columns:1fr;}.p3-info-grid{grid-template-columns:1fr;}}
+    @media(max-width:600px){.info-bar-grid{grid-template-columns:1fr;}}
+
+    /* ── Phase 2 card wrapper: รวม header ฟ้า + stepper + step content
+         ให้เป็นแผ่นเดียวกัน (เส้นขอบ/เงาเดียว ไม่มีรอยต่อ) ────────── */
+    .phase2-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 20px rgba(44,61,143,0.08);
+    }
+
+    /* ── Step card wrapper (อยู่ภายใน .phase2-card แล้ว จึงไม่มี
+         border/shadow/radius ของตัวเอง ป้องกันไม่ให้ดูเป็นคนละแผ่น) ── */
+    .step-card {
+      background: #fff;
+    }
+    .step-card-header {
+      background: #fff;
+      padding: 16px 22px 12px;
+      display: flex; align-items: center; gap: 14px;
+      border-bottom: 2px solid #f0f0f0;
+      border-top: 1px solid #f0f0f0;
+    }
+    .step-card-num {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: #2e86ab;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-md); font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .step-card-title {
+      font-size: var(--fs-md); font-weight: 700; color: #333;
+      letter-spacing: .01em;
+    }
+    .step-card-subtitle {
+      font-size: var(--fs-xs); color: #888;
+      margin-top: 2px;
+    }
+    .step-card-body {
+      padding: 22px 22px 20px;
+    }
+
+    /* ── Income summary row (step 1 top) ─────────────────────── */
+    .income-summary-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-bottom: 18px;
+    }
+    .income-summary-box {
+      background: #f8fbff;
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .income-summary-box.editable {
+      border: 1.5px solid #2e86ab;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(90,139,250,0.08);
+    }
+    .income-summary-box.editable .income-summary-box-label::after {
+      content: " *"; color: #2e86ab;
+    }
+    .income-summary-box-label {
+      font-size: var(--fs-xs); color: #888; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;
+    }
+    .income-summary-box-value {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .income-summary-box-value input {
+      font-size: var(--fs-lg); font-weight: 700; color: #1e2d5e;
+      border: none; outline: none; background: transparent;
+      font-family: 'Sarabun', sans-serif; width: 160px; text-align: right;
+    }
+    .income-summary-box-value input[readonly] { color: #1e2d5e; }
+    .income-summary-box-unit { font-size: var(--fs-xs); color: #888; }
+    .income-summary-box-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: #2e86ab;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .license-count-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #f5f7fa; border: 1px solid #c8d0db; border-radius: 6px;
+      padding: 4px 10px; font-size: var(--fs-xs); color: #1e2d5e; font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    /* ── Status badge (Step 1 table — text only) ─────────────── */
+    .lic-status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 99px;
+      font-size: var(--fs-xs); font-weight: 600;
+    }
+    .lic-status-active   { background:#f0fdf4; color:#16a34a; }
+    .lic-status-ended    { background:#fffbeb; color:#D97706; }
+    .lic-status-cancelled,.lic-status-revoked { background:#fff0f0; color:#e53e3e; }
+
+    /* ── Navigation action bar ───────────────────────────────── */
+    .step-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 22px; border-top: 1px solid #f0f0f0;
+      background: #fafafa;
+    }
+    .btn-nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 8px;
+      border: 1px solid #e2e8f0; background: #fff;
+      font-family:'Sarabun',sans-serif; font-size:var(--fs-base);
+      color:#555; cursor:pointer; transition:all .15s;
+    }
+    .btn-nav-back:hover { background:#f0f0f0; color:#1e2d5e; }
+    .btn-nav-next {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 22px; border-radius: 8px; border: none;
+      background: #2e86ab;
+      font-family:'Sarabun',sans-serif; font-size:var(--fs-base);
+      font-weight:600; color:#fff; cursor:pointer;
+      box-shadow: 0 3px 10px rgba(90,139,250,0.35);
+      transition:all .15s;
+    }
+    .btn-nav-next:hover { box-shadow:0 5px 16px rgba(90,139,250,0.45); transform:translateY(-1px); }
+    .btn-nav-confirm {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 22px; border-radius: 8px; border: none;
+      background: #16a34a;
+      font-family:'Sarabun',sans-serif; font-size:var(--fs-base);
+      font-weight:600; color:#fff; cursor:pointer;
+      box-shadow: 0 3px 10px rgba(30,125,74,0.3);
+      transition:all .15s;
+    }
+    .btn-nav-confirm:hover { box-shadow:0 5px 16px rgba(30,125,74,0.4); }
+
+    /* ── info-bar font sizes match section-header ────────────── */
+    .info-bar-cell-value { font-size: var(--fs-base) !important; }
+    .info-bar-cell-value.highlight { font-size: var(--fs-md) !important; }
+    .info-bar-ref { font-size: var(--fs-md) !important; }
+
+    /* ── Step 5 s5 rows ─────────────────────────────────────── */
+    .s5-input-box {
+      display:flex; align-items:center; gap:8px;
+      background:#f8fbff; border:1px solid #e2e8f0; border-radius:8px;
+      padding:8px 12px; flex:1; max-width:220px;
+    }
+    .s5-input-box input {
+      border:none;outline:none;background:transparent;
+      font-family:'Sarabun',sans-serif; font-size:var(--fs-base);
+      text-align:right; width:100%; color:#1e2d5e; font-weight:600;
+    }
+    .s5-input-unit { font-size:var(--fs-xs); color:#888; flex-shrink:0; }
+
+    /* ── override bottom-action with step-nav ────────────────── */
+    .step-card .bottom-action {
+      margin: 0; padding: 14px 22px;
+      border-top: 1px solid #f0f0f0; background: #fafafa;
+      border-radius: 0 0 16px 16px;
+    }
+    .step-card .bottom-action .btn {
+      border-radius: 8px;
+    }
+    .step-card .bottom-action .btn-primary {
+      background: #2e86ab;
+      box-shadow: 0 3px 10px rgba(90,139,250,0.3);
+    }
+    .step-card .bottom-action .btn-secondary {
+      background:#fff; color:#555; border:1px solid #e2e8f0;
+    }
+
+    /* ── Doc upload modernize ────────────────────────────────── */
+    #doc-upload-list { border-radius:0 0 12px 12px; overflow:hidden; border:1px solid #e2e8f0; border-top:none; }
+    .doc-row { transition: background .12s; }
+    .doc-row:last-child { border-radius:0 0 12px 12px; }
+/* ════════════════════════════════════════════════════
+   PATCH — ขยาย container + ชิดซ้าย + thead สีน้ำเงิน
+   ════════════════════════════════════════════════════ */
+
+/* 1. ขยาย main container ให้กว้างขึ้น */
+.main {
+  max-width: 1280px !important;
+  padding: 20px 24px !important;
+}
+
+/* start-card ขยายตาม main */
+.start-card {
+  max-width: 100% !important;
+}
+
+/* 2. ข้อความชิดซ้ายทุก step */
+
+/* step-card-body ทุก step */
+.step-card-body,
+.step-card-body * {
+  text-align: left;
+}
+
+/* thead ยกเว้น — ให้ CSS เฉพาะตารางดูแลเอง */
+.step-card-body thead th {
+  text-align: center;
+}
+
+/* income table col 2-3 ให้ center */
+.income-table thead th:not(:first-child),
+.main-page-income-table thead th:not(:first-child) {
+  text-align: center !important;
+}
+
+/* step 2 — override inline style text-align:left ให้ชัด */
+.main-page-indent {
+  text-align: left !important;
+}
+
+/* modal table */
+.modal-tbl-body td.td-indent {
+  text-align: left !important;
+}
+
+/* step 5 label */
+.s5-label {
+  text-align: left !important;
+}
+
+/* 3. thead สีน้ำเงิน ตัวอักษรขาว — ครอบทุกตารางใน step-card */
+.step-card thead tr,
+.phase2-card thead tr,
+#stepContent1 thead tr,
+#stepContent2 thead tr,
+#stepContent3 thead tr,
+#stepContent5 thead tr {
+  background: #1e2d5e !important;
+  color: #fff !important;
+}
+
+.step-card thead th,
+.phase2-card thead th,
+#stepContent1 thead th,
+#stepContent2 thead th,
+#stepContent3 thead th,
+#stepContent5 thead th {
+  color: #fff !important;
+  font-weight: 600 !important;
+  background: #1e2d5e !important;
+  border-color: #16233f !important;
+}
+
+/* income-table (step 2) thead */
+.income-table thead tr {
+  background: #1e2d5e !important;
+}
+.income-table thead th {
+  color: #fff !important;
+  background: #1e2d5e !important;
+  border-color: #16233f !important;
+}
+
+/* modal income table thead */
+#incomeModal thead tr,
+#deductModal thead tr {
+  background: #1e2d5e !important;
+}
+#incomeModal thead th,
+#deductModal thead th {
+  color: #fff !important;
+  background: #1e2d5e !important;
+}
+
+/* td-header (หมวดย่อยใน modal) — คงสีเขียวอ่อนไว้ ไม่ใช่ thead */
+.modal-tbl-body tr.td-header-row td,
+td.td-header {
+  background: #f0fdf4 !important;
+  color: #1e2d5e !important;
+}
+
+/* 4. step 3 — deduct table header */
+#stepContent3 .table-wrap thead tr {
+  background: #1e2d5e !important;
+}
+#stepContent3 .table-wrap thead th {
+  color: #fff !important;
+  background: #1e2d5e !important;
+  border-color: #16233f !important;
+}
+
+/* 5. step 5 — summary table header */
+#stepContent5 .table-wrap thead tr {
+  background: #1e2d5e !important;
+}
+#stepContent5 .table-wrap thead th {
+  color: #fff !important;
+  background: #1e2d5e !important;
+  border-color: #16233f !important;
+}
+
+/* 6. phase 3 license list header — ปรับสีให้ตรงกัน */
+#phase3 [style*="grid-template-columns"] {
+  background: #1e2d5e !important;
+  color: #fff !important;
+}
+
+/* 7. doc-upload-header สีน้ำเงินเข้ม (มีอยู่แล้ว แต่ reinforce) */
+.doc-upload-header {
+  background: #1e2d5e !important;
+  color: #fff !important;
+}
+
+/* 8. form-grid ชิดซ้าย */
+.form-grid .form-field-label,
+.form-field-label {
+  text-align: left !important;
+}
+
+/* 9. info-bar header ชิดซ้าย */
+.info-bar-cell-label,
+.info-bar-cell-value {
+  text-align: left !important;
+}
+
+/* 10. step-card-header title/subtitle ชิดซ้าย */
+.step-card-title,
+.step-card-subtitle {
+  text-align: left !important;
+}
+
+/* 11. bottom-action ยังคง space-between */
+.bottom-action,
+.step-card .bottom-action {
+  text-align: unset !important;
+}
+
+/* 12. ป้องกัน input text-align ถูก override โดย * selector */
+.step-card-body input[type="text"],
+.step-card-body input[type="number"] {
+  text-align: right;
+}
+.step-card-body input.table-station-input,
+.step-card-body input[placeholder="สถานี"],
+#license-table-body input[type="text"] {
+  text-align: left !important;
+}
+
+/* 13. รายได้รวมตามงบการเงิน / ตามใบอนุญาต — input ชิดขวา */
+#total-income-financial,
+#total-income-license {
+  text-align: right !important;
+}
+
+/* 14. modal income input ชิดขวา */
+.modal-calc-input,
+.input-val,
+.income-input {
+  text-align: right !important;
+}

@@ -1,0 +1,83 @@
+/* ════════════════════════════════════════════════════
+   css/status.css — หน้าสถานะการนำส่ง
+   ════════════════════════════════════════════════════ */
+
+/* ── Loading ─── */
+.status-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 20px; color: var(--text-muted);
+  gap: 14px;
+}
+.status-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Not Submitted Card ─── */
+.status-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  max-width: 480px; margin: 0 auto;
+  padding: 40px 32px;
+  text-align: center;
+}
+.status-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+.status-icon-pending { background: #FEF9C3; color: #92400E; }
+.status-icon-success { background: #DCFCE7; color: #15803D; }
+.status-icon-paid    { background: #DBEAFE; color: #1D4ED8; }
+.status-title    { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+.status-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+
+/* ── Status Banner ─── */
+.status-banner {
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 16px; color: #fff;
+  flex-wrap: wrap;
+}
+.status-banner.draft    { background: linear-gradient(135deg, #92400E, #B45309); }
+.status-banner.pending  { background: linear-gradient(135deg, #1D4ED8, #3B82F6); }
+.status-banner.paid     { background: linear-gradient(135deg, #15803D, #22C55E); }
+.status-banner.overdue  { background: linear-gradient(135deg, #B91C1C, #EF4444); }
+.status-banner-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.status-banner-text { flex: 1; }
+.status-banner-title { font-size: 17px; font-weight: 700; }
+.status-banner-sub   { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 3px; }
+.status-banner-ref   { text-align: right; flex-shrink: 0; }
+
+/* ── Amount Grid ─── */
+.amount-grid { display: flex; flex-direction: column; gap: 10px; }
+.amount-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.amount-row:last-child { border-bottom: none; }
+.amount-label { color: var(--text-secondary); font-size: 13px; flex: 1; }
+.amount-value { font-size: 15px; font-weight: 600; color: var(--primary); text-align: right; min-width: 140px; }
+.amount-unit  { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.amount-row-total {
+  background: var(--accent-bg);
+  border-radius: var(--radius);
+  padding: 12px 14px !important;
+  margin-top: 4px;
+}
+.amount-row-total .amount-label { font-weight: 700; color: var(--primary); font-size: 14px; }
+.amount-row-total .amount-value { font-size: 20px; color: var(--primary); }
+.text-danger { color: var(--danger) !important; }
