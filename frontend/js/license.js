@@ -7,12 +7,6 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * บังคับรูปแบบ "เลขที่ใบอนุญาต" ให้เป็น xx-xxxxxx-xxxx-xx เสมอ (2-6-4-2 ตัวอักษร
- * คั่นด้วย "-") โดยแปลงค่าที่พิมพ์แบบ real-time ทุกครั้งที่มีการกด (เหมือน mask
- * ของช่องกรอกเลขบัตรเครดิต) — ตัดอักขระที่ไม่ใช่ตัวอักษร/เลขออก แปลงเป็นตัวพิมพ์
- * ใหญ่ จำกัดความยาวไม่เกิน 14 ตัวอักษร (ไม่รวม "-") แล้วแทรก "-" ให้ตรงตำแหน่ง
- * พร้อมรักษาตำแหน่ง cursor เดิมไว้ไม่ให้กระโดดไปท้ายสุดทุกครั้งที่พิมพ์
- *
  * @param {HTMLInputElement} inputEl - input element ของช่องเลขที่ใบอนุญาต
  * @returns {string} ค่าที่จัดรูปแบบแล้ว สำหรับส่งต่อให้ updateRowText()
  */
@@ -77,12 +71,6 @@ async function startProcess(){
     return;
   }
 
-  // เดิมโค้ดตรงนี้เขียน appState.refNo = '' แบบไม่มีเงื่อนไข ซึ่งจะลบทิ้ง
-  // รหัสอ้างอิงที่ autoFillFromTaxId() (index.html) เพิ่งดึงมาจาก
-  // taxpayer_master สำเร็จไปแล้วก่อนหน้านี้ — ทำให้ appState.refNo กลาย
-  // เป็นค่าว่างทั้งที่จริงๆ มีรหัสอ้างอิงอยู่แล้ว จึงเปลี่ยนมาอ่านค่าจาก
-  // ช่อง #ph1-ref (ซึ่งแสดงรหัสที่ fill ไว้แล้วอยู่) แทน ถ้าช่องนั้นยังเป็น
-  // placeholder ข้อความแจ้งเตือน (ไม่ใช่รหัสจริง) ค่อยถือว่ายังไม่มีรหัส
   const _refFieldVal = (document.getElementById('ph1-ref')?.value || '').trim();
   const _isPlaceholderRef = !_refFieldVal || _refFieldVal === '—' || _refFieldVal.includes('กรุณากรอก');
   appState.refNo = _isPlaceholderRef ? '' : _refFieldVal;
@@ -178,15 +166,6 @@ function generateRows() {
     flatpickr(".table-datepicker", {
       locale: "th",
       dateFormat: "d/m/Y",
-      // 🌟 [แก้บั๊ก] เดิมโค้ดเอา instance.currentYear + 543 ไปแสดงทุกครั้งที่
-      // เปิด/เปลี่ยนเดือน/ปี — ใช้ได้แค่ตอนฟิลด์ "ว่าง" (flatpickr ตั้งมุมมอง
-      // เป็นวันนี้ตามปี ค.ศ. จริง) แต่ถ้าฟิลด์มีค่าอยู่แล้ว เช่น "01/01/2560"
-      // flatpickr จะอ่านเลข 2560 เป็นปีของตัวเองตรงๆ (ไม่รู้จัก พ.ศ.) ทำให้
-      // instance.currentYear เป็น 2560 อยู่แล้ว การเอาไป +543 ซ้ำจึงกลายเป็น
-      // เลขปีที่ผิดเพี้ยนไปไกล (บั๊กที่เจอ) วิธีแก้ที่ถูกต้องคือปรับ "จุดเริ่ม
-      // มุมมอง" ของปฏิทินให้เป็น พ.ศ. ตั้งแต่ต้นเฉพาะตอนยังไม่มีวันที่ถูกเลือก
-      // (ฟิลด์ว่าง) เท่านั้น จากนั้นปล่อยให้ flatpickr คำนวณปีต่อไปเองตามปกติ
-      // ไม่ต้องแก้ค่า currentYearElement อีกเลยไม่ว่าจะเปิด/ปิด/เปลี่ยนเดือนกี่ครั้ง
       onReady: function(selectedDates, dateStr, instance) {
         if (!selectedDates || selectedDates.length === 0) {
           const now = new Date();

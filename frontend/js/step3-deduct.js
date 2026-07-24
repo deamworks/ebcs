@@ -77,7 +77,6 @@ function openDeductModal(idx) {
 
   // เติมข้อมูลทั่วไปของใบอนุญาตใน Modal
   // หมายเหตุ: สถานะใบอนุญาตต้องดึงจาก rowData.licenseStatus (สถานะของใบนี้โดยเฉพาะ)
-  // ห้ามดึงจาก appState.type เพราะนั่นคือ "ประเภทรายการ" ของทั้งฉบับ คนละเรื่องกัน
   set('dm-licensee',       appState.licensee);
   set('dm-license-no',     rowData.no);
   set('dm-license-status', LICENSE_STATUS_TH[rowData.licenseStatus] || 'ปกติ');
@@ -173,7 +172,6 @@ function checkChannelIncomeLimit() {
 
   const isOverLimit = totalChannelIncome > licenseIncome;
 
-  // ไฮไลต์/เอากรอบแดงออกจากช่อง "รายได้" ของทุกช่องทางที่ติ๊กไว้
   ['analog', 'digital', 'iptv'].forEach(ch => {
     const incInput = document.getElementById(`dm-${ch}-income`);
     if (!incInput) return;

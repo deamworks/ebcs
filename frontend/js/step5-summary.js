@@ -2,15 +2,6 @@
  * ไฟล์: js/step5-summary.js
  * หน้าที่: คำนวณและแสดงสรุปยอดใน Step 5 — เงินสมทบกองทุน
  * รวมถึง Phase 3 (หน้ายืนยันการชำระ) และ Phase 4
- *
- * Depends on: fund-calc.js (RATE_TABLE, calcProgressiveFund, calcPenalty, parseThaiBuddhistDate)
- *             state.js (appState, fmt, pv)
- *             step2-other.js (calcOtherTotal)
- *             ui.js (showToast)
- *             save-to-supabase.js (saveSubmissionToSupabase)
- *
- * หมายเหตุ: RATE_TABLE, calcProgressiveFund, parseThaiBuddhistDate, calcPenalty
- * ย้ายไปอยู่ใน fund-calc.js แล้ว ต้องโหลดไฟล์นั้นก่อนไฟล์นี้เสมอ
  */
 
 /**
@@ -271,17 +262,6 @@ function goToPhase4Home() {
   window.scrollTo(0, 0);
 }
 
-/**
- * หน้าฟังก์ชันเมื่อต้องการยื่นแบบต่อไปหน้าบันทึก Supabase
- *
- * 🌟 [เพิ่มใหม่] เพิ่ม loading state ให้ปุ่ม "ยืนยันการนำส่งข้อมูล" ทันทีที่กด
- * เพื่อป้องกันผู้ใช้กดซ้ำหลายครั้งระหว่างที่ระบบกำลังบันทึกข้อมูลอยู่ (ซึ่งจะทำให้
- * เกิดการบันทึกข้อมูลซ้ำซ้อนหลายรายการใน Supabase ถ้าไม่กันไว้) — ปิดปุ่มและ
- * เปลี่ยนข้อความเป็น "กำลังบันทึกข้อมูล..." พร้อมไอคอนวงหมุน ตลอดช่วงที่รอผล
- * จาก saveSubmissionToSupabase() ถ้าสำเร็จจะเปลี่ยนไปหน้า Phase 4 ทันที (ไม่ต้อง
- * เปิดปุ่มกลับคืน เพราะปุ่มจะถูกซ่อนไปกับหน้านี้แล้ว) แต่ถ้าล้มเหลวจะเปิดปุ่มกลับ
- * คืนให้กดใหม่ได้ พร้อมแจ้งข้อผิดพลาดให้ผู้ใช้ทราบ
- */
 function goToPhase3Next() {
   const btn = document.getElementById('btn-confirm-submit');
 
