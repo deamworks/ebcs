@@ -78,7 +78,7 @@ async function startProcess(){
   if (typeof autoFillFromAuth === 'function') {
     await autoFillFromAuth();
     if (appState._lockedSubmission) {
-      alert('ปีบัญชีนี้ยื่นแบบไปแล้ว ไม่สามารถกรอกซ้ำได้ กรุณาเปลี่ยนปีบัญชี หรือกด "ดูใบยื่นแบบที่ยื่นไปแล้ว"');
+      alert('ปีบัญชีนี้ยื่นแบบไปแล้ว ไม่สามารถกรอกซ้ำได้ กรุณาเปลี่ยนปีบัญชี');
       return;
     }
   }
@@ -96,32 +96,11 @@ async function startProcess(){
   if (!_ps || !_pe) { alert('กรุณาระบุวันเริ่มต้นและวันสิ้นสุดรอบบัญชีให้ครบถ้วน'); return; }
   appState.period = `${_ps}-${_pe}`;
   
-  // ── คำนวณวันครบกำหนดชำระอัตโนมัติ: วันสิ้นสุดรอบบัญชี + 150 วัน ──────────
-  let autoComputedDue = '';
-  try {
-    const parts = _pe.split('/');           
-    if (parts.length === 3) {
-      const dd  = parseInt(parts[0], 10);
-      const mm  = parseInt(parts[1], 10) - 1; 
-      const yy  = parseInt(parts[2], 10) - 543; 
-      const endDate = new Date(yy, mm, dd);
-      endDate.setDate(endDate.getDate() + 150);
-      const dueDD   = String(endDate.getDate()).padStart(2, '0');
-      const dueMM   = String(endDate.getMonth() + 1).padStart(2, '0');
-      const dueYYYY = endDate.getFullYear() + 543; 
-      autoComputedDue = `${dueDD}/${dueMM}/${dueYYYY}`;
-    }
-  } catch(e) { /* fallback */ }
-
+  // [FIX] วันครบกำหนดชำระ ต้องใช้ค่าจริงจากฐานข้อมูล (autoFillFromAuth
+  // เติมให้แล้วด้านบน) ห้ามคำนวณเอง (เดิมคำนวณ วันสิ้นสุดรอบบัญชี + 150 วัน
+  // ทับค่าจริงเสมอ ทำให้ไม่ตรงกับข้อมูลในระบบเวลาเปลี่ยนปีบัญชี)
   const dueDateEl = document.getElementById('ph1-due-date');
-  if (autoComputedDue && dueDateEl) {
-    if (dueDateEl._flatpickr) {
-      dueDateEl._flatpickr.setDate(autoComputedDue, true, "d/m/Y");
-    } else {
-      dueDateEl.value = autoComputedDue;
-    }
-  }
-  appState.dueDate = autoComputedDue || (dueDateEl ? dueDateEl.value.trim() : '');
+  appState.dueDate = dueDateEl ? dueDateEl.value.trim() : '';
 
   const roundEl = document.getElementById('ph1-period-round');
   appState.periodRound = roundEl ? roundEl.value : '';

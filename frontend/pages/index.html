@@ -117,7 +117,7 @@
               <div>
                 <div class="form-field">
                   <label class="form-field-label">รอบปีบัญชี (พ.ศ.)</label>
-                  <input class="form-field-input" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)">
+                  <input class="form-field-input" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)" onchange="if(typeof autoFillFromAuth==='function') autoFillFromAuth();">
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ประเภท</label>

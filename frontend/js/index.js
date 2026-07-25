@@ -112,42 +112,13 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // [FIX] ถ้ายืนยันใบยื่น "ปีนี้" ไปแล้ว (ไม่ใช่ draft) ห้ามกรอกซ้ำปีเดิม —
-    // แต่ต้องยังอยู่ที่ Phase 1 ต่อได้ เผื่อผู้ประกอบการจะเปลี่ยนไปกรอกปีบัญชี
-    // อื่นแทน (คนละใบ ไม่ล็อก) เดิมพอเจอสถานะไม่ใช่ draft จะเด้งเข้าโหมดดู
-    // อย่างเดียวทันทีและซ่อน Phase 1 ทั้งหน้า ทำให้เปลี่ยนปีไม่ได้เลย
-    const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
-    appState._lockedSubmission = null;
-    if (info.existing_submission) {
-      const s = info.existing_submission;
-      if (s.status && s.status !== 'draft') {
-        appState._lockedSubmission = s;
-        if (msgEl) {
-          msgEl.innerHTML =
-            `⚠️ ปีบัญชีนี้ยื่นแบบไปแล้ว (สถานะ: ${statusTh[s.status] || s.status}) ไม่สามารถกรอกซ้ำได้ ` +
-            `<button type="button" class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="viewExistingSubmission()">ดูใบยื่นแบบที่ยื่นไปแล้ว</button> ` +
-            `หรือเปลี่ยนช่อง "รอบปีบัญชี" ด้านบนเพื่อยื่นปีอื่น`;
-          msgEl.style.color = '#d97706';
-        }
-        // ยังเติมข้อมูล ref/ชื่อ/รอบบัญชี/วันครบกำหนดของปีนี้ให้เห็นตามปกติ
-        // (ข้อมูลอ้างอิงอย่างเดียว) แต่ข้ามการโหลด draft/licenses ต่อท้าย
-        _setField('ph1-year', String(info.fiscal_year || ''));
-        _setField('ph1-licensee', info.operator_name);
-        _setField('ph1-ref', info.ref_no || '—');
-        await new Promise(r => setTimeout(r, 30));
-        _setDate(document.getElementById('ph1-period-start'), isoToBE(info.period_start));
-        _setDate(document.getElementById('ph1-period-end'),   isoToBE(info.period_end));
-        _setDate(document.getElementById('ph1-due-date'),     isoToBE(info.due_date));
-        appState.taxId = taxId; appState.taxid = taxId;
-        appState.refNo = info.ref_no || ''; appState.year = String(info.fiscal_year || '');
-        appState.dueDate = isoToBE(info.due_date); appState.licensee = info.operator_name || '';
-        return;
-      }
-      if (msgEl) {
-        msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
-        msgEl.style.color = '#d97706';
-      }
-    }
+    // [FIX] จำสถานะใบยื่นของปีนี้ไว้เงียบๆ (ใช้กันซ้ำตอนกด "เริ่มนำส่ง" ใน
+    // startProcess() เท่านั้น) — ไม่ต้องเด้งข้อความเตือนหรือปุ่มแยกตรงนี้
+    // เปลี่ยนปีในช่อง "รอบปีบัญชี" เมื่อไหร่ก็ดึงข้อมูลปีนั้นมาแสดงตามปกติ
+    appState._lockedSubmission =
+      (info.existing_submission && info.existing_submission.status !== 'draft')
+        ? info.existing_submission
+        : null;
 
     // fill ปีก่อน เพื่อให้ validation ผ่าน
     _setField('ph1-year', String(info.fiscal_year || ''));
@@ -181,7 +152,7 @@ async function autoFillFromAuth() {
       roundEl.style.background = '#f5f5f5';
     }
 
-    if (msgEl && !info.existing_submission) msgEl.textContent = '';
+    if (msgEl) msgEl.textContent = '';
 
      // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
      // (คืนค่า income/deduction/ผู้สอบบัญชี ที่กรอกไว้ก่อนหน้า)
@@ -217,7 +188,10 @@ async function autoFillFromAuth() {
 
 
   } catch (err) {
-    if (msgEl) { msgEl.textContent = `❌ ${err.message}`; msgEl.style.color = '#dc2626'; }
+    if (msgEl) {
+      msgEl.textContent = err?.code === 'NOT_FOUND' ? 'ไม่มีข้อมูล' : `❌ ${err.message}`;
+      msgEl.style.color = '#dc2626';
+    }
   }
 }
 
