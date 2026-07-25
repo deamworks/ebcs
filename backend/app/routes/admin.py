@@ -1190,6 +1190,30 @@ def create_receipt():
 # 5.6 Audit Logs
 # ════════════════════════════════════════════════════════
 
+@admin_bp.route("/audit-logs", methods=["POST"])
+@jwt_required()
+@require_admin
+def post_audit_log():
+    """
+    บันทึก Audit Log จากฝั่ง frontend (เช่น import สำเร็จ, bulk delete)
+    Request: POST /api/admin/audit-logs { action, table_name, record_id, changes }
+    """
+    body = request.get_json(silent=True) or {}
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        save_audit_log(
+            db, admin_email,
+            body.get("action"),
+            body.get("table_name"),
+            body.get("record_id"),
+            body.get("changes"),
+        )
+        db.commit()
+
+    return jsonify({"success": True}), 201
+
+
 @admin_bp.route("/audit-logs", methods=["GET"])
 @jwt_required()
 @require_admin
