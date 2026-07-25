@@ -27,7 +27,7 @@ services:
   # หน้าที่: รัน Python Flask REST API
   # ไม่มี ports: เปิดออกข้างนอก — ป้องกันการเรียก API ตรงๆ ต้องผ่าน Nginx
   flask-api:
-    build: .                          # build จาก Dockerfile ใน root
+    build: ./backend                   # build จาก backend/Dockerfile
     container_name: ebcs-api
     env_file: .env                     # อ่าน environment variables จาก .env
     volumes:

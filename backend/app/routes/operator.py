@@ -241,16 +241,22 @@ def get_licenses():
         with db.cursor() as cur:
             if year:
                 cur.execute("""
-                    SELECT id, license_no, license_type,
-                           license_status, license_start, license_end
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
                     FROM   licensee_master
                     WHERE  tax_id = %s AND fiscal_year = %s
                     ORDER  BY license_status, license_no
                 """, (tax_id, year))
             else:
                 cur.execute("""
-                    SELECT id, license_no, license_type,
-                           license_status, license_start, license_end
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
                     FROM   licensee_master
                     WHERE  tax_id = %s
                     ORDER  BY license_status, license_no

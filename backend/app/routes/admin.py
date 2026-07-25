@@ -9,9 +9,10 @@
 
 import io
 import json
+import os
 from datetime import datetime, date
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from ..db import get_db
@@ -180,10 +181,10 @@ def get_submissions():
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
-                    s.fiscal_year, s.ref_no,
+                    s.fiscal_year, s.ref_no, s.due_date,
                     s.net_amount, s.submitted_at, s.created_at,
                     CASE WHEN r.id IS NOT NULL THEN 'paid'
-                         ELSE s.status END AS actual_status
+                         ELSE s.status END AS status
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
                 {where}
@@ -223,6 +224,7 @@ def get_submissions():
     for item in items:
         item["submitted_at"] = date_to_str(item["submitted_at"])
         item["created_at"]   = date_to_str(item["created_at"])
+        item["due_date"]     = date_to_str(item["due_date"])
         item["net_amount"]   = float(item["net_amount"] or 0)
 
     return jsonify({
@@ -500,6 +502,81 @@ def delete_submissions():
 
 
 # ════════════════════════════════════════════════════════
+# 5.2b ไฟล์แนบ (Attachments) — ดาวน์โหลด/ลบ
+# nginx บล็อกการเข้าถึง /uploads/ ตรงๆ (ดู nginx.conf) ต้องผ่าน
+# endpoint นี้เท่านั้น เพื่อตรวจ JWT ก่อนส่งไฟล์
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
+@jwt_required()
+@require_admin
+def download_attachment(attachment_id):
+    """ดาวน์โหลดไฟล์แนบ"""
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT storage_path, file_name, mime_type "
+                "FROM document_attachments WHERE id = %s",
+                (attachment_id,)
+            )
+            att = cur.fetchone()
+
+    if not att or not os.path.exists(att["storage_path"]):
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+        }), 404
+
+    return send_file(
+        att["storage_path"],
+        mimetype=att.get("mime_type") or "application/octet-stream",
+        download_name=att["file_name"],
+        as_attachment=True,
+    )
+
+
+@admin_bp.route("/attachments/<attachment_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_attachment(attachment_id):
+    """ลบไฟล์แนบ (ทั้งแถวใน DB และไฟล์จริงบน server)"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT storage_path, file_name FROM document_attachments WHERE id = %s",
+                (attachment_id,)
+            )
+            att = cur.fetchone()
+
+            if not att:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+                }), 404
+
+            cur.execute("DELETE FROM document_attachments WHERE id = %s", (attachment_id,))
+
+        save_audit_log(
+            db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
+            "document_attachments", attachment_id
+        )
+        db.commit()
+
+    try:
+        if att.get("storage_path") and os.path.exists(att["storage_path"]):
+            os.remove(att["storage_path"])
+    except OSError:
+        pass
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบไฟล์เรียบร้อยแล้ว"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
 # 5.3 จัดการผู้ประกอบการ (Taxpayer CRUD)
 # ════════════════════════════════════════════════════════
 
@@ -509,9 +586,10 @@ def delete_submissions():
 def get_taxpayers():
     """ดูรายการผู้ประกอบการทั้งหมด"""
 
-    search = request.args.get("search", "").strip()
-    year   = request.args.get("year", type=int)
-    page   = request.args.get("page", 1, type=int)
+    search   = request.args.get("search", "").strip()
+    year     = request.args.get("year", type=int)
+    page     = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 100, type=int)
 
     conditions = []
     params     = []
@@ -537,8 +615,8 @@ def get_taxpayers():
                 FROM taxpayer_master
                 {where}
                 ORDER BY fiscal_year DESC, operator_name
-                LIMIT 100 OFFSET %s
-            """, params + [(page - 1) * 100])
+                LIMIT %s OFFSET %s
+            """, params + [per_page, (page - 1) * per_page])
             taxpayers = cur.fetchall()
 
     for t in taxpayers:
@@ -712,9 +790,10 @@ def delete_taxpayer(taxpayer_id):
 def get_licensees():
     """ดูรายการใบอนุญาตทั้งหมด"""
 
-    search = request.args.get("search", "").strip()
-    status = request.args.get("status")
-    page   = request.args.get("page", 1, type=int)
+    search   = request.args.get("search", "").strip()
+    status   = request.args.get("status")
+    page     = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 100, type=int)
 
     conditions = []
     params     = []
@@ -735,19 +814,19 @@ def get_licensees():
         with db.cursor() as cur:
             cur.execute(f"""
                 SELECT id, license_no, tax_id, company_name,
-                       license_type, license_status,
-                       license_start, license_end, updated_at
+                       licensee_type, license_status,
+                       start_date, end_date, updated_at
                 FROM licensee_master
                 {where}
                 ORDER BY license_no
-                LIMIT 100 OFFSET %s
-            """, params + [(page - 1) * 100])
+                LIMIT %s OFFSET %s
+            """, params + [per_page, (page - 1) * per_page])
             licensees = cur.fetchall()
 
     for lic in licensees:
-        lic["license_start"] = date_to_str(lic["license_start"])
-        lic["license_end"]   = date_to_str(lic["license_end"])
-        lic["updated_at"]    = date_to_str(lic["updated_at"])
+        lic["start_date"] = date_to_str(lic["start_date"])
+        lic["end_date"]   = date_to_str(lic["end_date"])
+        lic["updated_at"] = date_to_str(lic["updated_at"])
 
     return jsonify({
         "success": True,
@@ -779,17 +858,17 @@ def create_licensee():
                 cur.execute("""
                     INSERT INTO licensee_master
                         (license_no, tax_id, company_name,
-                         license_type, license_status,
-                         license_start, license_end)
+                         licensee_type, license_status,
+                         start_date, end_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["license_no"],
                     data["tax_id"],
                     data["company_name"],
-                    data.get("license_type"),
+                    data.get("licensee_type"),
                     data.get("license_status", "active"),
-                    data.get("license_start"),
-                    data.get("license_end")
+                    data.get("start_date"),
+                    data.get("end_date")
                 ))
                 cur.execute(
                     "SELECT id FROM licensee_master WHERE license_no = %s",
@@ -842,8 +921,8 @@ def update_licensee(licensee_id):
                               "message": "ไม่พบใบอนุญาต"}
                 }), 404
 
-            updatable = ["company_name", "license_type",
-                         "license_status", "license_start", "license_end"]
+            updatable = ["company_name", "licensee_type",
+                         "license_status", "start_date", "end_date"]
             set_parts  = []
             set_params = []
             changes    = {}

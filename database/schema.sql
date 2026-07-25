@@ -79,8 +79,8 @@ CREATE TABLE licensee_master (
   tax_id         VARCHAR(13)  NOT NULL COMMENT 'เจ้าของใบอนุญาต',
   company_name   VARCHAR(255) NOT NULL,
 
-  -- license_type: ประเภทใบอนุญาต
-  license_type   VARCHAR(100) NULL,
+  -- licensee_type: ประเภทใบอนุญาต
+  licensee_type  VARCHAR(100) NULL,
 
   -- license_status: สถานะใบอนุญาต
   -- ENUM จำกัดให้ใส่ได้แค่ 4 ค่านี้เท่านั้น
@@ -88,8 +88,8 @@ CREATE TABLE licensee_master (
   license_status ENUM('active','ended','cancelled','revoked')
                  DEFAULT 'active',
 
-  license_start  DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
-  license_end    DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
+  start_date     DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
+  end_date       DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
 
   -- คอลัมน์ต่อไปนี้ใช้โดยการ Import Excel ใบอนุญาตรายปี (services/import_service.py)
   -- และรายงานผลการจัดเก็บ (services/export_service.py) — เก็บ snapshot
@@ -429,8 +429,8 @@ VALUES
 -- ใบอนุญาตทดสอบ 3 ใบ
 -- (มีทั้ง active และ ended เพื่อทดสอบว่าระบบดึงมาทุกสถานะ)
 INSERT INTO licensee_master
-  (license_no, tax_id, company_name, license_type,
-   license_status, license_start, license_end)
+  (license_no, tax_id, company_name, licensee_type,
+   license_status, start_date, end_date)
 VALUES
   -- ใบอนุญาตของบริษัท ไทยวิทยุ (active)
   ('B1-2567-001', '0123456789012',

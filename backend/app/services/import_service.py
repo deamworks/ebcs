@@ -391,7 +391,7 @@ def import_licensees(db, rows):
                     tax_id=%s, fiscal_year=%s, ref_code=%s,
                     sub_type=%s, round_type=%s, sub_status=%s,
                     company_name=%s, license_count=%s,
-                    license_type=%s, license_start=%s, license_end=%s,
+                    licensee_type=%s, start_date=%s, end_date=%s,
                     license_status=%s,
                     income=%s, deduction=%s, fund_amount=%s,
                     vat=%s, surcharge=%s, net_amount=%s,
@@ -413,7 +413,7 @@ def import_licensees(db, rows):
                 INSERT INTO licensee_master (
                     tax_id, fiscal_year, ref_code, sub_type, round_type,
                     sub_status, company_name, license_count, license_no,
-                    license_type, license_start, license_end, license_status,
+                    licensee_type, start_date, end_date, license_status,
                     income, deduction, fund_amount, vat, surcharge, net_amount
                 ) VALUES (
                     %s,%s,%s,%s,%s,

@@ -391,8 +391,9 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
         cur.execute(f"""
             SELECT
                 license_no, tax_id, company_name,
-                license_type, license_status,
-                license_start, license_end, fiscal_year
+                licensee_type AS license_type, license_status,
+                start_date AS license_start, end_date AS license_end,
+                fiscal_year
             FROM licensee_master
             {where}
             ORDER BY license_no

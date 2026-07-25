@@ -21,14 +21,12 @@ ALTER TABLE taxpayer_master
   ADD COLUMN email   VARCHAR(255) NULL AFTER phone,
   ADD COLUMN address VARCHAR(500) NULL AFTER email;
 
--- ── licensee_master: rename to the naming convention already used
---    by operator.py / import_service.py / export_service.py, and
---    add the financial/import snapshot columns they expect ──
+-- ── licensee_master: add the financial/import snapshot columns
+--    import_service.py / export_service.py expect (column names
+--    licensee_type/start_date/end_date are unchanged — they already
+--    match admin.py's CRUD and the admin frontend) ──
 ALTER TABLE licensee_master
-  CHANGE COLUMN licensee_type license_type VARCHAR(100) NULL,
-  CHANGE COLUMN start_date    license_start DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
-  CHANGE COLUMN end_date      license_end   DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
-  ADD COLUMN fiscal_year   INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด' AFTER license_end,
+  ADD COLUMN fiscal_year   INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด' AFTER end_date,
   ADD COLUMN ref_code      VARCHAR(50)   NULL COMMENT 'รหัสอ้างอิงจากไฟล์ import' AFTER fiscal_year,
   ADD COLUMN sub_type      VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import)' AFTER ref_code,
   ADD COLUMN round_type    VARCHAR(50)   NULL COMMENT 'รอบ (จากไฟล์ import)' AFTER sub_type,
