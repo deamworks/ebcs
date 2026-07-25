@@ -16,6 +16,26 @@
 
 SET NAMES utf8mb4;
 
-ALTER TABLE operator_accounts
-  ADD COLUMN IF NOT EXISTS operator_name VARCHAR(255) NOT NULL DEFAULT ''
-  AFTER tax_id;
+-- ALTER TABLE ... ADD COLUMN IF NOT EXISTS ล้มเหลว syntax error บน MySQL
+-- บางเวอร์ชัน จึงเช็คคอลัมน์ก่อนด้วย prepared statement แทน (idempotent
+-- เหมือนกัน — รันซ้ำได้โดยไม่ error ถ้าคอลัมน์มีอยู่แล้ว)
+SET @col_exists = (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'operator_accounts'
+    AND COLUMN_NAME = 'operator_name'
+);
+
+SET @ddl = IF(
+  @col_exists = 0,
+  CONCAT(
+    'ALTER TABLE operator_accounts ADD COLUMN operator_name VARCHAR(255) NOT NULL DEFAULT ',
+    QUOTE(''),
+    ' AFTER tax_id'
+  ),
+  'SELECT 1'
+);
+
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
