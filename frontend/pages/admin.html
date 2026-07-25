@@ -54,6 +54,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
             ใบอนุญาต
           </div>
+          <div class="sb-item" data-page="operator-accounts" onclick="navigateFromSidebar('operator-accounts')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.5a4 4 0 010 7"/></svg>
+            บัญชีผู้ประกอบการ
+          </div>
         </div>
       </div>
 
@@ -465,6 +469,67 @@
           <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="openAddLicenseModal(activeTaxpayerTaxId)">+ เพิ่มใบอนุญาตให้บริษัทนี้</button>
         </div>
         <div id="tp-detail-body"></div>
+      </div>
+
+      <!-- ══ PAGE: operator-accounts (บัญชีผู้ประกอบการ — อีเมลรับ OTP) ══ -->
+      <div class="adm-page" id="page-operator-accounts">
+        <div class="adm-card">
+          <div class="adm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="adm-card-title">นำเข้าบัญชีผู้ประกอบการ (Excel)</span>
+            <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, resetOperatorAccountImportPage)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              รีเฟรช
+            </button>
+          </div>
+          <div style="padding:20px;">
+            <div style="background:#f0f6ff;border:1px solid #c8ddf5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;">
+              ระบบจะอ่านข้อมูลจากคอลัมน์ดังต่อไปนี้ (แถวหัวตารางอยู่แถวที่ 1): <strong>tax_id (เลขผู้เสียภาษี 13 หลัก), email</strong>
+              — เมื่อนำเข้าแล้ว ตอนผู้ประกอบการกรอกเลขผู้เสียภาษีในหน้า Login ระบบจะส่ง OTP ไปยังอีเมลนี้แทนอีเมลเดิมในระบบ
+            </div>
+            <div class="import-file-zone" onclick="document.getElementById('operatorAccountFile').click()">
+              <div style="font-size:13px;color:#555;">กรุณาเลือกไฟล์ Excel เพื่อนำเข้าข้อมูล</div>
+              <input type="file" id="operatorAccountFile" accept=".xlsx,.xls" style="display:none" onchange="handleOperatorAccountFile(this)">
+            </div>
+            <div id="oa-import-warning" class="import-warning" style="display:none;"></div>
+            <div id="oa-import-section" style="display:none;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span id="oa-import-count" style="font-size:13px;font-weight:500;"></span>
+                <button class="adm-btn adm-btn-primary" id="oa-import-btn" onclick="startOperatorAccountImport()">เริ่มการนำเข้าข้อมูล</button>
+              </div>
+              <div style="overflow-x:auto;max-height:320px;overflow-y:auto;margin-bottom:12px;border:1px solid #e2e8f0;border-radius:8px;">
+                <table class="adm-table">
+                  <thead>
+                    <tr><th>ลำดับ</th><th>Tax ID</th><th>อีเมล</th><th>ตรวจสอบ</th></tr>
+                  </thead>
+                  <tbody id="oa-import-preview-body"></tbody>
+                </table>
+              </div>
+              <div class="import-log" id="oa-import-log"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- table toolbar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
+          <span id="oa-count" style="font-size:12px;color:#888;"></span>
+          <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, loadOperatorAccounts)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            รีเฟรช
+          </button>
+        </div>
+        <div class="adm-card">
+          <div style="overflow-x:auto;">
+            <table class="adm-table">
+              <thead><tr>
+                <th style="text-align:center">เลขผู้เสียภาษี</th>
+                <th style="text-align:center">อีเมล</th>
+                <th style="text-align:center">วันที่สร้าง</th>
+                <th style="text-align:center">จัดการ</th>
+              </tr></thead>
+              <tbody id="oa-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- ══ PAGE: import-licensee ══ -->
@@ -977,6 +1042,7 @@
   <script src="../js/api-client.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/admin-utils.js"></script>
+  <script src="../js/admin-operator-accounts.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html>
