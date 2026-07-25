@@ -195,6 +195,14 @@ def check_taxpayer():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
+            # ตรวจ operator_accounts (แอดมิน import แยกต่างหาก) — ถ้ามีแถวของ
+            # tax_id นี้ ใช้อีเมลจากตารางนี้แทนอีเมลใน taxpayer_master เสมอ
+            cur.execute(
+                "SELECT email FROM operator_accounts WHERE tax_id = %s",
+                (tax_id,)
+            )
+            operator_account = cur.fetchone()
+
     if not taxpayer:
         return jsonify({
             "success": False,
@@ -208,7 +216,8 @@ def check_taxpayer():
         }), 404
 
     # สร้าง list ช่องทางที่มี
-    email = taxpayer.get("email") or ""
+    email = (operator_account["email"] if operator_account else None) \
+        or taxpayer.get("email") or ""
 
     if not email:
         return jsonify({
@@ -311,6 +320,14 @@ def request_otp():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
+            # ตรวจ operator_accounts เหมือน check-taxpayer — อีเมลจากตารางนี้
+            # มีสิทธิ์เหนือกว่าอีเมลใน taxpayer_master เสมอ
+            cur.execute(
+                "SELECT email FROM operator_accounts WHERE tax_id = %s",
+                (tax_id,)
+            )
+            operator_account = cur.fetchone()
+
     if not taxpayer:
         return jsonify({
             "success": False,
@@ -318,7 +335,8 @@ def request_otp():
                       "message": "ไม่พบข้อมูลในระบบ"}
         }), 404
 
-    email = taxpayer.get("email") or ""
+    email = (operator_account["email"] if operator_account else None) \
+        or taxpayer.get("email") or ""
 
     if not email:
         return jsonify({

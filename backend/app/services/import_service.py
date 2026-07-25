@@ -29,6 +29,8 @@ from datetime import datetime, date
 
 import openpyxl
 
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 # ────────────────────────────────────────────────────────
 # Helpers
@@ -519,6 +521,83 @@ def parse_contact_excel(file_stream):
         else:
             rows.append(rec)
     return rows, errors
+
+
+# ════════════════════════════════════════════════════════
+# OPERATOR ACCOUNTS  →  operator_accounts
+# ════════════════════════════════════════════════════════
+# col index (header แถว 1):
+#  0  tax_id  (เลขประจำตัวผู้เสียภาษี 13 หลัก)
+#  1  email
+
+def _parse_operator_account_row(row, excel_row_num, seen_tax_ids):
+    errs = []
+
+    tax_id = _clean_tax_id(row[0] if len(row) > 0 else None)
+    if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
+        errs.append(f"tax_id '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
+    elif tax_id in seen_tax_ids:
+        errs.append(f"tax_id '{tax_id}' ซ้ำในไฟล์")
+
+    email = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ""
+    if not email or not EMAIL_RE.match(email):
+        errs.append(f"email '{email}' รูปแบบไม่ถูกต้อง")
+
+    if errs:
+        return None, {"row": excel_row_num, "message": ", ".join(errs)}
+
+    seen_tax_ids.add(tax_id)
+    return {"tax_id": tax_id, "email": email}, None
+
+
+def parse_operator_account_excel(file_stream):
+    """
+    อ่านไฟล์ Excel บัญชีผู้ประกอบการ (header แถว 1, ข้อมูลแถว 2+)
+    คอลัมน์: tax_id | email
+    คืน: (rows: list[dict], errors: list[dict])
+    """
+    try:
+        _, data = _read_data_rows(file_stream, header_row=1)
+    except Exception as e:
+        return [], [{"row": 0, "message": f"เปิดไฟล์ไม่ได้: {e}"}]
+
+    rows, errors = [], []
+    seen_tax_ids = set()
+    for idx, row in enumerate(data, start=2):   # Excel row 2 เป็นต้นไป
+        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids)
+        if err:
+            errors.append(err)
+        else:
+            rows.append(rec)
+    return rows, errors
+
+
+def import_operator_accounts(db, rows):
+    """
+    Upsert operator_accounts  unique: tax_id
+    - มีอยู่แล้ว → UPDATE email
+    - ยังไม่มี   → INSERT
+    คืน: {"inserted": n, "updated": n}
+    """
+    inserted = updated = 0
+    cur = db.cursor()
+    for row in rows:
+        cur.execute("SELECT id FROM operator_accounts WHERE tax_id=%s", (row["tax_id"],))
+        if cur.fetchone():
+            cur.execute(
+                "UPDATE operator_accounts SET email=%s WHERE tax_id=%s",
+                (row["email"], row["tax_id"])
+            )
+            updated += 1
+        else:
+            cur.execute(
+                "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
+                (row["tax_id"], row["email"])
+            )
+            inserted += 1
+    db.commit()
+    cur.close()
+    return {"inserted": inserted, "updated": updated}
 
 
 def import_contacts(db, rows):

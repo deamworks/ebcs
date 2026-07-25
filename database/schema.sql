@@ -120,6 +120,22 @@ CREATE TABLE licensee_master (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+-- ตาราง: operator_accounts
+-- เก็บอีเมลสำหรับรับ OTP ของผู้ประกอบการ นำเข้าโดยแอดมินผ่านไฟล์ Excel
+-- (เลขผู้เสียภาษี + อีเมล) แยกต่างหากจาก taxpayer_master.email — ถ้า tax_id
+-- มีแถวอยู่ในตารางนี้ ระบบ login จะใช้อีเมลนี้แทนอีเมลใน taxpayer_master เสมอ
+CREATE TABLE operator_accounts (
+  id         CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
+  tax_id     VARCHAR(13)  NOT NULL,
+  email      VARCHAR(255) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  -- tax_id ห้ามซ้ำ: 1 เลขผู้เสียภาษี ผูกได้แค่ 1 อีเมล
+  UNIQUE KEY uq_oa_tax_id (tax_id)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ════════════════════════════════════════════════════════
 -- กลุ่มที่ 2: ADMIN TABLE
 -- บัญชีเจ้าหน้าที่ (ระบบ auth เขียนเอง ไม่พึ่งพา third-party auth provider)

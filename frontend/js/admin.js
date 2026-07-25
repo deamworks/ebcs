@@ -516,8 +516,8 @@ function openEditLicenseModal(id) {
   document.getElementById('lic-ml-name').value    = r.company_name||'';
   document.getElementById('lic-ml-no').value      = r.license_no||'';
   document.getElementById('lic-ml-type').value    = r.licensee_type||'NETWORK';
-  document.getElementById('lic-ml-start').value   = r.start_date||'';
-  document.getElementById('lic-ml-end').value     = r.end_date||'';
+  document.getElementById('lic-ml-start').value   = fdISOToThai(r.start_date);
+  document.getElementById('lic-ml-end').value     = fdISOToThai(r.end_date);
   document.getElementById('lic-ml-status').value  = r.license_status||'active';
   document.getElementById('lic-modal').style.display = 'flex';
 }
@@ -533,8 +533,8 @@ async function saveLicense() {
     company_name:   document.getElementById('lic-ml-name').value.trim(),
     license_no:     document.getElementById('lic-ml-no').value.trim(),
     licensee_type:  document.getElementById('lic-ml-type').value,
-    start_date:     document.getElementById('lic-ml-start').value || null,
-    end_date:       document.getElementById('lic-ml-end').value   || null,
+    start_date:     fdThaiToISO(document.getElementById('lic-ml-start').value),
+    end_date:       fdThaiToISO(document.getElementById('lic-ml-end').value),
     license_status: document.getElementById('lic-ml-status').value,
   };
   if (!payload.tax_id || !payload.license_no) { alert('กรุณากรอก Tax ID และเลขที่ใบอนุญาต'); return; }
@@ -572,6 +572,7 @@ async function deleteLicense(id, no) {
   const PAGE_META = {
     submissions:       { title: 'รายการยื่นแบบ',       sub: 'ข้อมูลการนำส่งเงินรายปีเข้ากองทุน กสทช.' },
     licenses:          { title: 'ใบอนุญาต',               sub: 'จัดการข้อมูลใบอนุญาตทั้งหมด' },
+    'operator-accounts': { title: 'บัญชีผู้ประกอบการ',   sub: 'นำเข้าและจัดการอีเมลสำหรับรับ OTP ของผู้ประกอบการ' },
     taxpayers:         { title: 'ผู้ประกอบการ',          sub: 'ข้อมูลผู้ประกอบการและใบอนุญาต' },
     'taxpayer-detail': { title: 'รายละเอียดผู้ประกอบการ', sub: 'ใบอนุญาตทั้งหมดของบริษัทนี้' },
     'import-licensee': { title: 'นำเข้าข้อมูลใบอนุญาต', sub: 'นำเข้าข้อมูลใบอนุญาตจากไฟล์ Excel' },
@@ -611,6 +612,7 @@ async function deleteLicense(id, no) {
     // โหลดข้อมูลตามหน้า
     if (page === 'submissions') { loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'licenses')    loadLicenses();
+    if (page === 'operator-accounts') loadOperatorAccounts();
     if (page === 'taxpayers')   { loadTaxpayers(); loadLicenses(); loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'audit')       loadAuditLogs();
     if (page === 'export')      loadExportPage();
