@@ -289,7 +289,7 @@ def import_taxpayers(db, rows):
 # ════════════════════════════════════════════════════════
 # col index (จาก header แถว 3):
 #  0  ลำดับ
-#  1  ปี (BE)                    → fiscal_year (แปลงเป็น CE)
+#  1  ปี (BE)                    → fiscal_year (เก็บเป็น พ.ศ. ตรงกับ taxpayer_master)
 #  2  รหัสอ้างอิง                → ref_code
 #  3  ประเภท                     → sub_type
 #  4  รอบ                        → round_type
@@ -356,12 +356,15 @@ def _parse_licensee_row(row, excel_row_num):
     if not license_no:
         errs.append("เลขที่ใบอนุญาตว่าง")
 
-    # fiscal_year (BE → CE)
+    # fiscal_year — เก็บเป็น พ.ศ. (BE) ตรงกับ taxpayer_master.fiscal_year
+    # (เดิมแปลงเป็น ค.ศ. ก่อนเก็บ ทำให้ licensee_master.fiscal_year ไม่ตรงกับ
+    # taxpayer_master.fiscal_year — เวลาผู้ประกอบการเปิดหน้า index จะดึง
+    # licenses ด้วยปี พ.ศ. จาก taxpayer_master แต่ licensee_master เก็บ ค.ศ.
+    # ทำให้ WHERE fiscal_year=%s ไม่ match เลย แสดงใบอนุญาต 0 รายการ)
     try:
         fiscal_year_be = int(str(row[1]).split(".")[0].strip()) if len(row) > 1 and row[1] else None
-        fiscal_year_ce = (fiscal_year_be - 543) if fiscal_year_be and fiscal_year_be > 2400 else fiscal_year_be
     except (TypeError, ValueError):
-        fiscal_year_ce = None
+        fiscal_year_be = None
         errs.append(f"ปี '{row[1] if len(row) > 1 else ''}' อ่านไม่ได้")
 
     # license_status: ต้อง map ภาษาไทย → ENUM literal ก่อน ไม่งั้น insert ล้มเหลว
@@ -374,7 +377,7 @@ def _parse_licensee_row(row, excel_row_num):
 
     return {
         "tax_id":         tax_id,
-        "fiscal_year":    fiscal_year_ce,
+        "fiscal_year":    fiscal_year_be,
         "ref_code":       _s(2),
         "sub_type":       _s(3),
         "round_type":     _s(4),
