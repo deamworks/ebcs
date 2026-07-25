@@ -157,7 +157,7 @@ function _vsRenderStatusBanner(s, statusLabelOverride) {
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
   const bar = document.createElement('div');
   bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;';
-  bar.textContent = `โหมดดูอย่างเดียว — ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label}) ไม่สามารถแก้ไขได้`;
+  bar.textContent = `โหมดดูอย่างเดียว — ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label}) ไม่สามารถแก้ไขได้ หากต้องการแก้ไขข้อมูล กรุณาแจ้งเจ้าหน้าที่`;
   const main = document.querySelector('.main') || document.body;
   main.insertBefore(bar, main.firstChild);
 }
