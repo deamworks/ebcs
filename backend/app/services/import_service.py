@@ -203,21 +203,23 @@ def _get_next_ref_no(cur, fiscal_year_be: int) -> str:
     """
     Generate ref_no อัตโนมัติ รูปแบบ BK{ปี 2 หลัก}{เลขลำดับ 5 หลัก}
     เช่น BK6800001, BK6800002
-    ใช้ ref_no_counters table เพื่อป้องกันเลขซ้ำแม้ import พร้อมกัน
+    ใช้ ref_no_counters table (unique key = prefix) เพื่อป้องกันเลขซ้ำ
+    แม้ import พร้อมกัน — ตาราง ref_no_counters ไม่มีคอลัมน์ fiscal_year
+    จึงใช้ prefix ("BK68") เป็น key ของตัวนับแทน
     """
     year_2digit = str(fiscal_year_be)[-2:]   # 2568 → "68"
     prefix = f"BK{year_2digit}"
 
     # INSERT ... ON DUPLICATE KEY UPDATE เพื่อ upsert แถว counter
     cur.execute("""
-        INSERT INTO ref_no_counters (fiscal_year, last_seq)
+        INSERT INTO ref_no_counters (prefix, last_seq)
         VALUES (%s, 1)
         ON DUPLICATE KEY UPDATE last_seq = last_seq + 1
-    """, (fiscal_year_be,))
+    """, (prefix,))
 
     cur.execute(
-        "SELECT last_seq FROM ref_no_counters WHERE fiscal_year = %s",
-        (fiscal_year_be,)
+        "SELECT last_seq FROM ref_no_counters WHERE prefix = %s",
+        (prefix,)
     )
     row = cur.fetchone()
     seq = row["last_seq"] if isinstance(row, dict) else row[0]
@@ -291,7 +293,7 @@ def import_taxpayers(db, rows):
 #  4  รอบ                        → round_type
 #  5  สถานะ                      → sub_status
 #  6  เลขประจำตัวผู้เสียภาษี     → tax_id
-#  7  รายชื่อผู้รับใบอนุญาต      → operator_name
+#  7  รายชื่อผู้รับใบอนุญาต      → company_name
 #  8  จำนวนใบอนุญาต              → license_count
 #  9  เลขที่ใบอนุญาต             → license_no  (unique key)
 # 10  ประเภทใบอนุญาต             → license_type
@@ -338,7 +340,7 @@ def _parse_licensee_row(row, excel_row_num):
         "sub_type":       _s(3),
         "round_type":     _s(4),
         "sub_status":     _s(5),
-        "operator_name":  _s(7),
+        "company_name":   _s(7),
         "license_count":  int(row[8]) if len(row) > 8 and row[8] else None,
         "license_no":     license_no,
         "license_type":   _s(10),
@@ -388,8 +390,8 @@ def import_licensees(db, rows):
                 UPDATE licensee_master SET
                     tax_id=%s, fiscal_year=%s, ref_code=%s,
                     sub_type=%s, round_type=%s, sub_status=%s,
-                    operator_name=%s, license_count=%s,
-                    license_type=%s, license_start=%s, license_end=%s,
+                    company_name=%s, license_count=%s,
+                    licensee_type=%s, start_date=%s, end_date=%s,
                     license_status=%s,
                     income=%s, deduction=%s, fund_amount=%s,
                     vat=%s, surcharge=%s, net_amount=%s,
@@ -398,7 +400,7 @@ def import_licensees(db, rows):
             """, (
                 row["tax_id"],        row["fiscal_year"],  row["ref_code"],
                 row["sub_type"],      row["round_type"],   row["sub_status"],
-                row["operator_name"], row["license_count"],
+                row["company_name"],  row["license_count"],
                 row["license_type"],  row["license_start"],row["license_end"],
                 row["license_status"],
                 row["income"],        row["deduction"],    row["fund_amount"],
@@ -410,8 +412,8 @@ def import_licensees(db, rows):
             cur.execute("""
                 INSERT INTO licensee_master (
                     tax_id, fiscal_year, ref_code, sub_type, round_type,
-                    sub_status, operator_name, license_count, license_no,
-                    license_type, license_start, license_end, license_status,
+                    sub_status, company_name, license_count, license_no,
+                    licensee_type, start_date, end_date, license_status,
                     income, deduction, fund_amount, vat, surcharge, net_amount
                 ) VALUES (
                     %s,%s,%s,%s,%s,
@@ -422,7 +424,7 @@ def import_licensees(db, rows):
             """, (
                 row["tax_id"],        row["fiscal_year"],  row["ref_code"],
                 row["sub_type"],      row["round_type"],   row["sub_status"],
-                row["operator_name"], row["license_count"],row["license_no"],
+                row["company_name"],  row["license_count"],row["license_no"],
                 row["license_type"],  row["license_start"],row["license_end"],
                 row["license_status"],
                 row["income"],        row["deduction"],    row["fund_amount"],

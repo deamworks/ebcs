@@ -46,19 +46,15 @@ async function handleLogin() {
   if (btn) { btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...'; }
 
   try {
-    const res  = await api.post('/auth/admin/login', { email, password });
-    const data = await res.json();
+    // [FIX] api.post() คืนค่า data ที่ parse แล้ว (ไม่ใช่ raw Response)
+    // และ throw ApiError เองถ้า success:false — ไม่ต้องเรียก .json() ซ้ำ
+    const data = await api.post('/auth/admin/login', { email, password });
 
-    if (!data.success) {
-      if (errEl) { errEl.textContent = data.error?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'; errEl.style.display = 'block'; }
-      return;
-    }
-
-    localStorage.setItem('ebcs_admin_token', data.data.token);
-    enterDashboard(data.data.admin.email, data.data.admin.full_name);
+    localStorage.setItem('ebcs_admin_token', data.token);
+    enterDashboard(data.admin.email, data.admin.full_name);
 
   } catch (e) {
-    if (errEl) { errEl.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = e.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่'; errEl.style.display = 'block'; }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
   }
@@ -120,11 +116,15 @@ async function loadAuditLogs() {
   if (yearFrom) params.set('year_from', String(parseInt(yearFrom) - 543));
   if (yearTo)   params.set('year_to',   String(parseInt(yearTo)   - 543));
 
-  const res  = await api.get('/admin/audit-logs?' + params.toString());
-  const data = await res.json();
-  if (!data.success) { showToast('เกิดข้อผิดพลาดในการโหลดประวัติการดำเนินการ'); return; }
+  let data;
+  try {
+    data = await api.get('/admin/audit-logs?' + params.toString());
+  } catch (e) {
+    showToast('เกิดข้อผิดพลาดในการโหลดประวัติการดำเนินการ');
+    return;
+  }
 
-  const rows = (data.data.logs || []).filter(r => {
+  const rows = (data.logs || []).filter(r => {
     if (search && !`${r.admin_email} ${r.action} ${r.table_name}`.toLowerCase().includes(search)) return false;
     if (actions.length && !actions.some(a => (r.action || '').startsWith(a))) return false;
     return true;
@@ -175,15 +175,15 @@ async function loadSubmissions() {
   const selectAllCb = document.getElementById('selectAll');
   if (selectAllCb) selectAllCb.checked = false;
 
-  const res  = await api.get('/admin/submissions?per_page=500');
-  const data = await res.json();
-
-  if (!data.success) {
-    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">เกิดข้อผิดพลาด: ${data.error?.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
+  let data;
+  try {
+    data = await api.get('/admin/submissions?per_page=500');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">เกิดข้อผิดพลาด: ${e.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
     return;
   }
 
-  allSubmissions = (data.data.submissions || []).map(s => ({
+  allSubmissions = (data.items || []).map(s => ({
     ...s,
     _derivedStatus: s.status,
   }));
@@ -284,13 +284,18 @@ async function submitReceiptModal() {
 }
 
 async function recordReceipt(submissionId, receiptNo, amount) {
-  const res  = await api.post('/admin/receipts', {
-    receipt_no:  receiptNo,
-    amount,
-    received_at: new Date().toISOString().slice(0, 10),
-  });
-  const data = await res.json();
-  if (!data.success) { showToast('บันทึกไม่สำเร็จ: ' + (data.error?.message || '')); return; }
+  try {
+    // [FIX] เดิมไม่ได้ส่ง submission_id ไปด้วย ทั้งที่ backend ต้องการ (required field)
+    await api.post('/admin/receipts', {
+      submission_id: submissionId,
+      receipt_no:    receiptNo,
+      amount,
+      received_at:   new Date().toISOString().slice(0, 10),
+    });
+  } catch (e) {
+    showToast('บันทึกไม่สำเร็จ: ' + (e.message || ''));
+    return;
+  }
   showToast('บันทึกรับชำระเรียบร้อยแล้ว ✓');
   await loadSubmissions();
 }
@@ -386,9 +391,12 @@ async function handleAdminBulkDelete() {
   if (!confirm(`ยืนยันการลบ ${selectedIds.length} รายการ?\n(${namesPreview}${moreText})\nไม่สามารถเรียกคืนได้`)) return;
 
   showToast(`กำลังลบข้อมูล ${selectedIds.length} รายการ...`);
-  const res  = await api.delete('/admin/submissions', { ids: selectedIds });
-  const data = await res.json();
-  if (!data.success) { showToast('ลบไม่สำเร็จ: ' + (data.error?.message || '')); return; }
+  try {
+    await api.delete('/admin/submissions', { ids: selectedIds });
+  } catch (e) {
+    showToast('ลบไม่สำเร็จ: ' + (e.message || ''));
+    return;
+  }
 
   await writeAuditLog(`ลบรายการยื่นแบบ ${selectedIds.length} รายการ`, 'submissions', 'bulk', { ids: selectedIds });
   showToast(`ลบเรียบร้อยแล้ว ✓ (${selectedIds.length} รายการ)`);
@@ -404,9 +412,12 @@ async function viewAttachment(attachmentId, storagePath) {
 
 async function deleteAttachment(attachmentId, storagePath, fileName, docTypeLabel) {
   if (!confirm(`ยืนยันการลบไฟล์ "${fileName}" ใช่หรือไม่?`)) return;
-  const res  = await api.delete(`/admin/attachments/${attachmentId}`);
-  const data = await res.json();
-  if (!data.success) { showToast('ลบไฟล์ไม่สำเร็จ: ' + (data.error?.message || '')); return; }
+  try {
+    await api.delete(`/admin/attachments/${attachmentId}`);
+  } catch (e) {
+    showToast('ลบไฟล์ไม่สำเร็จ: ' + (e.message || ''));
+    return;
+  }
   showToast('ลบไฟล์เรียบร้อยแล้ว');
   if (typeof loadFdDocList === 'function') loadFdDocList(activeSubmissionId);
   loadSubmissions();
@@ -417,10 +428,14 @@ async function deleteAttachment(attachmentId, storagePath, fileName, docTypeLabe
 // ── Licenses Management ───────────────────────────────────────
 
 async function loadLicenses() {
-  const res  = await api.get('/admin/licensees');
-  const data = await res.json();
-  if (!data.success) { showToast('โหลดข้อมูลใบอนุญาตผิดพลาด'); return; }
-  allLicenses = data.data.licenses || [];
+  let data;
+  try {
+    data = await api.get('/admin/licensees?per_page=2000');
+  } catch (e) {
+    showToast('โหลดข้อมูลใบอนุญาตผิดพลาด');
+    return;
+  }
+  allLicenses = data.licensees || [];
   renderLicenseStats();
   renderLicenseTable();
   if (typeof renderTaxpayerTable === 'function') renderTaxpayerTable();
@@ -524,10 +539,13 @@ async function saveLicense() {
   };
   if (!payload.tax_id || !payload.license_no) { alert('กรุณากรอก Tax ID และเลขที่ใบอนุญาต'); return; }
 
-  const res  = id ? await api.put(`/admin/licensees/${id}`, payload)
-                  : await api.post('/admin/licensees', payload);
-  const data = await res.json();
-  if (!data.success) { alert('บันทึกผิดพลาด: ' + (data.error?.message || '')); return; }
+  try {
+    if (id) await api.put(`/admin/licensees/${id}`, payload);
+    else    await api.post('/admin/licensees', payload);
+  } catch (e) {
+    alert('บันทึกผิดพลาด: ' + (e.message || ''));
+    return;
+  }
 
   await writeAuditLog(id ? `แก้ไขใบอนุญาต ${payload.license_no}` : `เพิ่มใบอนุญาต ${payload.license_no}`, 'licensee_master', id || 'new', payload);
   showToast(id ? 'แก้ไขสำเร็จ' : 'เพิ่มสำเร็จ');
@@ -537,9 +555,12 @@ async function saveLicense() {
 
 async function deleteLicense(id, no) {
   if (!confirm(`ลบใบอนุญาต ${no} ?\nไม่สามารถกู้คืนได้`)) return;
-  const res  = await api.delete(`/admin/licensees/${id}`);
-  const data = await res.json();
-  if (!data.success) { alert('ลบผิดพลาด: ' + (data.error?.message || '')); return; }
+  try {
+    await api.delete(`/admin/licensees/${id}`);
+  } catch (e) {
+    alert('ลบผิดพลาด: ' + (e.message || ''));
+    return;
+  }
   await writeAuditLog(`ลบใบอนุญาต ${no}`, 'licensee_master', id, {});
   showToast('ลบสำเร็จ');
   await loadLicenses();
@@ -604,11 +625,17 @@ async function deleteLicense(id, no) {
   }
 
   // ── Taxpayers ────────────────────────────────────────────────
+  // [FIX] เดิมเรียก sb.from('taxpayer_master') (Supabase client ที่ไม่มีอยู่จริง
+  // ในระบบนี้แล้ว — เปลี่ยนมาใช้ Flask API ตรงๆ แทน)
   async function loadTaxpayers() {
-    const { data, error } = await sb.from('taxpayer_master')
-      .select('*').order('fiscal_year', { ascending: false }).order('tax_id');
-    if (error) { showToast('โหลดข้อมูลผิดพลาด'); return; }
-    allTaxpayers = data || [];
+    let data;
+    try {
+      data = await api.get('/admin/taxpayers?per_page=2000');
+    } catch (e) {
+      showToast('โหลดข้อมูลผิดพลาด');
+      return;
+    }
+    allTaxpayers = data.taxpayers || [];
     renderTaxpayerTable();
   }
 
@@ -635,7 +662,7 @@ async function deleteLicense(id, no) {
     // เติมบริษัทที่มีใบอนุญาตแต่ไม่มีข้อมูล taxpayer_master เลย (กันตกหล่น)
     (allLicenses || []).forEach(l => {
       if (!map.has(l.tax_id)) map.set(l.tax_id, {
-        tax_id: l.tax_id, operator_name: l.licensee_name, years: 0,
+        tax_id: l.tax_id, operator_name: l.company_name, years: 0,
         ref_no: null, period_start: null, period_end: null, due_date: null,
       });
     });
@@ -687,7 +714,7 @@ async function deleteLicense(id, no) {
     if (licStatuses.length) rows = rows.filter(r =>
       (allLicenses || []).some(l => l.tax_id === r.tax_id && licStatuses.includes(l.license_status || '')));
     if (licTypes.length) rows = rows.filter(r =>
-      (allLicenses || []).some(l => l.tax_id === r.tax_id && licTypes.includes(l.license_type || '')));
+      (allLicenses || []).some(l => l.tax_id === r.tax_id && licTypes.includes(l.licensee_type || '')));
 
     rows.sort((a, b) => (a.operator_name || '').localeCompare(b.operator_name || '', 'th'));
 
@@ -752,7 +779,7 @@ async function deleteLicense(id, no) {
   function renderTaxpayerDetail(taxId) {
     const years    = (allTaxpayers || []).filter(t => t.tax_id === taxId);
     const licenses = (allLicenses  || []).filter(l => l.tax_id === taxId);
-    const name = years[0]?.operator_name || licenses[0]?.licensee_name || '—';
+    const name = years[0]?.operator_name || licenses[0]?.company_name || '—';
 
     document.getElementById('tp-detail-name').textContent = name;
     document.getElementById('tp-detail-taxid').textContent = `Tax ID: ${taxId}`;
@@ -765,7 +792,7 @@ async function deleteLicense(id, no) {
     const licRow = l => `
       <tr>
         <td style="font-weight:500;color:#1e2d5e;font-size:12px">${l.license_no || '—'}</td>
-        <td><span class="lic-type-badge">${l.license_type || '—'}</span></td>
+        <td><span class="lic-type-badge">${l.licensee_type || '—'}</span></td>
         <td style="font-size:11px">${fmtBE(l.start_date)}</td>
         <td style="font-size:11px">${fmtBE(l.end_date)}</td>
         <td>${statusBadge(l.license_status)}</td>

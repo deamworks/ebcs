@@ -9,9 +9,10 @@
 
 import io
 import json
+import os
 from datetime import datetime, date
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from ..db import get_db
@@ -180,10 +181,10 @@ def get_submissions():
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
-                    s.fiscal_year, s.ref_no,
+                    s.fiscal_year, s.ref_no, s.due_date,
                     s.net_amount, s.submitted_at, s.created_at,
                     CASE WHEN r.id IS NOT NULL THEN 'paid'
-                         ELSE s.status END AS actual_status
+                         ELSE s.status END AS status
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
                 {where}
@@ -223,6 +224,7 @@ def get_submissions():
     for item in items:
         item["submitted_at"] = date_to_str(item["submitted_at"])
         item["created_at"]   = date_to_str(item["created_at"])
+        item["due_date"]     = date_to_str(item["due_date"])
         item["net_amount"]   = float(item["net_amount"] or 0)
 
     return jsonify({
@@ -279,33 +281,37 @@ def get_submission_detail(submission_id):
                               "message": "ไม่พบใบยื่นแบบ"}
                 }), 404
 
-            # ดึงใบอนุญาต
+            # ดึงใบอนุญาตของใบยื่นนี้ (ตาราง licenses ไม่ใช่ licensee_master
+            # ซึ่งเป็นทะเบียนใบอนุญาตกลางของ กสทช. คนละความหมายกัน)
             cur.execute("""
-                SELECT l.*, GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'id',          li.id,
-                        'income_type', li.income_type,
-                        'label',       li.label,
-                        'amount',      li.amount
-                    ) SEPARATOR ','
-                ) as incomes_raw
-                FROM licensee_master l
-                LEFT JOIN license_incomes li ON li.license_id = l.id
-                WHERE l.submission_id = %s
-                GROUP BY l.id
+                SELECT * FROM licenses
+                WHERE  submission_id = %s
+                ORDER  BY created_at
             """, (submission_id,))
             licenses = cur.fetchall()
 
-            # แปลง incomes_raw (string) เป็น list
+            incomes_by_license = {}
+            license_ids = [lic["id"] for lic in licenses]
+            if license_ids:
+                placeholders = ",".join(["%s"] * len(license_ids))
+                cur.execute(f"""
+                    SELECT id, license_id, field_key, label, amount, is_custom
+                    FROM   license_incomes
+                    WHERE  license_id IN ({placeholders})
+                """, license_ids)
+                for row in cur.fetchall():
+                    incomes_by_license.setdefault(row["license_id"], []).append({
+                        "id":        row["id"],
+                        "field_key": row["field_key"],
+                        "label":     row["label"],
+                        "amount":    float(row["amount"] or 0),
+                        "is_custom": bool(row["is_custom"]),
+                    })
+
             for lic in licenses:
-                raw = lic.pop("incomes_raw", None)
-                try:
-                    lic["incomes"] = json.loads(
-                        f"[{raw}]"
-                    ) if raw else []
-                except Exception:
-                    lic["incomes"] = []
+                lic["incomes"] = incomes_by_license.get(lic["id"], [])
                 lic["fee_amount"] = float(lic["fee_amount"] or 0)
+                lic["deduction_amount"] = float(lic["deduction_amount"] or 0)
 
             # ดึงรายได้อื่น
             cur.execute(
@@ -496,6 +502,81 @@ def delete_submissions():
 
 
 # ════════════════════════════════════════════════════════
+# 5.2b ไฟล์แนบ (Attachments) — ดาวน์โหลด/ลบ
+# nginx บล็อกการเข้าถึง /uploads/ ตรงๆ (ดู nginx.conf) ต้องผ่าน
+# endpoint นี้เท่านั้น เพื่อตรวจ JWT ก่อนส่งไฟล์
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
+@jwt_required()
+@require_admin
+def download_attachment(attachment_id):
+    """ดาวน์โหลดไฟล์แนบ"""
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT storage_path, file_name, mime_type "
+                "FROM document_attachments WHERE id = %s",
+                (attachment_id,)
+            )
+            att = cur.fetchone()
+
+    if not att or not os.path.exists(att["storage_path"]):
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+        }), 404
+
+    return send_file(
+        att["storage_path"],
+        mimetype=att.get("mime_type") or "application/octet-stream",
+        download_name=att["file_name"],
+        as_attachment=True,
+    )
+
+
+@admin_bp.route("/attachments/<attachment_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_attachment(attachment_id):
+    """ลบไฟล์แนบ (ทั้งแถวใน DB และไฟล์จริงบน server)"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT storage_path, file_name FROM document_attachments WHERE id = %s",
+                (attachment_id,)
+            )
+            att = cur.fetchone()
+
+            if not att:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+                }), 404
+
+            cur.execute("DELETE FROM document_attachments WHERE id = %s", (attachment_id,))
+
+        save_audit_log(
+            db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
+            "document_attachments", attachment_id
+        )
+        db.commit()
+
+    try:
+        if att.get("storage_path") and os.path.exists(att["storage_path"]):
+            os.remove(att["storage_path"])
+    except OSError:
+        pass
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบไฟล์เรียบร้อยแล้ว"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
 # 5.3 จัดการผู้ประกอบการ (Taxpayer CRUD)
 # ════════════════════════════════════════════════════════
 
@@ -505,9 +586,10 @@ def delete_submissions():
 def get_taxpayers():
     """ดูรายการผู้ประกอบการทั้งหมด"""
 
-    search = request.args.get("search", "").strip()
-    year   = request.args.get("year", type=int)
-    page   = request.args.get("page", 1, type=int)
+    search   = request.args.get("search", "").strip()
+    year     = request.args.get("year", type=int)
+    page     = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 100, type=int)
 
     conditions = []
     params     = []
@@ -527,14 +609,14 @@ def get_taxpayers():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(f"""
-                SELECT id, tax_id, operator_name,
+                SELECT id, tax_id, operator_name, email, address,
                        fiscal_year, ref_no, period_start,
                        period_end, due_date, updated_at
                 FROM taxpayer_master
                 {where}
                 ORDER BY fiscal_year DESC, operator_name
-                LIMIT 100 OFFSET %s
-            """, params + [(page - 1) * 100])
+                LIMIT %s OFFSET %s
+            """, params + [per_page, (page - 1) * per_page])
             taxpayers = cur.fetchall()
 
     for t in taxpayers:
@@ -574,7 +656,7 @@ def create_taxpayer():
                     INSERT INTO taxpayer_master
                         (tax_id, operator_name, fiscal_year,
                          ref_no, period_start, period_end, due_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["tax_id"],
                     data["operator_name"],
@@ -636,7 +718,7 @@ def update_taxpayer(taxpayer_id):
                               "message": "ไม่พบผู้ประกอบการ"}
                 }), 404
 
-            updatable = ["operator_name", "ref_no",
+            updatable = ["operator_name", "email", "address", "ref_no",
                          "period_start", "period_end", "due_date"]
             set_parts  = []
             set_params = []
@@ -708,9 +790,10 @@ def delete_taxpayer(taxpayer_id):
 def get_licensees():
     """ดูรายการใบอนุญาตทั้งหมด"""
 
-    search = request.args.get("search", "").strip()
-    status = request.args.get("status")
-    page   = request.args.get("page", 1, type=int)
+    search   = request.args.get("search", "").strip()
+    status   = request.args.get("status")
+    page     = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 100, type=int)
 
     conditions = []
     params     = []
@@ -736,8 +819,8 @@ def get_licensees():
                 FROM licensee_master
                 {where}
                 ORDER BY license_no
-                LIMIT 100 OFFSET %s
-            """, params + [(page - 1) * 100])
+                LIMIT %s OFFSET %s
+            """, params + [per_page, (page - 1) * per_page])
             licensees = cur.fetchall()
 
     for lic in licensees:

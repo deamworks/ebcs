@@ -7,6 +7,8 @@
 # 3. ตอบ JSON format เดียวกันทุกตัว: { success, data } หรือ { success, error }
 # ════════════════════════════════════════════════════════
 
+import uuid
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
@@ -20,6 +22,11 @@ operator_bp = Blueprint("operator", __name__)
 # ════════════════════════════════════════════════════════
 # Helper Functions
 # ════════════════════════════════════════════════════════
+
+def new_uuid():
+    """สร้าง UUID สำหรับ primary key (MySQL ไม่มี RETURNING ต้อง gen เองใน Python)"""
+    return str(uuid.uuid4())
+
 
 def date_to_str(d):
     """แปลง date/datetime → "YYYY-MM-DD" string (JSON safe)"""
@@ -234,16 +241,22 @@ def get_licenses():
         with db.cursor() as cur:
             if year:
                 cur.execute("""
-                    SELECT id, license_no, license_type,
-                           license_status, license_start, license_end
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
                     FROM   licensee_master
                     WHERE  tax_id = %s AND fiscal_year = %s
                     ORDER  BY license_status, license_no
                 """, (tax_id, year))
             else:
                 cur.execute("""
-                    SELECT id, license_no, license_type,
-                           license_status, license_start, license_end
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
                     FROM   licensee_master
                     WHERE  tax_id = %s
                     ORDER  BY license_status, license_no
@@ -311,8 +324,9 @@ def create_submission():
 
     [FIX] เดิม:
       - รับ auditor เป็น nested object → แก้เป็น flat fields
-      - ใช้ db.insert_id() (MySQL) → แก้เป็น RETURNING id (PostgreSQL)
       - คำนวณ fund ด้วย flat 2% → แก้เป็น progressive rate
+      - id ของแถวที่สร้างสร้างเองด้วย uuid.uuid4() ในฝั่ง Python
+        (MySQL ไม่มี RETURNING แบบ PostgreSQL)
     """
     tax_id = get_jwt_identity()
     data   = request.get_json()
@@ -376,23 +390,24 @@ def create_submission():
         with db.cursor() as cur:
 
             # 1. สร้างใบยื่นหลัก
-            # [FIX] ใช้ RETURNING id แทน insert_id() (psycopg2/PostgreSQL)
+            # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
+            submission_id = new_uuid()
             cur.execute("""
                 INSERT INTO submissions (
-                    tax_id, ref_no, fiscal_year,
+                    id, tax_id, ref_no, fiscal_year,
                     operator_name, period_start, period_end, due_date,
                     status, total_income, deduction_amount,
                     fund_amount, vat_amount, extra_amount, net_amount,
                     auditor_name, auditor_license, auditor_office, audited_date
                 ) VALUES (
-                    %s, %s, %s,
+                    %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     'draft', %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s
                 )
-                RETURNING id
             """, (
+                submission_id,
                 tax_id,
                 taxpayer["ref_no"],
                 fiscal_year,
@@ -411,31 +426,31 @@ def create_submission():
                 auditor_office,
                 audited_date,
             ))
-            submission_id = cur.fetchone()["id"]  # [FIX] RETURNING id
 
-            # 2. บันทึกใบอนุญาตทีละใบ
+            # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
             for lic in licenses_data:
+                license_id = new_uuid()
                 cur.execute("""
-                    INSERT INTO submission_licenses (
-                        submission_id, license_no,
-                        income, deduction
-                    ) VALUES (%s, %s, %s, %s)
-                    RETURNING id
+                    INSERT INTO licenses (
+                        id, submission_id, license_no,
+                        fee_amount, deduction_amount
+                    ) VALUES (%s, %s, %s, %s, %s)
                 """, (
+                    license_id,
                     submission_id,
                     lic.get("license_no", ""),
                     float(lic.get("income", 0)),
                     float(lic.get("deduction", 0)),
                 ))
-                license_id = cur.fetchone()["id"]
 
                 # 3. บันทึกรายได้ย่อยของใบอนุญาตนี้
                 for income_item in lic.get("incomes", []):
                     cur.execute("""
                         INSERT INTO license_incomes (
-                            license_id, field_key, label, amount, is_custom
-                        ) VALUES (%s, %s, %s, %s, %s)
+                            id, license_id, field_key, label, amount, is_custom
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
+                        new_uuid(),
                         license_id,
                         income_item.get("field_key", ""),
                         income_item.get("label", ""),
@@ -447,9 +462,10 @@ def create_submission():
             for other in other_incomes:
                 cur.execute("""
                     INSERT INTO other_incomes (
-                        submission_id, field_key, label, amount, is_custom
-                    ) VALUES (%s, %s, %s, %s, %s)
+                        id, submission_id, field_key, label, amount, is_custom
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
                 """, (
+                    new_uuid(),
                     submission_id,
                     other.get("field_key", ""),
                     other.get("label", ""),
@@ -530,31 +546,31 @@ def update_submission(submission_id):
                 submission_id,
             ))
 
-            # ลบใบอนุญาตเก่า + income เก่า (CASCADE)
-            cur.execute("DELETE FROM submission_licenses WHERE submission_id = %s", (submission_id,))
+            # ลบใบอนุญาตเก่า + income เก่า (CASCADE ลบ license_incomes ให้อัตโนมัติ)
+            cur.execute("DELETE FROM licenses WHERE submission_id = %s", (submission_id,))
             cur.execute("DELETE FROM other_incomes WHERE submission_id = %s", (submission_id,))
 
             for lic in licenses_data:
+                license_id = new_uuid()
                 cur.execute("""
-                    INSERT INTO submission_licenses (submission_id, license_no, income, deduction)
-                    VALUES (%s, %s, %s, %s) RETURNING id
-                """, (submission_id, lic.get("license_no", ""),
+                    INSERT INTO licenses (id, submission_id, license_no, fee_amount, deduction_amount)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (license_id, submission_id, lic.get("license_no", ""),
                       float(lic.get("income", 0)), float(lic.get("deduction", 0))))
-                license_id = cur.fetchone()["id"]
 
                 for income_item in lic.get("incomes", []):
                     cur.execute("""
-                        INSERT INTO license_incomes (license_id, field_key, label, amount, is_custom)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (license_id, income_item.get("field_key", ""),
+                        INSERT INTO license_incomes (id, license_id, field_key, label, amount, is_custom)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (new_uuid(), license_id, income_item.get("field_key", ""),
                           income_item.get("label", ""), float(income_item.get("amount", 0)),
                           bool(income_item.get("is_custom", False))))
 
             for other in other_incomes:
                 cur.execute("""
-                    INSERT INTO other_incomes (submission_id, field_key, label, amount, is_custom)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (submission_id, other.get("field_key", ""),
+                    INSERT INTO other_incomes (id, submission_id, field_key, label, amount, is_custom)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (new_uuid(), submission_id, other.get("field_key", ""),
                       other.get("label", ""), float(other.get("amount", 0)),
                       bool(other.get("is_custom", False))))
 
@@ -633,21 +649,36 @@ def get_submission(submission_id):
             if not submission:
                 return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
 
+            # [FIX] MySQL ไม่มี array_agg/json_build_object/FILTER (PostgreSQL)
+            # ดึง licenses แล้วดึง incomes แยก จับกลุ่มฝั่ง Python แทน
             cur.execute("""
-                SELECT sl.*, array_agg(
-                    json_build_object(
-                        'field_key', li.field_key,
-                        'label',     li.label,
-                        'amount',    li.amount,
-                        'is_custom', li.is_custom
-                    )
-                ) FILTER (WHERE li.id IS NOT NULL) AS incomes
-                FROM   submission_licenses sl
-                LEFT JOIN license_incomes li ON li.license_id = sl.id
-                WHERE  sl.submission_id = %s
-                GROUP  BY sl.id
+                SELECT * FROM licenses
+                WHERE  submission_id = %s
+                ORDER  BY created_at
             """, (submission_id,))
             licenses = cur.fetchall()
+
+            incomes_by_license = {}
+            license_ids = [lic["id"] for lic in licenses]
+            if license_ids:
+                placeholders = ",".join(["%s"] * len(license_ids))
+                cur.execute(f"""
+                    SELECT license_id, field_key, label, amount, is_custom
+                    FROM   license_incomes
+                    WHERE  license_id IN ({placeholders})
+                """, license_ids)
+                for row in cur.fetchall():
+                    incomes_by_license.setdefault(row["license_id"], []).append({
+                        "field_key": row["field_key"],
+                        "label":     row["label"],
+                        "amount":    float(row["amount"] or 0),
+                        "is_custom": bool(row["is_custom"]),
+                    })
+
+            for lic in licenses:
+                lic["incomes"] = incomes_by_license.get(lic["id"], [])
+                lic["fee_amount"] = float(lic["fee_amount"] or 0)
+                lic["deduction_amount"] = float(lic["deduction_amount"] or 0)
 
             cur.execute("SELECT * FROM other_incomes WHERE submission_id = %s", (submission_id,))
             other_incomes = cur.fetchall()
@@ -732,4 +763,79 @@ def get_my_submissions():
     return jsonify({
         "success": True,
         "data": {"submissions": result, "total": len(result)}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 4.8 สถานะการนำส่งล่าสุด (สำหรับหน้า pages/status.html)
+# GET /api/operator/status?year=2568
+# ════════════════════════════════════════════════════════
+
+@operator_bp.route("/status", methods=["GET"])
+@jwt_required()
+@require_operator
+def get_status():
+    """
+    ดูสถานะใบยื่นแบบล่าสุด (หรือของปีที่ระบุ) ของผู้ประกอบการ
+    ใช้โดยหน้า pages/status.html (frontend/js/status.js)
+
+    Response:
+        { success, data: { submitted: false } }
+        หรือ
+        { success, data: { submitted: true, status, ref_no, ... } }
+    """
+    tax_id = get_jwt_identity()
+    year   = request.args.get("year", type=int)
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            params = [tax_id]
+            year_clause = ""
+            if year:
+                year_clause = "AND s.fiscal_year = %s"
+                params.append(year)
+
+            cur.execute(f"""
+                SELECT s.*, r.receipt_no, r.received_at,
+                       r.amount AS receipt_amount, inv.invoice_no
+                FROM   submissions s
+                LEFT JOIN receipt r   ON r.submission_id = s.id
+                LEFT JOIN invoice inv ON inv.submission_id = s.id
+                WHERE  s.tax_id = %s {year_clause}
+                ORDER  BY s.created_at DESC
+                LIMIT  1
+            """, params)
+            submission = cur.fetchone()
+
+    if not submission or submission["status"] == "draft":
+        return jsonify({"success": True, "data": {"submitted": False}}), 200
+
+    actual_status = "paid" if submission.get("receipt_no") else submission["status"]
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "submitted":      True,
+            "status":         actual_status,
+            "ref_no":         submission["ref_no"],
+            "operator_name":  submission["operator_name"],
+            "fiscal_year":    submission["fiscal_year"],
+            "period_start":   date_to_str(submission["period_start"]),
+            "period_end":     date_to_str(submission["period_end"]),
+            "due_date":       date_to_str(submission["due_date"]),
+            "submitted_at":   date_to_str(submission["submitted_at"]),
+            "created_at":     date_to_str(submission["created_at"]),
+            "total_income":   float(submission["total_income"] or 0),
+            "fund_amount":    float(submission["fund_amount"] or 0),
+            "vat_amount":     float(submission["vat_amount"] or 0),
+            "extra_amount":   float(submission["extra_amount"] or 0),
+            "net_amount":     float(submission["net_amount"] or 0),
+            "receipt_no":     submission.get("receipt_no"),
+            "received_at":    date_to_str(submission.get("received_at")),
+            "receipt_amount": (
+                float(submission["receipt_amount"])
+                if submission.get("receipt_amount") is not None else None
+            ),
+            "invoice_no":     submission.get("invoice_no"),
+        }
     }), 200

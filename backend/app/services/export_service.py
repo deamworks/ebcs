@@ -390,9 +390,10 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
     with db.cursor() as cur:
         cur.execute(f"""
             SELECT
-                license_no, tax_id, operator_name,
-                license_type, license_status,
-                license_start, license_end, fiscal_year
+                license_no, tax_id, company_name,
+                licensee_type AS license_type, license_status,
+                start_date AS license_start, end_date AS license_end,
+                fiscal_year
             FROM licensee_master
             {where}
             ORDER BY license_no
@@ -468,7 +469,7 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
             "",  # รอบ - ยังไม่มีใน schema
             "",  # สถานะ (สถานะแนบเอกสาร) - ยังไม่มีใน schema
             row["tax_id"] or "",
-            row["operator_name"],
+            row["company_name"],
             license_counts.get(row["tax_id"], 1),
             row["license_no"],
             row["license_type"] or "",
