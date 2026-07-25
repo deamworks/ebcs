@@ -235,6 +235,8 @@ CREATE TABLE licenses (
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
+  start_date    DATE          NULL,
+  end_date      DATE          NULL,
 
   -- fee_amount: รายได้รวมของใบอนุญาตนี้
   fee_amount    DECIMAL(18,2) DEFAULT 0,

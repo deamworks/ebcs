@@ -356,7 +356,7 @@ function renderTable() {
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-success" onclick="openReceiptModal('${s.id}')">บันทึกรับชำระ</button>` : ''}
-        <button class="adm-btn adm-btn-sm" onclick="openFullDetailModal('${s.id}')">ดูข้อมูล</button>
+        <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
       </td>
     </tr>`).join('');
 }

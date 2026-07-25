@@ -112,9 +112,18 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // แจ้งเตือนถ้าเคยยื่นปีนี้ไปแล้ว
+    // [FIX] ถ้ายืนยันใบยื่นปีนี้ไปแล้ว (ไม่ใช่ draft) ห้ามเข้ามาแก้ไขได้อีก —
+    // เดิมแค่โชว์ข้อความเตือนแต่ยังให้กรอกฟอร์มต่อได้ตามปกติ (สร้างใบซ้ำได้)
+    // ต้องสลับไปโหมดดูอย่างเดียวแทน จนกว่าแอดมินจะลบใบยื่นเดิม
     if (info.existing_submission) {
       const s = info.existing_submission;
+      if (s.status && s.status !== 'draft') {
+        const detail = await api.get(`/operator/submissions/${s.id}`);
+        if (typeof renderReadOnlySubmission === 'function') {
+          renderReadOnlySubmission(detail, { downloadBase: '/operator', statusLabel: null });
+        }
+        return;
+      }
       const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
       if (msgEl) {
         msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
@@ -299,9 +308,15 @@ async function saveSubmission() {
       });
 
       licenses.push({
-        license_no: d.no       || '',
-        income:     d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
-        deduction:  d.deduction || 0,  // [FIX] ส่ง deduction แยก
+        license_no:     d.no       || '',
+        income:         d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
+        deduction:      d.deduction || 0,  // [FIX] ส่ง deduction แยก
+        // [FIX] เดิมไม่ส่ง 3 ฟิลด์นี้เลย ทำให้ snapshot ใบอนุญาตในใบยื่นแบบ
+        // ไม่มีประเภท/วันที่/สถานะ — หน้าดูรายละเอียด (แอดมิน) เลยข้อมูลไม่ครบ
+        license_type:   d.type          || '',
+        license_start:  thaiToISO(d.startDate),
+        license_end:    thaiToISO(d.endDate),
+        license_status: d.licenseStatus || 'active',
         incomes,
       });
     }
@@ -346,6 +361,12 @@ async function saveSubmission() {
     } else {
       throw new Error(result?.error?.message || result?.message || 'บันทึกไม่สำเร็จ');
     }
+
+    // [FIX] เดิมไม่เคยเรียก endpoint นี้เลย — ใบยื่นแบบเลยค้างสถานะ 'draft'
+    // ตลอดไป ทำให้ผู้ประกอบการยื่นซ้ำ/แก้ไขได้ไม่จำกัดแม้กดยืนยันไปแล้ว
+    // ต้องเรียกยืนยันสถานะทันทีหลังบันทึกสำเร็จ ให้ status เปลี่ยนเป็น
+    // pending_payment (ล็อกไม่ให้แก้ไขได้อีกจนกว่าแอดมินจะลบใบยื่นนี้)
+    await api.post(`/operator/submissions/${submissionId}/submit`, {});
 
     // ลบ draft หลัง submit สำเร็จ
     if (typeof clearDraft === 'function') clearDraft();
