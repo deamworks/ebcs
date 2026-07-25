@@ -112,19 +112,37 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // [FIX] ถ้ายืนยันใบยื่นปีนี้ไปแล้ว (ไม่ใช่ draft) ห้ามเข้ามาแก้ไขได้อีก —
-    // เดิมแค่โชว์ข้อความเตือนแต่ยังให้กรอกฟอร์มต่อได้ตามปกติ (สร้างใบซ้ำได้)
-    // ต้องสลับไปโหมดดูอย่างเดียวแทน จนกว่าแอดมินจะลบใบยื่นเดิม
+    // [FIX] ถ้ายืนยันใบยื่น "ปีนี้" ไปแล้ว (ไม่ใช่ draft) ห้ามกรอกซ้ำปีเดิม —
+    // แต่ต้องยังอยู่ที่ Phase 1 ต่อได้ เผื่อผู้ประกอบการจะเปลี่ยนไปกรอกปีบัญชี
+    // อื่นแทน (คนละใบ ไม่ล็อก) เดิมพอเจอสถานะไม่ใช่ draft จะเด้งเข้าโหมดดู
+    // อย่างเดียวทันทีและซ่อน Phase 1 ทั้งหน้า ทำให้เปลี่ยนปีไม่ได้เลย
+    const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+    appState._lockedSubmission = null;
     if (info.existing_submission) {
       const s = info.existing_submission;
       if (s.status && s.status !== 'draft') {
-        const detail = await api.get(`/operator/submissions/${s.id}`);
-        if (typeof renderReadOnlySubmission === 'function') {
-          renderReadOnlySubmission(detail, { downloadBase: '/operator', statusLabel: null });
+        appState._lockedSubmission = s;
+        if (msgEl) {
+          msgEl.innerHTML =
+            `⚠️ ปีบัญชีนี้ยื่นแบบไปแล้ว (สถานะ: ${statusTh[s.status] || s.status}) ไม่สามารถกรอกซ้ำได้ ` +
+            `<button type="button" class="btn btn-secondary btn-sm" style="margin-left:6px;" onclick="viewExistingSubmission()">ดูใบยื่นแบบที่ยื่นไปแล้ว</button> ` +
+            `หรือเปลี่ยนช่อง "รอบปีบัญชี" ด้านบนเพื่อยื่นปีอื่น`;
+          msgEl.style.color = '#d97706';
         }
+        // ยังเติมข้อมูล ref/ชื่อ/รอบบัญชี/วันครบกำหนดของปีนี้ให้เห็นตามปกติ
+        // (ข้อมูลอ้างอิงอย่างเดียว) แต่ข้ามการโหลด draft/licenses ต่อท้าย
+        _setField('ph1-year', String(info.fiscal_year || ''));
+        _setField('ph1-licensee', info.operator_name);
+        _setField('ph1-ref', info.ref_no || '—');
+        await new Promise(r => setTimeout(r, 30));
+        _setDate(document.getElementById('ph1-period-start'), isoToBE(info.period_start));
+        _setDate(document.getElementById('ph1-period-end'),   isoToBE(info.period_end));
+        _setDate(document.getElementById('ph1-due-date'),     isoToBE(info.due_date));
+        appState.taxId = taxId; appState.taxid = taxId;
+        appState.refNo = info.ref_no || ''; appState.year = String(info.fiscal_year || '');
+        appState.dueDate = isoToBE(info.due_date); appState.licensee = info.operator_name || '';
         return;
       }
-      const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
       if (msgEl) {
         msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
         msgEl.style.color = '#d97706';
@@ -206,6 +224,20 @@ async function autoFillFromAuth() {
 // ── autoFillFromTaxId — legacy compat ───────────────
 async function autoFillFromTaxId() {
   await autoFillFromAuth();
+}
+
+// ── เปิดดูใบยื่นแบบที่ยืนยันไปแล้ว (โหมดอ่านอย่างเดียว) ────
+async function viewExistingSubmission() {
+  const s = appState._lockedSubmission;
+  if (!s) return;
+  try {
+    const detail = await api.get(`/operator/submissions/${s.id}`);
+    if (typeof renderReadOnlySubmission === 'function') {
+      renderReadOnlySubmission(detail, { downloadBase: '/operator', statusLabel: null });
+    }
+  } catch (e) {
+    alert('เปิดดูใบยื่นแบบไม่สำเร็จ: ' + (e.message || ''));
+  }
 }
 
 function _setField(id, val) {

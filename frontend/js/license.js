@@ -71,6 +71,18 @@ async function startProcess(){
     return;
   }
 
+  // [FIX] ตรวจสอบปีบัญชีที่กรอกอยู่ตอนนี้ซ้ำอีกครั้งก่อนเข้าฟอร์ม — เผื่อ
+  // ผู้ประกอบการเปลี่ยนช่อง "รอบปีบัญชี" เป็นปีอื่นหลังโหลดหน้าครั้งแรก
+  // (ปีแรกที่ auto-detect อาจถูกยื่นไปแล้ว แต่ปีที่เพิ่งพิมพ์ใหม่ยังไม่ถูกยื่น
+  // ต้องให้เข้าฟอร์มของปีนั้นได้ตามปกติ — เดิมเช็คแค่ตอนโหลดหน้าครั้งเดียว)
+  if (typeof autoFillFromAuth === 'function') {
+    await autoFillFromAuth();
+    if (appState._lockedSubmission) {
+      alert('ปีบัญชีนี้ยื่นแบบไปแล้ว ไม่สามารถกรอกซ้ำได้ กรุณาเปลี่ยนปีบัญชี หรือกด "ดูใบยื่นแบบที่ยื่นไปแล้ว"');
+      return;
+    }
+  }
+
   const _refFieldVal = (document.getElementById('ph1-ref')?.value || '').trim();
   const _isPlaceholderRef = !_refFieldVal || _refFieldVal === '—' || _refFieldVal.includes('กรุณากรอก');
   appState.refNo = _isPlaceholderRef ? '' : _refFieldVal;
