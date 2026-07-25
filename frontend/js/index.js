@@ -154,11 +154,10 @@ async function autoFillFromAuth() {
       roundEl.style.background = '#f5f5f5';
     }
 
-    // ดึงใบอนุญาต
-    await loadLicenses(info.fiscal_year, taxId);
     if (msgEl && !info.existing_submission) msgEl.textContent = '';
 
      // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
+     // (คืนค่า income/deduction/ผู้สอบบัญชี ที่กรอกไว้ก่อนหน้า)
      await new Promise(r => setTimeout(r, 80));
      if (typeof loadDraft === 'function') {
        const hasDraft = loadDraft(taxId, String(info.fiscal_year));
@@ -176,6 +175,16 @@ async function autoFillFromAuth() {
 
        }
      }
+
+     // [FIX] ดึงใบอนุญาตจากฐานข้อมูล "หลัง" โหลด draft เสมอ — draft ใน
+     // localStorage เป็น cache เก่าที่อาจไม่ตรงกับข้อมูลจริงในระบบ (เช่น
+     // แอดมินแก้ไข/นำเข้าใบอนุญาตใหม่หลังผู้ประกอบการเคยบันทึก draft ไว้)
+     // loadDraft() เขียนทับ appState.rowsData ทั้งก้อนด้วยข้อมูลเก่านั้น
+     // จึงต้องดึงจาก DB ซ้ำเป็นขั้นตอนสุดท้ายเพื่อให้เลขที่ใบอนุญาต/ประเภท/
+     // วันที่/สถานะ ที่แสดงตรงกับฐานข้อมูลเสมอ (ไม่ทับ income/deduction ที่
+     // เพิ่งโหลดจาก draft เพราะ loadLicenses แก้เฉพาะฟิลด์โครงสร้างใบอนุญาต)
+     await loadLicenses(info.fiscal_year, taxId);
+
      // บันทึก key ให้ถูกต้องทันที
      if (typeof saveDraftNow === 'function') saveDraftNow(taxId, String(info.fiscal_year));
 
