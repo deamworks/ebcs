@@ -296,7 +296,7 @@ def create_submission():
     """
     บันทึกข้อมูลใบยื่นแบบ (สร้าง draft)
 
-    Body ที่ Frontend ส่งมา (index.js saveSubmissionToSupabase):
+    Body ที่ Frontend ส่งมา (index.js saveSubmission):
     {
         "fiscal_year":      2568,
         "total_income":     1000000,

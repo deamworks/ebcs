@@ -403,7 +403,7 @@ async function handleAdminBulkDelete() {
   await loadSubmissions();
 }
 
-// ── ดูไฟล์แนบ (เปิดจาก Flask แทน Supabase Storage) ────────────
+// ── ดูไฟล์แนบ (เสิร์ฟผ่าน Flask API พร้อมตรวจสอบสิทธิ์ token) ────────────
 async function viewAttachment(attachmentId, storagePath) {
   // Flask เสิร์ฟไฟล์ผ่าน endpoint ที่ตรวจ token
   const url = `/api/admin/attachments/${attachmentId}/download`;
@@ -625,8 +625,7 @@ async function deleteLicense(id, no) {
   }
 
   // ── Taxpayers ────────────────────────────────────────────────
-  // [FIX] เดิมเรียก sb.from('taxpayer_master') (Supabase client ที่ไม่มีอยู่จริง
-  // ในระบบนี้แล้ว — เปลี่ยนมาใช้ Flask API ตรงๆ แทน)
+  // [FIX] เดิมเรียก client ฐานข้อมูลที่ไม่มีอยู่จริงในระบบนี้ — เปลี่ยนมาใช้ Flask API ตรงๆ แทน
   async function loadTaxpayers() {
     let data;
     try {

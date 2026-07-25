@@ -180,7 +180,7 @@ function confirmFundPayment() {
 }
 
 /**
- * ฟังก์ชันยิงพรีวิวข้อมูลความสำเร็จขึ้น Phase 4 หลังเซฟ Supabase สำเร็จ
+ * ฟังก์ชันยิงพรีวิวข้อมูลความสำเร็จขึ้น Phase 4 หลังบันทึกข้อมูลสำเร็จ
  */
 function handlePhase3Success() {
   if (typeof renderStep5AndSummary === 'function') renderStep5AndSummary();
@@ -276,8 +276,8 @@ function goToPhase3Next() {
     btn.innerHTML = '<span class="btn-spinner"></span>กำลังบันทึกข้อมูล...';
   }
 
-  if (typeof saveSubmissionToSupabase === 'function') {
-    saveSubmissionToSupabase().then(res => {
+  if (typeof saveSubmission === 'function') {
+    saveSubmission().then(res => {
       if (res && res.success) {
         handlePhase3Success(); // สำเร็จ → เปลี่ยนหน้าไป Phase 4 ไม่ต้องเปิดปุ่มคืน
       } else {

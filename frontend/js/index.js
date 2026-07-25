@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════
-// js/index.js — Logic หน้ากรอกรายได้ (เขียนใหม่ ไม่มี Supabase)
+// js/index.js — Logic หน้ากรอกรายได้
 // Depends on: api-client.js, auth.js, calc.js
 // ════════════════════════════════════════════════════
 
@@ -259,8 +259,8 @@ function startProcess() {
   window.scrollTo(0, 0);
 }
 
-// ── saveSubmissionToSupabase — เรียกจาก step5-summary.js ──
-async function saveSubmissionToSupabase() {
+// ── saveSubmission — บันทึกใบยื่นแบบไปที่ Flask API, เรียกจาก step5-summary.js ──
+async function saveSubmission() {
   try {
     const count = parseInt(document.getElementById('license-count')?.value) || 1;
     const { perLicense, totals } = calcAllLicenseSummary(count);
