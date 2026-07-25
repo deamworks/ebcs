@@ -77,8 +77,10 @@ async function startProcess(){
   // ต้องให้เข้าฟอร์มของปีนั้นได้ตามปกติ — เดิมเช็คแค่ตอนโหลดหน้าครั้งเดียว)
   if (typeof autoFillFromAuth === 'function') {
     await autoFillFromAuth();
-    if (appState._lockedSubmission) {
-      alert('ปีบัญชีนี้ยื่นแบบไปแล้ว ไม่สามารถกรอกซ้ำได้ กรุณาเปลี่ยนปีบัญชี');
+    // [FIX] ปีนี้ยืนยันไปแล้ว — เปิดโหมดดูอย่างเดียวให้เห็นใบยื่นแบบจริงเลย
+    // แทนที่จะแค่เตือนด้วย alert แล้วค้างอยู่หน้าฟอร์มเปล่า
+    if (appState._lockedSubmission && typeof viewExistingSubmission === 'function') {
+      await viewExistingSubmission();
       return;
     }
   }
