@@ -24,6 +24,13 @@ function setText(id, val) {
 
 // ── Status config ─────────────────────────────────────
 const STATUS_CONFIG = {
+  // [FIX] backend ส่งค่าจริงเป็น 'pending_payment' (ตาม ENUM ใน submissions.status)
+  // ไม่ใช่ 'draft' — เพิ่ม key ให้ตรงกัน คงข้อความ/ไอคอนเดิมไว้
+  pending_payment: {
+    cls: 'draft', label: 'รอการชำระเงิน',
+    sub: 'ยื่นแบบแล้ว กรุณาชำระเงินภายในกำหนด',
+    icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+  },
   draft: {
     cls: 'draft', label: 'รอการชำระเงิน',
     sub: 'ยื่นแบบแล้ว กรุณาชำระเงินภายในกำหนด',

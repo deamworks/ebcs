@@ -27,11 +27,16 @@ CREATE TABLE taxpayer_master (
   -- operator_name: ชื่อบริษัท/ผู้ประกอบการ
   operator_name VARCHAR(255) NOT NULL,
 
-  -- phone: เบอร์โทรสำหรับรับ OTP ตอน Login
+  -- phone: เบอร์โทร (เดิมใช้รับ OTP ตอน Login — ปัจจุบันเปลี่ยนไปใช้ email แล้ว
+  -- เก็บไว้เผื่ออ้างอิงข้อมูลเก่า ไม่ได้ใช้ใน flow login ปัจจุบัน)
   phone         VARCHAR(10)  NULL,
 
-  -- email: อีเมลสำหรับรับ OTP
+  -- email: อีเมลสำหรับรับ OTP ตอน Login (Phase 6-7)
   email         VARCHAR(255) NULL,
+
+  -- address: ที่อยู่ที่ติดต่อได้ (Import จากไฟล์ Excel ที่อยู่ผู้ประกอบการ)
+  address       VARCHAR(500) NULL,
+
 
   -- fiscal_year: ปีบัญชี (พ.ศ.) เช่น 2568
   fiscal_year   INT          NOT NULL,
@@ -74,8 +79,8 @@ CREATE TABLE licensee_master (
   tax_id         VARCHAR(13)  NOT NULL COMMENT 'เจ้าของใบอนุญาต',
   company_name   VARCHAR(255) NOT NULL,
 
-  -- licensee_type: ประเภทใบอนุญาต
-  licensee_type  VARCHAR(100) NULL,
+  -- license_type: ประเภทใบอนุญาต
+  license_type   VARCHAR(100) NULL,
 
   -- license_status: สถานะใบอนุญาต
   -- ENUM จำกัดให้ใส่ได้แค่ 4 ค่านี้เท่านั้น
@@ -83,8 +88,25 @@ CREATE TABLE licensee_master (
   license_status ENUM('active','ended','cancelled','revoked')
                  DEFAULT 'active',
 
-  start_date     DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
-  end_date       DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
+  license_start  DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
+  license_end    DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
+
+  -- คอลัมน์ต่อไปนี้ใช้โดยการ Import Excel ใบอนุญาตรายปี (services/import_service.py)
+  -- และรายงานผลการจัดเก็บ (services/export_service.py) — เก็บ snapshot
+  -- ทางการเงิน/สถานะงวดนำส่งล่าสุดของใบอนุญาตนี้ไว้ในแถวเดียวกัน
+  fiscal_year    INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด',
+  ref_code       VARCHAR(50)   NULL COMMENT 'รหัสอ้างอิงจากไฟล์ import',
+  sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import)',
+  round_type     VARCHAR(50)   NULL COMMENT 'รอบ (จากไฟล์ import)',
+  sub_status     VARCHAR(50)   NULL COMMENT 'สถานะงวดนำส่ง (จากไฟล์ import)',
+  license_count  INT           NULL COMMENT 'จำนวนใบอนุญาตของ tax_id นี้ ณ วันที่ import',
+  income         DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้จากใบอนุญาต',
+  deduction      DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน',
+  fund_amount    DECIMAL(18,2) DEFAULT 0 COMMENT 'เงินนำส่งเข้ากองทุน',
+  vat            DECIMAL(18,2) DEFAULT 0 COMMENT 'ภาษีมูลค่าเพิ่ม',
+  surcharge      DECIMAL(18,2) DEFAULT 0 COMMENT 'เงินเพิ่ม',
+  net_amount     DECIMAL(18,2) DEFAULT 0 COMMENT 'จำนวนเงินรายปีนำส่งสุทธิ',
+
   created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -199,6 +221,10 @@ CREATE TABLE licenses (
 
   -- fee_amount: รายได้รวมของใบอนุญาตนี้
   fee_amount    DECIMAL(18,2) DEFAULT 0,
+
+  -- deduction_amount: ค่าลดหย่อนของใบอนุญาตนี้ (Step 3)
+  deduction_amount DECIMAL(18,2) DEFAULT 0,
+
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
@@ -217,8 +243,10 @@ CREATE TABLE license_incomes (
   license_id  CHAR(36)      NOT NULL,
 
   income_type VARCHAR(50)   NULL COMMENT 'รหัสประเภท เช่น ads, rental',
+  field_key   VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น f1_1, custom_1',
   label       VARCHAR(255)  NULL COMMENT 'ชื่อแสดงผล เช่น รายได้ค่าโฆษณา',
   amount      DECIMAL(18,2) DEFAULT 0,
+  is_custom   BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง (ไม่ใช่รายการมาตรฐาน)',
 
   FOREIGN KEY (license_id) REFERENCES licenses(id) ON DELETE CASCADE,
   INDEX idx_inc_lic (license_id)
@@ -233,8 +261,10 @@ CREATE TABLE other_incomes (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)      NOT NULL,
   income_type   VARCHAR(50)   NULL,
+  field_key     VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น o1, other_custom_1',
   label         VARCHAR(255)  NULL,
   amount        DECIMAL(18,2) DEFAULT 0,
+  is_custom     BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง (ไม่ใช่รายการมาตรฐาน)',
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
   INDEX idx_oth_sub (submission_id)
@@ -399,8 +429,8 @@ VALUES
 -- ใบอนุญาตทดสอบ 3 ใบ
 -- (มีทั้ง active และ ended เพื่อทดสอบว่าระบบดึงมาทุกสถานะ)
 INSERT INTO licensee_master
-  (license_no, tax_id, company_name, licensee_type,
-   license_status, start_date, end_date)
+  (license_no, tax_id, company_name, license_type,
+   license_status, license_start, license_end)
 VALUES
   -- ใบอนุญาตของบริษัท ไทยวิทยุ (active)
   ('B1-2567-001', '0123456789012',

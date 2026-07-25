@@ -24,11 +24,6 @@ class Config:
     OTP_MAX_ATTEMPTS       = int(os.environ.get("OTP_MAX_ATTEMPTS", 5))
     OTP_RATE_LIMIT_PER_MIN = int(os.environ.get("OTP_RATE_LIMIT_PER_MINUTE", 3))
 
-    # ── SMS ──────────────────────────────────────────────
-    SMS_MODE    = os.environ.get("SMS_MODE", "mock")
-    SMS_API_KEY = os.environ.get("SMS_API_KEY", "")
-    SMS_SENDER  = os.environ.get("SMS_SENDER", "NBTC")
-
     # ── Email (Exchange/Outlook) ──────────────────────────
     # MAIL_SERVER = mock → พิมพ์ OTP ลง log แทนส่งจริง
     MAIL_SERVER   = os.environ.get("MAIL_SERVER", "mock")

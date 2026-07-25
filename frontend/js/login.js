@@ -154,10 +154,11 @@ async function handleVerifyOtp() {
     });
 
     // บันทึก token + ข้อมูล operator
+    // [FIX] backend ส่ง operator info ซ้อนอยู่ใน data.operator.* ไม่ใช่ flat
     auth.saveOperator(data.token, {
       tax_id:        _taxId,
-      operator_name: data.operator_name  || '',
-      fiscal_year:   data.fiscal_year    || '',
+      operator_name: data.operator?.operator_name || '',
+      fiscal_year:   data.operator?.fiscal_year    || '',
     });
 
     // redirect ไปหน้ากรอกรายได้

@@ -279,33 +279,37 @@ def get_submission_detail(submission_id):
                               "message": "ไม่พบใบยื่นแบบ"}
                 }), 404
 
-            # ดึงใบอนุญาต
+            # ดึงใบอนุญาตของใบยื่นนี้ (ตาราง licenses ไม่ใช่ licensee_master
+            # ซึ่งเป็นทะเบียนใบอนุญาตกลางของ กสทช. คนละความหมายกัน)
             cur.execute("""
-                SELECT l.*, GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'id',          li.id,
-                        'income_type', li.income_type,
-                        'label',       li.label,
-                        'amount',      li.amount
-                    ) SEPARATOR ','
-                ) as incomes_raw
-                FROM licensee_master l
-                LEFT JOIN license_incomes li ON li.license_id = l.id
-                WHERE l.submission_id = %s
-                GROUP BY l.id
+                SELECT * FROM licenses
+                WHERE  submission_id = %s
+                ORDER  BY created_at
             """, (submission_id,))
             licenses = cur.fetchall()
 
-            # แปลง incomes_raw (string) เป็น list
+            incomes_by_license = {}
+            license_ids = [lic["id"] for lic in licenses]
+            if license_ids:
+                placeholders = ",".join(["%s"] * len(license_ids))
+                cur.execute(f"""
+                    SELECT id, license_id, field_key, label, amount, is_custom
+                    FROM   license_incomes
+                    WHERE  license_id IN ({placeholders})
+                """, license_ids)
+                for row in cur.fetchall():
+                    incomes_by_license.setdefault(row["license_id"], []).append({
+                        "id":        row["id"],
+                        "field_key": row["field_key"],
+                        "label":     row["label"],
+                        "amount":    float(row["amount"] or 0),
+                        "is_custom": bool(row["is_custom"]),
+                    })
+
             for lic in licenses:
-                raw = lic.pop("incomes_raw", None)
-                try:
-                    lic["incomes"] = json.loads(
-                        f"[{raw}]"
-                    ) if raw else []
-                except Exception:
-                    lic["incomes"] = []
+                lic["incomes"] = incomes_by_license.get(lic["id"], [])
                 lic["fee_amount"] = float(lic["fee_amount"] or 0)
+                lic["deduction_amount"] = float(lic["deduction_amount"] or 0)
 
             # ดึงรายได้อื่น
             cur.execute(
@@ -527,7 +531,7 @@ def get_taxpayers():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(f"""
-                SELECT id, tax_id, operator_name,
+                SELECT id, tax_id, operator_name, email, address,
                        fiscal_year, ref_no, period_start,
                        period_end, due_date, updated_at
                 FROM taxpayer_master
@@ -574,7 +578,7 @@ def create_taxpayer():
                     INSERT INTO taxpayer_master
                         (tax_id, operator_name, fiscal_year,
                          ref_no, period_start, period_end, due_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["tax_id"],
                     data["operator_name"],
@@ -636,7 +640,7 @@ def update_taxpayer(taxpayer_id):
                               "message": "ไม่พบผู้ประกอบการ"}
                 }), 404
 
-            updatable = ["operator_name", "ref_no",
+            updatable = ["operator_name", "email", "address", "ref_no",
                          "period_start", "period_end", "due_date"]
             set_parts  = []
             set_params = []
@@ -731,8 +735,8 @@ def get_licensees():
         with db.cursor() as cur:
             cur.execute(f"""
                 SELECT id, license_no, tax_id, company_name,
-                       licensee_type, license_status,
-                       start_date, end_date, updated_at
+                       license_type, license_status,
+                       license_start, license_end, updated_at
                 FROM licensee_master
                 {where}
                 ORDER BY license_no
@@ -741,9 +745,9 @@ def get_licensees():
             licensees = cur.fetchall()
 
     for lic in licensees:
-        lic["start_date"] = date_to_str(lic["start_date"])
-        lic["end_date"]   = date_to_str(lic["end_date"])
-        lic["updated_at"] = date_to_str(lic["updated_at"])
+        lic["license_start"] = date_to_str(lic["license_start"])
+        lic["license_end"]   = date_to_str(lic["license_end"])
+        lic["updated_at"]    = date_to_str(lic["updated_at"])
 
     return jsonify({
         "success": True,
@@ -775,17 +779,17 @@ def create_licensee():
                 cur.execute("""
                     INSERT INTO licensee_master
                         (license_no, tax_id, company_name,
-                         licensee_type, license_status,
-                         start_date, end_date)
+                         license_type, license_status,
+                         license_start, license_end)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["license_no"],
                     data["tax_id"],
                     data["company_name"],
-                    data.get("licensee_type"),
+                    data.get("license_type"),
                     data.get("license_status", "active"),
-                    data.get("start_date"),
-                    data.get("end_date")
+                    data.get("license_start"),
+                    data.get("license_end")
                 ))
                 cur.execute(
                     "SELECT id FROM licensee_master WHERE license_no = %s",
@@ -838,8 +842,8 @@ def update_licensee(licensee_id):
                               "message": "ไม่พบใบอนุญาต"}
                 }), 404
 
-            updatable = ["company_name", "licensee_type",
-                         "license_status", "start_date", "end_date"]
+            updatable = ["company_name", "license_type",
+                         "license_status", "license_start", "license_end"]
             set_parts  = []
             set_params = []
             changes    = {}
