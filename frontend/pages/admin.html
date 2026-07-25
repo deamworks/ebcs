@@ -483,7 +483,7 @@
           </div>
           <div style="padding:20px;">
             <div style="background:#f0f6ff;border:1px solid #c8ddf5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;">
-              ระบบจะอ่านข้อมูลจากคอลัมน์ดังต่อไปนี้ (แถวหัวตารางอยู่แถวที่ 1): <strong>tax_id (เลขผู้เสียภาษี 13 หลัก), email</strong>
+              ระบบจะอ่านข้อมูลจากคอลัมน์ที่ชื่อ <strong>tax_id / เลขประจำตัวผู้เสียภาษี</strong> และ <strong>email / อีเมล</strong> โดยหาตำแหน่งคอลัมน์และแถวหัวตารางให้โดยอัตโนมัติ (ไม่จำเป็นต้องอยู่ติดกันหรืออยู่แถวที่ 1) — รองรับทั้งไฟล์ template อย่างง่ายและรายงานที่ export จากระบบอื่น
               — เมื่อนำเข้าแล้ว ตอนผู้ประกอบการกรอกเลขผู้เสียภาษีในหน้า Login ระบบจะส่ง OTP ไปยังอีเมลนี้แทนอีเมลเดิมในระบบ
             </div>
             <div class="import-file-zone" onclick="document.getElementById('operatorAccountFile').click()">

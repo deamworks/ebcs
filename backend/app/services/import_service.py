@@ -563,20 +563,44 @@ def parse_contact_excel(file_stream):
 # ════════════════════════════════════════════════════════
 # OPERATOR ACCOUNTS  →  operator_accounts
 # ════════════════════════════════════════════════════════
-# col index (header แถว 1):
-#  0  tax_id  (เลขประจำตัวผู้เสียภาษี 13 หลัก)
-#  1  email
+# รองรับ 2 รูปแบบไฟล์:
+#  1) template อย่างง่าย — header แถว 1: tax_id | email (ติดกัน)
+#  2) รายงานจริงของ กสทช. — header อยู่แถวอื่น คอลัมน์ tax_id/email ไม่ติดกัน
+#     (เช่น "เลขประจำตัวผู้เสียภาษี" อยู่คอลัมน์ B, "อีเมล" อยู่คอลัมน์ X)
+# ตำแหน่งคอลัมน์จึงหาจาก "ชื่อ header" แทนตำแหน่งตายตัว
 
-def _parse_operator_account_row(row, excel_row_num, seen_tax_ids):
+_TAX_ID_HEADER_ALIASES = {"tax_id", "เลขประจำตัวผู้เสียภาษี", "เลขที่ผู้เสียภาษี"}
+_EMAIL_HEADER_ALIASES = {"email", "อีเมล", "อีเมล์"}
+
+
+def _find_operator_account_columns(all_rows, max_scan_rows=10):
+    """
+    สแกนแถวแรกๆ ของไฟล์หาแถวที่มี header ตรงกับชื่อคอลัมน์ tax_id และ email
+    คืน (header_row_idx (0-based), tax_col, email_col) หรือ None ถ้าไม่พบ
+    """
+    for r_idx in range(min(max_scan_rows, len(all_rows))):
+        tax_col = email_col = None
+        for c_idx, cell in enumerate(all_rows[r_idx]):
+            text = str(cell).strip().lower() if cell is not None else ""
+            if tax_col is None and text in _TAX_ID_HEADER_ALIASES:
+                tax_col = c_idx
+            elif email_col is None and text in _EMAIL_HEADER_ALIASES:
+                email_col = c_idx
+        if tax_col is not None and email_col is not None:
+            return r_idx, tax_col, email_col
+    return None
+
+
+def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, email_col=1):
     errs = []
 
-    tax_id = _clean_tax_id(row[0] if len(row) > 0 else None)
+    tax_id = _clean_tax_id(row[tax_col] if len(row) > tax_col else None)
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         errs.append(f"tax_id '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
     elif tax_id in seen_tax_ids:
         errs.append(f"tax_id '{tax_id}' ซ้ำในไฟล์")
 
-    email = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ""
+    email = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
     if not email or not EMAIL_RE.match(email):
         errs.append(f"email '{email}' รูปแบบไม่ถูกต้อง")
 
@@ -589,19 +613,38 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids):
 
 def parse_operator_account_excel(file_stream):
     """
-    อ่านไฟล์ Excel บัญชีผู้ประกอบการ (header แถว 1, ข้อมูลแถว 2+)
-    คอลัมน์: tax_id | email
+    อ่านไฟล์ Excel บัญชีผู้ประกอบการ — หาตำแหน่งคอลัมน์ tax_id/email จาก header
+    (ดู _find_operator_account_columns) รองรับทั้ง template อย่างง่ายและ
+    รายงานจริงที่ header อยู่แถวอื่น
     คืน: (rows: list[dict], errors: list[dict])
     """
+    if isinstance(file_stream, (bytes, bytearray)):
+        file_stream = io.BytesIO(file_stream)
     try:
-        _, data = _read_data_rows(file_stream, header_row=1)
+        wb = openpyxl.load_workbook(file_stream, data_only=True)
+        ws = wb.active
+        all_rows = list(ws.iter_rows(values_only=True))
+        wb.close()
     except Exception as e:
         return [], [{"row": 0, "message": f"เปิดไฟล์ไม่ได้: {e}"}]
 
+    found = _find_operator_account_columns(all_rows)
+    if not found:
+        return [], [{
+            "row": 0,
+            "message": "ไม่พบคอลัมน์ tax_id/เลขประจำตัวผู้เสียภาษี และ email/อีเมล ในไฟล์"
+        }]
+    header_row_idx, tax_col, email_col = found
+
+    data = [
+        list(r) for r in all_rows[header_row_idx + 1:]
+        if any(c is not None and str(c).strip() for c in r)
+    ]
+
     rows, errors = [], []
     seen_tax_ids = set()
-    for idx, row in enumerate(data, start=2):   # Excel row 2 เป็นต้นไป
-        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids)
+    for idx, row in enumerate(data, start=header_row_idx + 2):   # Excel row number จริง
+        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids, tax_col, email_col)
         if err:
             errors.append(err)
         else:
