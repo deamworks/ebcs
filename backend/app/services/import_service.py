@@ -309,6 +309,38 @@ def import_taxpayers(db, rows):
 # 18  เงินเพิ่ม                  → surcharge
 # 19  จำนวนเงินรายปีนำส่งสุทธิ  → net_amount
 
+# licensee_master.license_status คือ MySQL ENUM('active','ended','cancelled','revoked')
+# ไฟล์ Excel ที่ import (โดยเฉพาะไฟล์ที่ export ออกไปแล้วเอากลับมา) จะมีคอลัมน์นี้
+# เป็นภาษาไทย ไม่ใช่ค่า ENUM ตรงๆ — ต้อง map ก่อน insert ไม่งั้น MySQL จะ error
+# "Data truncated for column 'license_status'" และทำให้ import ทั้งไฟล์ล้มเหลว
+# (รวมป้ายภาษาไทยทุกแบบที่ใช้อยู่จริงในระบบ: export_service.py, operator.py, admin.js)
+_LICENSE_STATUS_MAP = {
+    "active": "active", "ended": "ended", "cancelled": "cancelled", "revoked": "revoked",
+    "ปกติ": "active", "ได้รับอนุญาต": "active",
+    "สิ้นสุด": "ended", "สิ้นสุดระยะเวลา": "ended", "สิ้นสุดระยะเวลาอนุญาต": "ended",
+    "ยกเลิก": "cancelled", "ยกเลิกประกอบกิจการ": "cancelled",
+    "เพิกถอน": "revoked", "เพิกถอนใบอนุญาต": "revoked",
+}
+
+
+def _normalize_license_status(raw):
+    """
+    แปลงค่าคอลัมน์ "สถานะใบอนุญาต" (อาจเป็นภาษาไทยหรือค่า ENUM ตรงๆ)
+    → ค่า ENUM จริง หรือคืน error message ถ้าไม่รู้จัก
+    ค่าว่าง → ใช้ 'active' (ตรงกับ DEFAULT ของคอลัมน์นี้ใน schema)
+    """
+    if raw is None or str(raw).strip() == "":
+        return "active", None
+    key = str(raw).strip()
+    mapped = _LICENSE_STATUS_MAP.get(key) or _LICENSE_STATUS_MAP.get(key.lower())
+    if mapped:
+        return mapped, None
+    return None, (
+        f"สถานะใบอนุญาต '{raw}' ไม่รู้จัก "
+        "(ต้องเป็นหนึ่งใน: ปกติ, สิ้นสุด, ยกเลิก, เพิกถอน)"
+    )
+
+
 def _parse_licensee_row(row, excel_row_num):
     errs = []
 
@@ -332,6 +364,11 @@ def _parse_licensee_row(row, excel_row_num):
         fiscal_year_ce = None
         errs.append(f"ปี '{row[1] if len(row) > 1 else ''}' อ่านไม่ได้")
 
+    # license_status: ต้อง map ภาษาไทย → ENUM literal ก่อน ไม่งั้น insert ล้มเหลว
+    license_status, status_err = _normalize_license_status(_s(13))
+    if status_err:
+        errs.append(status_err)
+
     if errs:
         return None, {"row": excel_row_num, "message": ", ".join(errs)}
 
@@ -348,7 +385,7 @@ def _parse_licensee_row(row, excel_row_num):
         "license_type":   _s(10),
         "license_start":  _to_date(row[11]) if len(row) > 11 else None,
         "license_end":    _to_date(row[12]) if len(row) > 12 else None,
-        "license_status": _s(13),
+        "license_status": license_status,
         "income":         _num(row[14]) if len(row) > 14 else 0.0,
         "deduction":      _num(row[15]) if len(row) > 15 else 0.0,
         "fund_amount":    _num(row[16]) if len(row) > 16 else 0.0,
