@@ -256,26 +256,11 @@ async function loadLicenses(year, taxId) {
   }
 }
 
-// ── startProcess — Phase 1 → Phase 2 ─────────────────
-function startProcess() {
-  appState.licensee    = document.getElementById('ph1-licensee')?.value    || '';
-  appState.taxId       = document.getElementById('ph1-taxid')?.value       || '';
-  appState.year        = document.getElementById('ph1-year')?.value        || '';
-  appState.type        = document.getElementById('ph1-type')?.value        || '';
-  appState.periodRound = document.getElementById('ph1-period-round')?.value || '';
-  const ps = document.getElementById('ph1-period-start')?.value || '';
-  const pe = document.getElementById('ph1-period-end')?.value   || '';
-  appState.period  = `${ps}-${pe}`;
-  appState.dueDate = document.getElementById('ph1-due-date')?.value || '';
-
-  if (!appState.licensee) { alert('กรุณาระบุชื่อผู้ได้รับใบอนุญาต'); return; }
-  if (!appState.year)     { alert('กรุณาระบุปีบัญชี'); return; }
-
-  document.getElementById('phase1').style.display = 'none';
-  document.getElementById('phase2').style.display = 'block';
-  if (typeof goToStep === 'function') goToStep(1);
-  window.scrollTo(0, 0);
-}
+// [FIX] startProcess (Phase 1 → Phase 2) ถูกลบออกจากไฟล์นี้ — เดิมมีนิยาม
+// ซ้ำกับ license.js ชื่อฟังก์ชันเดียวกัน ตัวไหนถูก parse ทีหลังจะทับตัวก่อน
+// (ทั้งคู่เป็น `function` declaration ธรรมดา ไม่ใช่ const) เวลาสลับลำดับ
+// <script> ในหน้า HTML จึงเปลี่ยนพฤติกรรมโดยไม่ตั้งใจ — นิยามใน license.js
+// สมบูรณ์กว่า (เติมข้อมูลสรุปด้านบน + คำนวณวันครบกำหนดอัตโนมัติ) เก็บไว้ที่เดียว
 
 // ── saveSubmission — บันทึกใบยื่นแบบไปที่ Flask API, เรียกจาก step5-summary.js ──
 async function saveSubmission() {
