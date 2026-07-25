@@ -576,22 +576,47 @@ _OPERATOR_NAME_HEADER_ALIASES = {
 _EMAIL_HEADER_ALIASES = {"email", "อีเมล", "อีเมล์"}
 
 
-def _find_operator_account_columns(all_rows, max_scan_rows=10):
+def _is_greenish_fill(cell):
+    """
+    True ถ้าเซลล์ header ถูกไฮไลต์สีเขียว (ใช้แยกคอลัมน์ "อีเมล" ที่ถูกต้อง
+    เวลาไฟล์มีคอลัมน์ชื่อ "อีเมล" ซ้ำหลายคอลัมน์ — กสทช. ใช้สีไฮไลต์แยกกลุ่ม
+    ที่อยู่แต่ละบล็อก เช่น สีชมพู = ที่อยู่ออกใบเสร็จ, สีเขียว = ที่อยู่ติดต่อได้จริง)
+    """
+    fill = cell.fill
+    if fill is None or fill.patternType != "solid":
+        return False
+    fg = fill.fgColor
+    if fg is None or fg.type != "rgb" or not fg.rgb or len(fg.rgb) != 8:
+        return False
+    try:
+        r, g, b = int(fg.rgb[2:4], 16), int(fg.rgb[4:6], 16), int(fg.rgb[6:8], 16)
+    except ValueError:
+        return False
+    return g > r + 15 and g > b + 15
+
+
+def _find_operator_account_columns(ws, max_scan_rows=10):
     """
     สแกนแถวแรกๆ ของไฟล์หาแถวที่มี header ตรงกับชื่อคอลัมน์ tax_id, operator_name, email
+    ถ้าคอลัมน์ "อีเมล" ปรากฏมากกว่า 1 คอลัมน์ในแถวเดียวกัน (ไฟล์รายงานจริงที่มี
+    บล็อกที่อยู่หลายชุด) ให้เลือกคอลัมน์ที่ไฮไลต์สีเขียว ถ้าไม่มีสีเขียวเลย
+    ให้ใช้คอลัมน์ขวาสุดที่ชื่อตรงกัน (fallback)
     คืน (header_row_idx (0-based), tax_col, name_col, email_col) หรือ None ถ้าไม่พบ
     """
-    for r_idx in range(min(max_scan_rows, len(all_rows))):
-        tax_col = name_col = email_col = None
-        for c_idx, cell in enumerate(all_rows[r_idx]):
-            text = str(cell).strip().lower() if cell is not None else ""
+    for r_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=max_scan_rows)):
+        tax_col = name_col = None
+        email_candidates = []   # [(col_idx, is_green)]
+        for c_idx, cell in enumerate(row):
+            text = str(cell.value).strip().lower() if cell.value is not None else ""
             if tax_col is None and text in _TAX_ID_HEADER_ALIASES:
                 tax_col = c_idx
             elif name_col is None and text in _OPERATOR_NAME_HEADER_ALIASES:
                 name_col = c_idx
-            elif email_col is None and text in _EMAIL_HEADER_ALIASES:
-                email_col = c_idx
-        if tax_col is not None and name_col is not None and email_col is not None:
+            elif text in _EMAIL_HEADER_ALIASES:
+                email_candidates.append((c_idx, _is_greenish_fill(cell)))
+        if tax_col is not None and name_col is not None and email_candidates:
+            green_cols = [c for c, is_green in email_candidates if is_green]
+            email_col = green_cols[-1] if green_cols else email_candidates[-1][0]
             return r_idx, tax_col, name_col, email_col
     return None
 
@@ -632,12 +657,12 @@ def parse_operator_account_excel(file_stream):
     try:
         wb = openpyxl.load_workbook(file_stream, data_only=True)
         ws = wb.active
+        found = _find_operator_account_columns(ws)
         all_rows = list(ws.iter_rows(values_only=True))
         wb.close()
     except Exception as e:
         return [], [{"row": 0, "message": f"เปิดไฟล์ไม่ได้: {e}"}]
 
-    found = _find_operator_account_columns(all_rows)
     if not found:
         return [], [{
             "row": 0,
