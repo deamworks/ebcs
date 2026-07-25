@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบผู้ดูแล — e-BCS กสทช.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/admin-login.css">
+  </head>
+<body>
+
+  <!-- Logo -->
+  <div class="login-logo">
+    <div class="brand-badge"><span>e</span>-BCS</div>
+    <div class="brand-sub">ระบบนำส่งเงินรายปีเข้ากองทุนวิจัยและพัฒนา กสทช.</div>
+    <div class="admin-tag">ADMIN PORTAL</div>
+  </div>
+
+  <!-- Card -->
+  <div class="login-card">
+    <div class="login-card-header">
+      <h2>เข้าสู่ระบบผู้ดูแล</h2>
+      <p>สำหรับเจ้าหน้าที่ กสทช. เท่านั้น</p>
+    </div>
+    <div class="login-card-body">
+
+      <div class="login-error" id="loginError"></div>
+
+      <div class="field-group">
+        <label for="loginEmail">อีเมล</label>
+        <input
+          type="email"
+          id="loginEmail"
+          placeholder="admin@nbtc.go.th"
+          autocomplete="email"
+          onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()"
+        >
+      </div>
+
+      <div class="field-group">
+        <label for="loginPassword">รหัสผ่าน</label>
+        <input
+          type="password"
+          id="loginPassword"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') handleLogin()"
+        >
+      </div>
+
+      <button class="btn-login" id="loginBtn" onclick="handleLogin()">
+        เข้าสู่ระบบ
+      </button>
+
+    </div>
+  </div>
+
+  <div class="login-footer">
+    ระบบ e-BCS กสทช. &nbsp;·&nbsp; สงวนสิทธิ์เฉพาะเจ้าหน้าที่
+  </div>
+
+<script src="../js/api-client.js"></script>
+<script src="../js/auth.js"></script>
+
+  <script src="../js/api-client.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/admin-login.js"></script>
+</body>
+</html>

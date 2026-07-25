@@ -1,0 +1,141 @@
+/* ════════════════════════════════════════════════════
+   css/admin-login.css — e-BCS Admin Login Page
+   ════════════════════════════════════════════════════ */
+
+body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #1a2b6b 0%, #2C3D8F 40%, #3D52A8 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .login-logo .brand-badge {
+      background: #fff;
+      color: var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 4px 18px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .login-logo .brand-badge span { color: var(--accent); }
+    .login-logo .brand-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 0.05em;
+    }
+    .login-logo .admin-tag {
+      background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.9);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 12px;
+      border-radius: 99px;
+      letter-spacing: 0.08em;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .login-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+    }
+    .login-card-header {
+      background: linear-gradient(135deg, #1e2d5e, var(--primary));
+      padding: 20px 24px;
+      color: #fff;
+    }
+    .login-card-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .login-card-header p {
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+    }
+    .login-card-body { padding: 24px; }
+
+    .login-error {
+      display: none;
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      border-left: 3px solid var(--danger);
+      color: #991B1B;
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .login-error.show { display: block; }
+
+    .field-group { margin-bottom: 16px; }
+    .field-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+    .field-group input {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 13.5px;
+      color: var(--text-primary);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(90,139,250,0.15);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      margin-top: 4px;
+    }
+    .btn-login:hover:not(:disabled) {
+      background: #1a2552;
+      box-shadow: 0 4px 14px rgba(30,45,94,0.4);
+    }
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.5);
+    }

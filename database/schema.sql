@@ -30,6 +30,9 @@ CREATE TABLE taxpayer_master (
   -- phone: เบอร์โทรสำหรับรับ OTP ตอน Login
   phone         VARCHAR(10)  NULL,
 
+  -- email: อีเมลสำหรับรับ OTP
+  email         VARCHAR(255) NULL,
+
   -- fiscal_year: ปีบัญชี (พ.ศ.) เช่น 2568
   fiscal_year   INT          NOT NULL,
 
@@ -366,13 +369,14 @@ INSERT INTO admin_users (email, password_hash, full_name) VALUES
 
 -- ผู้ประกอบการทดสอบ 2 ราย
 INSERT INTO taxpayer_master
-  (tax_id, operator_name, phone, fiscal_year, ref_no,
+  (tax_id, operator_name, phone, email, fiscal_year, ref_no,
    period_start, period_end, due_date)
 VALUES
   (
     '0123456789012',
     'บริษัท ไทยวิทยุกระจายเสียง จำกัด',
     '0949122002',
+    'operator1@example.com',
     2568,
     'NBTC-2568-0001',
     '2025-01-01',
@@ -383,6 +387,7 @@ VALUES
     '9876543210987',
     'บริษัท ทีวีดิจิทัลไทย จำกัด',
     '0898765432',
+    'operator2@example.com',
     2568,
     'NBTC-2568-0002',
     '2025-01-01',

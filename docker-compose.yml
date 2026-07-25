@@ -1,4 +1,3 @@
-
 # Docker Compose — e-BCS
 # รัน:  docker compose up -d
 # หยุด: docker compose down
@@ -28,7 +27,7 @@ services:
   # หน้าที่: รัน Python Flask REST API
   # ไม่มี ports: เปิดออกข้างนอก — ป้องกันการเรียก API ตรงๆ ต้องผ่าน Nginx
   flask-api:
-    build: ./backend                   # build จาก backend/Dockerfile
+    build: .                          # build จาก Dockerfile ใน root
     container_name: ebcs-api
     env_file: .env                     # อ่าน environment variables จาก .env
     volumes:
