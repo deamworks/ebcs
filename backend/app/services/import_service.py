@@ -564,41 +564,50 @@ def parse_contact_excel(file_stream):
 # OPERATOR ACCOUNTS  →  operator_accounts
 # ════════════════════════════════════════════════════════
 # รองรับ 2 รูปแบบไฟล์:
-#  1) template อย่างง่าย — header แถว 1: tax_id | email (ติดกัน)
-#  2) รายงานจริงของ กสทช. — header อยู่แถวอื่น คอลัมน์ tax_id/email ไม่ติดกัน
+#  1) template อย่างง่าย — header แถว 1: tax_id | operator_name | email (ติดกัน)
+#  2) รายงานจริงของ กสทช. — header อยู่แถวอื่น คอลัมน์ไม่ติดกัน
 #     (เช่น "เลขประจำตัวผู้เสียภาษี" อยู่คอลัมน์ B, "อีเมล" อยู่คอลัมน์ X)
 # ตำแหน่งคอลัมน์จึงหาจาก "ชื่อ header" แทนตำแหน่งตายตัว
 
 _TAX_ID_HEADER_ALIASES = {"tax_id", "เลขประจำตัวผู้เสียภาษี", "เลขที่ผู้เสียภาษี"}
+_OPERATOR_NAME_HEADER_ALIASES = {
+    "operator_name", "ชื่อผู้ประกอบการ", "รายชื่อผู้ประกอบการ", "รายชื่อผู้รับใบอนุญาต"
+}
 _EMAIL_HEADER_ALIASES = {"email", "อีเมล", "อีเมล์"}
 
 
 def _find_operator_account_columns(all_rows, max_scan_rows=10):
     """
-    สแกนแถวแรกๆ ของไฟล์หาแถวที่มี header ตรงกับชื่อคอลัมน์ tax_id และ email
-    คืน (header_row_idx (0-based), tax_col, email_col) หรือ None ถ้าไม่พบ
+    สแกนแถวแรกๆ ของไฟล์หาแถวที่มี header ตรงกับชื่อคอลัมน์ tax_id, operator_name, email
+    คืน (header_row_idx (0-based), tax_col, name_col, email_col) หรือ None ถ้าไม่พบ
     """
     for r_idx in range(min(max_scan_rows, len(all_rows))):
-        tax_col = email_col = None
+        tax_col = name_col = email_col = None
         for c_idx, cell in enumerate(all_rows[r_idx]):
             text = str(cell).strip().lower() if cell is not None else ""
             if tax_col is None and text in _TAX_ID_HEADER_ALIASES:
                 tax_col = c_idx
+            elif name_col is None and text in _OPERATOR_NAME_HEADER_ALIASES:
+                name_col = c_idx
             elif email_col is None and text in _EMAIL_HEADER_ALIASES:
                 email_col = c_idx
-        if tax_col is not None and email_col is not None:
-            return r_idx, tax_col, email_col
+        if tax_col is not None and name_col is not None and email_col is not None:
+            return r_idx, tax_col, name_col, email_col
     return None
 
 
-def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, email_col=1):
+def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, name_col=1, email_col=2):
     errs = []
 
     tax_id = _clean_tax_id(row[tax_col] if len(row) > tax_col else None)
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
-        errs.append(f"tax_id '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
+        errs.append(f"เลขผู้เสียภาษี '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
     elif tax_id in seen_tax_ids:
-        errs.append(f"tax_id '{tax_id}' ซ้ำในไฟล์")
+        errs.append(f"เลขผู้เสียภาษี '{tax_id}' ซ้ำในไฟล์")
+
+    operator_name = str(row[name_col]).strip() if len(row) > name_col and row[name_col] is not None else ""
+    if not operator_name:
+        errs.append("ชื่อผู้ประกอบการว่าง")
 
     email = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
     if not email or not EMAIL_RE.match(email):
@@ -608,14 +617,14 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, ema
         return None, {"row": excel_row_num, "message": ", ".join(errs)}
 
     seen_tax_ids.add(tax_id)
-    return {"tax_id": tax_id, "email": email}, None
+    return {"tax_id": tax_id, "operator_name": operator_name, "email": email}, None
 
 
 def parse_operator_account_excel(file_stream):
     """
-    อ่านไฟล์ Excel บัญชีผู้ประกอบการ — หาตำแหน่งคอลัมน์ tax_id/email จาก header
-    (ดู _find_operator_account_columns) รองรับทั้ง template อย่างง่ายและ
-    รายงานจริงที่ header อยู่แถวอื่น
+    อ่านไฟล์ Excel บัญชีผู้ประกอบการ — หาตำแหน่งคอลัมน์ tax_id/operator_name/email
+    จาก header (ดู _find_operator_account_columns) รองรับทั้ง template อย่างง่าย
+    และรายงานจริงที่ header อยู่แถวอื่น
     คืน: (rows: list[dict], errors: list[dict])
     """
     if isinstance(file_stream, (bytes, bytearray)):
@@ -632,9 +641,9 @@ def parse_operator_account_excel(file_stream):
     if not found:
         return [], [{
             "row": 0,
-            "message": "ไม่พบคอลัมน์ tax_id/เลขประจำตัวผู้เสียภาษี และ email/อีเมล ในไฟล์"
+            "message": "ไม่พบคอลัมน์ที่จำเป็น (เลขผู้เสียภาษี, ชื่อผู้ประกอบการ, อีเมล) ในไฟล์"
         }]
-    header_row_idx, tax_col, email_col = found
+    header_row_idx, tax_col, name_col, email_col = found
 
     data = [
         list(r) for r in all_rows[header_row_idx + 1:]
@@ -644,7 +653,7 @@ def parse_operator_account_excel(file_stream):
     rows, errors = [], []
     seen_tax_ids = set()
     for idx, row in enumerate(data, start=header_row_idx + 2):   # Excel row number จริง
-        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids, tax_col, email_col)
+        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids, tax_col, name_col, email_col)
         if err:
             errors.append(err)
         else:
@@ -655,7 +664,7 @@ def parse_operator_account_excel(file_stream):
 def import_operator_accounts(db, rows):
     """
     Upsert operator_accounts  unique: tax_id
-    - มีอยู่แล้ว → UPDATE email
+    - มีอยู่แล้ว → UPDATE operator_name, email
     - ยังไม่มี   → INSERT
     คืน: {"inserted": n, "updated": n}
     """
@@ -665,14 +674,14 @@ def import_operator_accounts(db, rows):
         cur.execute("SELECT id FROM operator_accounts WHERE tax_id=%s", (row["tax_id"],))
         if cur.fetchone():
             cur.execute(
-                "UPDATE operator_accounts SET email=%s WHERE tax_id=%s",
-                (row["email"], row["tax_id"])
+                "UPDATE operator_accounts SET operator_name=%s, email=%s WHERE tax_id=%s",
+                (row["operator_name"], row["email"], row["tax_id"])
             )
             updated += 1
         else:
             cur.execute(
-                "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
-                (row["tax_id"], row["email"])
+                "INSERT INTO operator_accounts (tax_id, operator_name, email) VALUES (%s, %s, %s)",
+                (row["tax_id"], row["operator_name"], row["email"])
             )
             inserted += 1
     db.commit()

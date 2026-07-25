@@ -483,7 +483,7 @@
           </div>
           <div style="padding:20px;">
             <div style="background:#f0f6ff;border:1px solid #c8ddf5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;">
-              ระบบจะอ่านข้อมูลจากคอลัมน์ที่ชื่อ <strong>tax_id / เลขประจำตัวผู้เสียภาษี</strong> และ <strong>email / อีเมล</strong> โดยหาตำแหน่งคอลัมน์และแถวหัวตารางให้โดยอัตโนมัติ (ไม่จำเป็นต้องอยู่ติดกันหรืออยู่แถวที่ 1) — รองรับทั้งไฟล์ template อย่างง่ายและรายงานที่ export จากระบบอื่น
+              ระบบจะอ่านข้อมูลจากคอลัมน์ที่ชื่อ <strong>เลขผู้เสียภาษี (tax_id)</strong>, <strong>ชื่อผู้ประกอบการ (operator_name)</strong> และ <strong>email / อีเมล</strong> โดยหาตำแหน่งคอลัมน์และแถวหัวตารางให้โดยอัตโนมัติ (ไม่จำเป็นต้องอยู่ติดกันหรืออยู่แถวที่ 1) — รองรับทั้งไฟล์ template อย่างง่ายและรายงานที่ export จากระบบอื่น
               — เมื่อนำเข้าแล้ว ตอนผู้ประกอบการกรอกเลขผู้เสียภาษีในหน้า Login ระบบจะส่ง OTP ไปยังอีเมลนี้แทนอีเมลเดิมในระบบ
             </div>
             <div class="import-file-zone" onclick="document.getElementById('operatorAccountFile').click()">
@@ -499,7 +499,7 @@
               <div style="overflow-x:auto;max-height:320px;overflow-y:auto;margin-bottom:12px;border:1px solid #e2e8f0;border-radius:8px;">
                 <table class="adm-table">
                   <thead>
-                    <tr><th>ลำดับ</th><th>Tax ID</th><th>อีเมล</th><th>ตรวจสอบ</th></tr>
+                    <tr><th>ลำดับ</th><th>เลขผู้เสียภาษี</th><th>ชื่อผู้ประกอบการ</th><th>อีเมล</th><th>ตรวจสอบ</th></tr>
                   </thead>
                   <tbody id="oa-import-preview-body"></tbody>
                 </table>
@@ -522,6 +522,7 @@
             <table class="adm-table">
               <thead><tr>
                 <th style="text-align:center">เลขผู้เสียภาษี</th>
+                <th style="text-align:center">ชื่อผู้ประกอบการ</th>
                 <th style="text-align:center">อีเมล</th>
                 <th style="text-align:center">วันที่สร้าง</th>
                 <th style="text-align:center">จัดการ</th>
