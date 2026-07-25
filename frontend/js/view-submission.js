@@ -57,64 +57,10 @@ function renderReadOnlySubmission(data, opts = {}) {
   const attachments = data.attachments   || [];
   const downloadBase = opts.downloadBase || '/operator';
 
-  // ── appState หลัก ──
-  appState.taxId       = s.tax_id || '';
-  appState.taxid       = s.tax_id || '';
-  appState.licensee    = s.operator_name || '';
-  appState.refNo       = s.ref_no || '';
-  appState.year        = String(s.fiscal_year || '');
-  appState.dueDate      = _vsIsoToBE(s.due_date);
-  // กัน restoreStepState(1) โหลด draft เก่าจาก localStorage มาทับข้อมูลจริงที่เพิ่ง hydrate
-  appState._draftLoaded = true;
-
-  // ── appState.rowsData จากใบอนุญาตของใบยื่นนี้ (snapshot ณ วันยื่น) ──
-  appState.rowsData = {};
-  licenses.forEach((lic, i) => {
-    const idx = i + 1;
-    const incomes = lic.incomes || [];
-    const savedInputs = {};
-    incomes.filter(inc => !inc.is_custom).forEach(inc => { savedInputs[inc.field_key] = inc.amount; });
-    const customItems = incomes.filter(inc => inc.is_custom)
-      .map(inc => ({ label: inc.label, value: inc.amount }));
-
-    appState.rowsData[idx] = {
-      income:         parseFloat(lic.fee_amount) || 0,
-      deduction:      parseFloat(lic.deduction_amount) || 0,
-      no:             lic.license_no || '',
-      type:           lic.licensee_type || '',
-      station:        lic.station || '',
-      startDate:      _vsIsoToBE(lic.start_date),
-      endDate:        _vsIsoToBE(lic.end_date),
-      hasIncome:      'yes',
-      noIncomeReason: '',
-      licenseStatus:  lic.license_status || 'active',
-      customItems,
-      savedInputs,
-    };
-  });
-  const countEl = document.getElementById('license-count');
-  if (countEl) countEl.value = licenses.length || 1;
-
-  // ── Step 2: รายได้อื่น ──
-  appState.step2Inputs     = {};
-  appState.step2CustomRows = [];
-  others.forEach(o => {
-    if (!o.is_custom && ['o1', 'o2', 'o3', 'o4', 'o5'].includes(o.field_key)) {
-      appState.step2Inputs[o.field_key] = o.amount;
-    } else {
-      appState.step2CustomRows.push({ label: o.label, value: o.amount });
-    }
-  });
-
-  // ── Step 4: ผู้สอบบัญชี ──
-  appState.auditor = {
-    name:    s.auditor_name    || '',
-    regNo:   s.auditor_license || '',
-    company: s.auditor_office  || '',
-    date:    _vsIsoToBE(s.audited_date),
-  };
-
-  // ── แสดง Phase 2 ตรงๆ (ข้าม Phase 1 เพราะเป็นการดู ไม่ใช่กรอกใหม่) ──
+  // [FIX] สลับไป Phase 2 + เติมข้อมูลสรุปด้านบนก่อนเป็นอันดับแรกเสมอ — เดิม
+  // ทำหลังลูปประมวลผลใบอนุญาต ถ้าลูปนั้น throw (ข้อมูล incomes ผิดรูป ฯลฯ)
+  // จะค้างอยู่ที่ Phase 1 เปล่าๆ ทั้งที่ป้ายเตือน "โหมดดูอย่างเดียว" ขึ้นไปแล้ว
+  // (แถบเตือนแทรกที่ .main ตรงๆ ไม่ขึ้นกับว่า Phase ไหนถูกซ่อนอยู่)
   const p1 = document.getElementById('phase1');
   const p2 = document.getElementById('phase2');
   if (p1) p1.style.display = 'none';
@@ -125,18 +71,81 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-licensee', s.operator_name);
   setText('disp-taxid',    s.tax_id);
   setText('disp-year',     s.fiscal_year ? `พ.ศ. ${s.fiscal_year}` : null);
-  // [FIX] "ประเภทรายการ" คือสถานะใบอนุญาต (ปกติ/สิ้นสุด/ยกเลิก/เพิกถอน) —
-  // เดิมใช้ licensee_type (NETWORK/SERVICE ฯลฯ) ผิดความหมาย คนละฟิลด์กัน
-  const licStatusTh = { active: 'ปกติ', ended: 'สิ้นสุด', cancelled: 'ยกเลิก', revoked: 'เพิกถอน' };
-  setText('disp-type', licStatusTh[licenses[0]?.license_status] || licenses[0]?.license_status);
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  if (typeof generateRows === 'function') generateRows();
-  if (typeof goToStep === 'function') goToStep(1);
-
   _vsRenderStatusBanner(s, opts.statusLabel);
-  _vsRenderAttachments(attachments, downloadBase);
+
+  // ── appState หลัก ──
+  appState.taxId       = s.tax_id || '';
+  appState.taxid       = s.tax_id || '';
+  appState.licensee    = s.operator_name || '';
+  appState.refNo       = s.ref_no || '';
+  appState.year        = String(s.fiscal_year || '');
+  appState.dueDate      = _vsIsoToBE(s.due_date);
+  // กัน restoreStepState(1) โหลด draft เก่าจาก localStorage มาทับข้อมูลจริงที่เพิ่ง hydrate
+  appState._draftLoaded = true;
+
+  try {
+    // ── appState.rowsData จากใบอนุญาตของใบยื่นนี้ (snapshot ณ วันยื่น) ──
+    appState.rowsData = {};
+    licenses.forEach((lic, i) => {
+      const idx = i + 1;
+      const incomes = lic.incomes || [];
+      const savedInputs = {};
+      incomes.filter(inc => !inc.is_custom).forEach(inc => { savedInputs[inc.field_key] = inc.amount; });
+      const customItems = incomes.filter(inc => inc.is_custom)
+        .map(inc => ({ label: inc.label, value: inc.amount }));
+
+      appState.rowsData[idx] = {
+        income:         parseFloat(lic.fee_amount) || 0,
+        deduction:      parseFloat(lic.deduction_amount) || 0,
+        no:             lic.license_no || '',
+        type:           lic.licensee_type || '',
+        station:        lic.station || '',
+        startDate:      _vsIsoToBE(lic.start_date),
+        endDate:        _vsIsoToBE(lic.end_date),
+        hasIncome:      'yes',
+        noIncomeReason: '',
+        licenseStatus:  lic.license_status || 'active',
+        customItems,
+        savedInputs,
+      };
+    });
+    const countEl = document.getElementById('license-count');
+    if (countEl) countEl.value = licenses.length || 1;
+
+    // [FIX] "ประเภทรายการ" คือสถานะใบอนุญาต (ปกติ/สิ้นสุด/ยกเลิก/เพิกถอน) —
+    // เดิมใช้ licensee_type (NETWORK/SERVICE ฯลฯ) ผิดความหมาย คนละฟิลด์กัน
+    const licStatusTh = { active: 'ปกติ', ended: 'สิ้นสุด', cancelled: 'ยกเลิก', revoked: 'เพิกถอน' };
+    setText('disp-type', licStatusTh[licenses[0]?.license_status] || licenses[0]?.license_status);
+
+    // ── Step 2: รายได้อื่น ──
+    appState.step2Inputs     = {};
+    appState.step2CustomRows = [];
+    others.forEach(o => {
+      if (!o.is_custom && ['o1', 'o2', 'o3', 'o4', 'o5'].includes(o.field_key)) {
+        appState.step2Inputs[o.field_key] = o.amount;
+      } else {
+        appState.step2CustomRows.push({ label: o.label, value: o.amount });
+      }
+    });
+
+    // ── Step 4: ผู้สอบบัญชี ──
+    appState.auditor = {
+      name:    s.auditor_name    || '',
+      regNo:   s.auditor_license || '',
+      company: s.auditor_office  || '',
+      date:    _vsIsoToBE(s.audited_date),
+    };
+
+    if (typeof generateRows === 'function') generateRows();
+    if (typeof goToStep === 'function') goToStep(1);
+    _vsRenderAttachments(attachments, downloadBase);
+  } catch (err) {
+    console.error('[renderReadOnlySubmission]', err);
+  }
+
   _vsLockReadOnly();
 }
 
