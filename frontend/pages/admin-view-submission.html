@@ -93,9 +93,9 @@
                 <div class="form-field">
                   <label class="form-field-label">เลขประจำตัวผู้เสียภาษี</label>
                   <div style="flex:1;min-width:0;">
-                    <input class="form-field-input ph1-locked-field" id="ph1-taxid" type="text"
+                    <input class="form-field-input" id="ph1-taxid" type="text"
                       placeholder="กรอก 13 หลัก" maxlength="13" style="width:100%;"
-                      readonly oninput="">
+                      oninput="">
                     <span id="taxid-autofill-msg" class="taxid-status"></span>
                   </div>
                 </div>
@@ -116,8 +116,8 @@
               <!-- Right column -->
               <div>
                 <div class="form-field">
-                  <label class="form-field-label">ปีบัญชี (พ.ศ.)</label>
-                  <input class="form-field-input ph1-locked-field" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)" readonly>
+                  <label class="form-field-label">รอบปีบัญชี (พ.ศ.)</label>
+                  <input class="form-field-input" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)">
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ประเภท</label>
