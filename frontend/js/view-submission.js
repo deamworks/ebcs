@@ -125,7 +125,10 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-licensee', s.operator_name);
   setText('disp-taxid',    s.tax_id);
   setText('disp-year',     s.fiscal_year ? `พ.ศ. ${s.fiscal_year}` : null);
-  setText('disp-type',     licenses[0]?.licensee_type);
+  // [FIX] "ประเภทรายการ" คือสถานะใบอนุญาต (ปกติ/สิ้นสุด/ยกเลิก/เพิกถอน) —
+  // เดิมใช้ licensee_type (NETWORK/SERVICE ฯลฯ) ผิดความหมาย คนละฟิลด์กัน
+  const licStatusTh = { active: 'ปกติ', ended: 'สิ้นสุด', cancelled: 'ยกเลิก', revoked: 'เพิกถอน' };
+  setText('disp-type', licStatusTh[licenses[0]?.license_status] || licenses[0]?.license_status);
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
