@@ -26,6 +26,8 @@ from ..services.import_service import (
     parse_taxpayer_excel, import_taxpayers,
     parse_licensee_excel, import_licensees,
     parse_contact_excel,  import_contacts,
+    parse_operator_account_excel, import_operator_accounts,
+    EMAIL_RE,
 )
 
 admin_bp = Blueprint("admin", __name__)
@@ -984,6 +986,120 @@ def delete_licensee(licensee_id):
 
 
 # ════════════════════════════════════════════════════════
+# 5.4b บัญชีผู้ประกอบการ (Operator Accounts) — อีเมลสำหรับรับ OTP
+# แยกต่างหากจาก taxpayer_master.email — ถ้า tax_id มีแถวอยู่ที่นี่
+# ระบบ login (auth.py) จะใช้อีเมลนี้แทนอีเมลใน taxpayer_master เสมอ
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/operator-accounts", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_operator_accounts():
+    """ดูรายการบัญชีผู้ประกอบการทั้งหมด"""
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT id, tax_id, email, created_at
+                FROM operator_accounts
+                ORDER BY created_at DESC
+            """)
+            accounts = cur.fetchall()
+
+    for a in accounts:
+        a["created_at"] = date_to_str(a["created_at"])
+
+    return jsonify({
+        "success": True,
+        "data": {"accounts": accounts, "total": len(accounts)}
+    }), 200
+
+
+@admin_bp.route("/operator-accounts", methods=["POST"])
+@jwt_required()
+@require_admin
+def create_operator_account():
+    """เพิ่มบัญชีผู้ประกอบการทีละรายการ (tax_id + email)"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    tax_id = str(data.get("tax_id", "")).strip().replace("-", "")
+    email  = str(data.get("email", "")).strip()
+
+    if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_TAX_ID",
+                      "message": "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก"}
+        }), 400
+
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_EMAIL",
+                      "message": "รูปแบบอีเมลไม่ถูกต้อง"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            try:
+                cur.execute(
+                    "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
+                    (tax_id, email)
+                )
+                cur.execute(
+                    "SELECT id FROM operator_accounts WHERE tax_id = %s",
+                    (tax_id,)
+                )
+                new_id = cur.fetchone()["id"]
+
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE",
+                                  "message": "เลขประจำตัวผู้เสียภาษีนี้มีบัญชีอยู่แล้ว"}
+                    }), 400
+                raise
+
+        save_audit_log(
+            db, admin_email, "เพิ่มบัญชีผู้ประกอบการ",
+            "operator_accounts", new_id, {"tax_id": tax_id, "email": email}
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": new_id}
+    }), 201
+
+
+@admin_bp.route("/operator-accounts/<account_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+def delete_operator_account(account_id):
+    """ลบบัญชีผู้ประกอบการ"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "DELETE FROM operator_accounts WHERE id = %s",
+                (account_id,)
+            )
+
+        save_audit_log(
+            db, admin_email, "ลบบัญชีผู้ประกอบการ",
+            "operator_accounts", account_id
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบสำเร็จ"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
 # 5.5 บันทึกรับเงิน (เปลี่ยน status → paid)
 # ════════════════════════════════════════════════════════
 
@@ -1255,6 +1371,77 @@ def import_licensees_route():
             db, admin_email,
             f"Import ใบอนุญาต {len(rows)} แถว",
             "licensee_master", None, result
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "mode":     "commit",
+            "inserted": result["inserted"],
+            "updated":  result["updated"],
+            "message":  (
+                f"Import สำเร็จ: "
+                f"เพิ่มใหม่ {result['inserted']} แถว, "
+                f"อัปเดต {result['updated']} แถว"
+            )
+        }
+    }), 200
+
+
+@admin_bp.route("/import/operator-accounts", methods=["POST"])
+@jwt_required()
+@require_admin
+def import_operator_accounts_route():
+    """
+    Import Excel บัญชีผู้ประกอบการ
+    คอลัมน์: tax_id | email
+    mode=preview → ตรวจข้อมูล ยังไม่บันทึก
+    mode=commit  → บันทึกจริง
+    """
+    admin_email = get_jwt_identity()
+
+    if "file" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE",
+                      "message": "กรุณาแนบไฟล์ Excel"}
+        }), 400
+
+    file = request.files["file"]
+    mode = request.form.get("mode", "preview")
+
+    rows, errors = parse_operator_account_excel(file.stream)
+
+    if mode == "preview":
+        return jsonify({
+            "success": True,
+            "data": {
+                "mode":         "preview",
+                "total_rows":   len(rows) + len(errors),
+                "valid_rows":   len(rows),
+                "error_rows":   len(errors),
+                "errors":       errors[:20],
+                "preview_data": rows[:5]
+            }
+        }), 200
+
+    if errors:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code":    "VALIDATION_ERROR",
+                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
+                "errors":  errors[:20]
+            }
+        }), 400
+
+    with get_db() as db:
+        result = import_operator_accounts(db, rows)
+        save_audit_log(
+            db, admin_email,
+            f"Import บัญชีผู้ประกอบการ {len(rows)} แถว",
+            "operator_accounts", None, result
         )
         db.commit()
 
