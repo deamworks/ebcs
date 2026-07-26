@@ -117,13 +117,31 @@ function renderOperatorAccountsTable() {
   tbody.innerHTML = allOperatorAccounts.length ? allOperatorAccounts.map(r => `
     <tr>
       <td style="text-align:center;font-size:11px;">${r.tax_id}</td>
+      <td style="text-align:center;">${r.operator_name || '—'}</td>
       <td style="text-align:center;">${r.email}</td>
       <td style="text-align:center;">${fdDateTime(r.created_at)}</td>
-      <td style="text-align:center;">
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="adm-btn adm-btn-sm" onclick="editOperatorAccountEmail('${r.id}','${(r.email||'').replace(/'/g, "\\'")}')">แก้ไข</button>
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteOperatorAccount('${r.id}','${r.tax_id}')">ลบ</button>
       </td>
     </tr>`).join('')
-    : '<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+    : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+}
+
+async function editOperatorAccountEmail(id, currentEmail) {
+  const newEmail = prompt('แก้ไขอีเมลสำหรับรับ OTP:', currentEmail);
+  if (newEmail === null) return;
+  const trimmed = newEmail.trim();
+  if (!trimmed) { alert('กรุณากรอกอีเมล'); return; }
+
+  try {
+    await api.put(`/admin/operator-accounts/${id}`, { email: trimmed });
+  } catch (e) {
+    alert('บันทึกผิดพลาด: ' + (e.message || ''));
+    return;
+  }
+  showToast('แก้ไขอีเมลเรียบร้อยแล้ว');
+  await loadOperatorAccounts();
 }
 
 async function deleteOperatorAccount(id, taxId) {

@@ -1061,18 +1061,73 @@ def get_operator_accounts():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT id, tax_id, email, created_at
-                FROM operator_accounts
-                ORDER BY created_at DESC
+                SELECT oa.id, oa.tax_id, oa.email, oa.created_at,
+                       (SELECT tm.operator_name FROM taxpayer_master tm
+                        WHERE tm.tax_id = oa.tax_id
+                        ORDER BY tm.fiscal_year DESC LIMIT 1) AS operator_name
+                FROM operator_accounts oa
+                ORDER BY oa.created_at DESC
             """)
             accounts = cur.fetchall()
 
     for a in accounts:
-        a["created_at"] = date_to_str(a["created_at"])
+        if isinstance(a.get("created_at"), datetime):
+            a["created_at"] = a["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            a["created_at"] = date_to_str(a["created_at"])
 
     return jsonify({
         "success": True,
         "data": {"accounts": accounts, "total": len(accounts)}
+    }), 200
+
+
+@admin_bp.route("/operator-accounts/<account_id>", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_operator_account(account_id):
+    """แก้ไขอีเมลของบัญชีผู้ประกอบการ (tax_id แก้ไขไม่ได้)"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    email = str(data.get("email", "")).strip()
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_EMAIL",
+                      "message": "รูปแบบอีเมลไม่ถูกต้อง"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT tax_id, email FROM operator_accounts WHERE id = %s",
+                (account_id,)
+            )
+            old = cur.fetchone()
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบบัญชีผู้ประกอบการ"}
+                }), 404
+
+            cur.execute(
+                "UPDATE operator_accounts SET email = %s WHERE id = %s",
+                (email, account_id)
+            )
+
+        save_audit_log(
+            db, admin_email,
+            f"แก้ไขอีเมลบัญชีผู้ประกอบการ {old['tax_id']}",
+            "operator_accounts", account_id,
+            {"email": {"old": old["email"], "new": email}},
+            record_label=f"{old['tax_id']} ({email})"
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
     }), 200
 
 
