@@ -34,6 +34,7 @@ function initBuddhistDatePicker() {
   flatpickr('.buddhist-datepicker', {
     locale:     'th',
     dateFormat: 'd/m/Y',
+    clickOpens: false,
     onChange: function(selectedDates, dateStr, instance) {
       const id = instance.element.id;
       if (id === 'ph1-period-start' && typeof autoFillEndDate === 'function') autoFillEndDate(dateStr);

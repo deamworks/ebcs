@@ -95,21 +95,21 @@
                   <div style="flex:1;min-width:0;">
                     <input class="form-field-input" id="ph1-taxid" type="text"
                       placeholder="กรอก 13 หลัก" maxlength="13" style="width:100%;"
-                      oninput="">
+                      oninput="" readonly>
                     <span id="taxid-autofill-msg" class="taxid-status"></span>
                   </div>
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ผู้ได้รับใบอนุญาต</label>
-                  <input class="form-field-input" id="ph1-licensee" type="text" placeholder="ชื่อบริษัท / ผู้รับใบอนุญาต">
+                  <input class="form-field-input" id="ph1-licensee" type="text" placeholder="ชื่อบริษัท / ผู้รับใบอนุญาต" readonly>
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันเริ่มต้นรอบบัญชี</label>
-                  <input class="form-field-input buddhist-datepicker" id="ph1-period-start" type="text" placeholder="วัน/เดือน/ปี">
+                  <input class="form-field-input buddhist-datepicker" id="ph1-period-start" type="text" placeholder="วัน/เดือน/ปี" readonly>
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันสิ้นสุดรอบบัญชี</label>
-                  <input class="form-field-input buddhist-datepicker" id="ph1-period-end" type="text" placeholder="วัน/เดือน/ปี">
+                  <input class="form-field-input buddhist-datepicker" id="ph1-period-end" type="text" placeholder="วัน/เดือน/ปี" readonly>
                 </div>
               </div>
 
@@ -121,7 +121,7 @@
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ประเภท</label>
-                  <select class="form-field-input" id="ph1-type" onchange="autoDetectPeriodType(); autoUnlockRoundOnTypeChange()">
+                  <select class="form-field-input" id="ph1-type" onchange="autoDetectPeriodType(); autoUnlockRoundOnTypeChange()" disabled>
                     <option value="ปกติ" selected>ปกติ</option>
                     <option value="ยกเลิก">ยกเลิก</option>
                     <option value="เพิกถอน">เพิกถอน</option>
@@ -139,7 +139,7 @@
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันครบกำหนดชำระ</label>
-                  <input class="form-field-input buddhist-datepicker" id="ph1-due-date" type="text" placeholder="วัน/เดือน/ปี">
+                  <input class="form-field-input buddhist-datepicker" id="ph1-due-date" type="text" placeholder="วัน/เดือน/ปี" readonly>
                 </div>
               </div>
 
