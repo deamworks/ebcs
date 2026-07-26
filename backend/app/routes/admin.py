@@ -10,7 +10,8 @@
 import io
 import json
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timezone
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
@@ -100,11 +101,32 @@ def require_admin(f):
     return decorated
 
 
+BANGKOK_TZ = ZoneInfo("Asia/Bangkok")
+
+TABLE_NAME_TH = {
+    "submissions":          "ใบยื่นแบบ",
+    "document_attachments": "ไฟล์แนบเอกสาร",
+    "taxpayer_master":      "ผู้ประกอบการ",
+    "licensee_master":      "ใบอนุญาต",
+    "operator_accounts":    "บัญชีผู้ประกอบการ",
+    "contact_master":       "ที่อยู่ผู้ประกอบการ",
+    "receipt":              "ใบเสร็จรับเงิน",
+}
+
+
+def now_bangkok():
+    """เวลาปัจจุบันตามเขตเวลาประเทศไทย (ไม่มี tzinfo สำหรับเก็บลง DATETIME)"""
+    return datetime.now(timezone.utc).astimezone(BANGKOK_TZ).replace(tzinfo=None)
+
+
 def save_audit_log(db, admin_email, action, table_name,
-                   record_id=None, changes=None):
+                   record_id=None, changes=None, record_label=None):
     """
     บันทึก Audit Log ทุกครั้งที่แอดมินแก้ไขข้อมูล
     เรียกใช้หลังทุก INSERT/UPDATE/DELETE
+
+    - record_label: ระบุ "ของใคร" เช่น ชื่อผู้ประกอบการ/เลขผู้เสียภาษี
+    - เวลาบันทึกใช้เขตเวลาประเทศไทย (Asia/Bangkok) เสมอ ไม่พึ่งพา timezone ของ DB server
 
     ตัวอย่าง changes:
     {
@@ -114,14 +136,16 @@ def save_audit_log(db, admin_email, action, table_name,
     with db.cursor() as cur:
         cur.execute("""
             INSERT INTO audit_logs
-                (admin_email, action, table_name, record_id, changes)
-            VALUES (%s, %s, %s, %s, %s)
+                (admin_email, action, table_name, record_id, record_label, changes, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
             admin_email,
             action,
             table_name,
             str(record_id) if record_id else None,
-            json.dumps(changes, ensure_ascii=False) if changes else None
+            record_label,
+            json.dumps(changes, ensure_ascii=False) if changes else None,
+            now_bangkok()
         ))
 
 
@@ -445,7 +469,8 @@ def update_submission(submission_id):
                 "แก้ไขใบยื่นแบบ",
                 "submissions",
                 submission_id,
-                changes
+                changes,
+                record_label=old.get("operator_name")
             )
 
         db.commit()
@@ -562,7 +587,8 @@ def delete_attachment(attachment_id):
 
         save_audit_log(
             db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
-            "document_attachments", attachment_id
+            "document_attachments", attachment_id,
+            record_label=att.get("file_name")
         )
         db.commit()
 
@@ -686,7 +712,8 @@ def create_taxpayer():
 
         save_audit_log(
             db, admin_email, "เพิ่มผู้ประกอบการ",
-            "taxpayer_master", new_id, data
+            "taxpayer_master", new_id, data,
+            record_label=data.get("operator_name")
         )
         db.commit()
 
@@ -745,7 +772,8 @@ def update_taxpayer(taxpayer_id):
         if changes:
             save_audit_log(
                 db, admin_email, "แก้ไขผู้ประกอบการ",
-                "taxpayer_master", taxpayer_id, changes
+                "taxpayer_master", taxpayer_id, changes,
+                record_label=old.get("operator_name")
             )
         db.commit()
 
@@ -766,13 +794,20 @@ def delete_taxpayer(taxpayer_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
+                "SELECT operator_name FROM taxpayer_master WHERE id = %s",
+                (taxpayer_id,)
+            )
+            old = cur.fetchone()
+
+            cur.execute(
                 "DELETE FROM taxpayer_master WHERE id = %s",
                 (taxpayer_id,)
             )
 
         save_audit_log(
             db, admin_email, "ลบผู้ประกอบการ",
-            "taxpayer_master", taxpayer_id
+            "taxpayer_master", taxpayer_id,
+            record_label=old.get("operator_name") if old else None
         )
         db.commit()
 
@@ -889,7 +924,8 @@ def create_licensee():
 
         save_audit_log(
             db, admin_email, "เพิ่มใบอนุญาต",
-            "licensee_master", new_id, data
+            "licensee_master", new_id, data,
+            record_label=data.get("company_name") or data.get("license_no")
         )
         db.commit()
 
@@ -948,7 +984,8 @@ def update_licensee(licensee_id):
         if changes:
             save_audit_log(
                 db, admin_email, "แก้ไขใบอนุญาต",
-                "licensee_master", licensee_id, changes
+                "licensee_master", licensee_id, changes,
+                record_label=old.get("company_name") or old.get("license_no")
             )
         db.commit()
 
@@ -969,13 +1006,20 @@ def delete_licensee(licensee_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
+                "SELECT company_name, license_no FROM licensee_master WHERE id = %s",
+                (licensee_id,)
+            )
+            old = cur.fetchone()
+
+            cur.execute(
                 "DELETE FROM licensee_master WHERE id = %s",
                 (licensee_id,)
             )
 
         save_audit_log(
             db, admin_email, "ลบใบอนุญาต",
-            "licensee_master", licensee_id
+            "licensee_master", licensee_id,
+            record_label=(old.get("company_name") or old.get("license_no")) if old else None
         )
         db.commit()
 
@@ -1063,7 +1107,8 @@ def create_operator_account():
 
         save_audit_log(
             db, admin_email, "เพิ่มบัญชีผู้ประกอบการ",
-            "operator_accounts", new_id, {"tax_id": tax_id, "email": email}
+            "operator_accounts", new_id, {"tax_id": tax_id, "email": email},
+            record_label=f"{tax_id} ({email})"
         )
         db.commit()
 
@@ -1083,13 +1128,20 @@ def delete_operator_account(account_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
+                "SELECT tax_id, email FROM operator_accounts WHERE id = %s",
+                (account_id,)
+            )
+            old = cur.fetchone()
+
+            cur.execute(
                 "DELETE FROM operator_accounts WHERE id = %s",
                 (account_id,)
             )
 
         save_audit_log(
             db, admin_email, "ลบบัญชีผู้ประกอบการ",
-            "operator_accounts", account_id
+            "operator_accounts", account_id,
+            record_label=f"{old['tax_id']} ({old['email']})" if old else None
         )
         db.commit()
 
@@ -1130,7 +1182,7 @@ def create_receipt():
 
             # ตรวจว่าใบยื่นมีอยู่จริง
             cur.execute(
-                "SELECT id, status FROM submissions WHERE id = %s",
+                "SELECT id, status, operator_name FROM submissions WHERE id = %s",
                 (data["submission_id"],)
             )
             submission = cur.fetchone()
@@ -1174,7 +1226,8 @@ def create_receipt():
                 "amount":      data["amount"],
                 "received_at": data["received_at"],
                 "receipt_no":  data.get("receipt_no")
-            }
+            },
+            record_label=submission.get("operator_name")
         )
         db.commit()
 
@@ -1217,7 +1270,7 @@ def get_audit_logs():
         with db.cursor() as cur:
             cur.execute(f"""
                 SELECT id, admin_email, action, table_name,
-                       record_id, changes, created_at
+                       record_id, record_label, changes, created_at
                 FROM audit_logs
                 {where}
                 ORDER BY created_at DESC
@@ -1232,7 +1285,11 @@ def get_audit_logs():
             total = cur.fetchone()["total"]
 
     for log in logs:
-        log["created_at"] = date_to_str(log["created_at"])
+        if isinstance(log.get("created_at"), datetime):
+            log["created_at"] = log["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            log["created_at"] = date_to_str(log["created_at"])
+        log["table_name_th"] = TABLE_NAME_TH.get(log["table_name"], log["table_name"])
         # changes ใน MySQL เก็บเป็น string แปลงกลับเป็น dict
         if log.get("changes") and isinstance(log["changes"], str):
             try:

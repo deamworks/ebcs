@@ -1003,13 +1003,13 @@
       display: flex; align-items: center; justify-content: space-between;
     }
     .adm-card-title { font-size: 13px; font-weight: 600; color: #1e2d5e; }
-    .adm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .adm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; border: 1px solid #dfe4ea; }
     .adm-table th {
       background: #1e2d5e; color: #fff; padding: 9px 12px;
       text-align: center; font-weight: 500; font-size: 12px;
+      border: 1px solid #2b3e73;
     }
-    .adm-table td { padding: 11px 12px; border-bottom: 1px solid #f0f0f0; color: #444; }
-    .adm-table tr:last-child td { border-bottom: none; }
+    .adm-table td { padding: 11px 12px; border: 1px solid #e6e9ee; color: #444; }
     .adm-table tr:hover td { background: #f8fbff; }
 
     /* ── Buttons ─────────────────────────────────────────────── */

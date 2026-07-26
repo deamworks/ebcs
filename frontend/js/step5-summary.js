@@ -268,6 +268,13 @@ function goToPhase3Next() {
   // กันเหนียว: ถ้าปุ่มถูกปิดอยู่แล้ว (กำลังบันทึกข้อมูลรอบก่อนยังไม่จบ) ห้ามเริ่มซ้ำ
   if (btn && btn.disabled) return;
 
+  // บังคับแนบเอกสาร 3 อัน: งบดุลการเงิน (1), ชส.01 (2), ชส.02 (3)
+  const missingDocs = [1, 2, 3].filter(idx => !appState.attachedFiles?.[idx]);
+  if (missingDocs.length) {
+    showToast('กรุณาแนบเอกสารให้ครบ: งบดุลการเงิน, ชส.01 และ ชส.02 ก่อนยืนยันการนำส่ง');
+    return;
+  }
+
   const originalHtml = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
