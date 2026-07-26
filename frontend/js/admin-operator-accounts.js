@@ -42,7 +42,7 @@ async function handleOperatorAccountFile(input) {
   tbody.innerHTML = rows.length ? rows.map((r, i) => `
       <tr>
         <td style="text-align:center">${i + 1}</td>
-        <td>${r.tax_id || ''}</td>
+        <td style="text-align:center">${r.tax_id || ''}</td>
         <td>${r.email || ''}</td>
         <td style="text-align:center;color:#16a34a;">✓</td>
       </tr>`).join('')

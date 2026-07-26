@@ -7,12 +7,14 @@
 # 3. ตอบ JSON format เดียวกันทุกตัว: { success, data } หรือ { success, error }
 # ════════════════════════════════════════════════════════
 
+import os
 import uuid
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
 from functools import wraps
+from werkzeug.utils import secure_filename
 
 from ..db import get_db
 
@@ -625,6 +627,72 @@ def submit_submission(submission_id):
             "message":       "ยื่นแบบสำเร็จแล้ว กรุณานำใบนำฝากไปชำระเงินที่ธนาคาร"
         }
     }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 4.5b แนบเอกสารประกอบการยื่นแบบ
+# POST /api/operator/submissions/<submission_id>/attachments
+# ════════════════════════════════════════════════════════
+
+@operator_bp.route("/submissions/<submission_id>/attachments", methods=["POST"])
+@jwt_required()
+@require_operator
+def upload_attachment(submission_id):
+    """แนบเอกสารประกอบการยื่นแบบ (ผู้ประกอบการอัปโหลดเอง) — multipart/form-data: file, doc_type"""
+    tax_id = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT id, tax_id FROM submissions WHERE id = %s",
+                (submission_id,)
+            )
+            submission = cur.fetchone()
+
+    if not submission:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
+    if submission["tax_id"] != tax_id:
+        return jsonify({"success": False, "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์"}}), 403
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": {"code": "MISSING_FILE", "message": "กรุณาแนบไฟล์"}}), 400
+
+    doc_type = request.form.get("doc_type") or ""
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_FILE_TYPE",
+                      "message": f"รองรับเฉพาะไฟล์ {', '.join(sorted(current_app.config['ALLOWED_EXTENSIONS']))}"}
+        }), 400
+
+    upload_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    stored_name  = f"{uuid.uuid4()}{ext}"
+    storage_path = os.path.join(upload_dir, stored_name)
+    file.save(storage_path)
+    file_size = os.path.getsize(storage_path)
+
+    attachment_id = new_uuid()
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                INSERT INTO document_attachments
+                    (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                attachment_id, submission_id, doc_type,
+                secure_filename(file.filename), storage_path,
+                file.mimetype, file_size
+            ))
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": attachment_id, "file_name": file.filename, "doc_type": doc_type}
+    }), 201
 
 
 # ════════════════════════════════════════════════════════

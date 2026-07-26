@@ -143,10 +143,10 @@ async function loadAuditLogs() {
   if (!tbody) return;
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="color:#888;font-size:11px">${fmtDT(r.created_at)}</td>
+      <td style="color:#888;font-size:11px;white-space:nowrap;text-align:center">${fmtDT(r.created_at)}</td>
       <td style="font-size:11px">${r.admin_email || '—'}</td>
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
-      <td style="font-size:11px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
+      <td style="font-size:11px;color:#888;text-align:center">${r.table_name_th || r.table_name || '—'}</td>
       <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
     </tr>`).join('')
     : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
@@ -492,14 +492,14 @@ function renderLicenseTable() {
   const tbody = document.getElementById('lic-tbody');
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="font-size:11px">${r.tax_id}</td>
+      <td style="font-size:11px;text-align:center">${r.tax_id}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.company_name||'—'}</td>
-      <td style="font-size:11px;font-weight:500">${r.license_no||'—'}</td>
-      <td><span class="lic-type-badge">${r.licensee_type||'—'}</span></td>
-      <td>${fmtBE(r.start_date)}</td>
-      <td>${fmtBE(r.end_date)}</td>
-      <td>${statusBadge(r.license_status)}</td>
-      <td>
+      <td style="font-size:11px;font-weight:500;text-align:center">${r.license_no||'—'}</td>
+      <td style="text-align:center"><span class="lic-type-badge">${r.licensee_type||'—'}</span></td>
+      <td style="text-align:center">${fmtBE(r.start_date)}</td>
+      <td style="text-align:center">${fmtBE(r.end_date)}</td>
+      <td style="text-align:center">${statusBadge(r.license_status)}</td>
+      <td style="text-align:center">
         <button class="adm-btn adm-btn-sm" onclick="openEditLicenseModal('${r.id}')">แก้ไข</button>
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteLicense('${r.id}','${r.license_no}')">ลบ</button>
       </td>
@@ -587,6 +587,7 @@ async function deleteLicense(id, no) {
     'import-operator-accounts': { title: 'นำเข้าบัญชีผู้ประกอบการ', sub: 'นำเข้าอีเมลสำหรับรับ OTP ของผู้ประกอบการจากไฟล์ Excel' },
     taxpayers:         { title: 'ผู้ประกอบการ',          sub: 'ข้อมูลผู้ประกอบการและใบอนุญาต' },
     'taxpayer-detail': { title: 'รายละเอียดผู้ประกอบการ', sub: 'ใบอนุญาตทั้งหมดของบริษัทนี้' },
+    'submission-detail': { title: 'ดู/แก้ไขข้อมูลแบบยื่น', sub: 'รายละเอียดแบบยื่นของผู้ประกอบการ' },
     'import-licensee': { title: 'นำเข้าข้อมูลใบอนุญาต', sub: 'นำเข้าข้อมูลใบอนุญาตจากไฟล์ Excel' },
     'import-taxpayer': { title: 'นำเข้าข้อมูลผู้ประกอบการ', sub: 'นำเข้าข้อมูลผู้ประกอบการจากไฟล์ Excel' },
     export:             { title: 'ส่งออกข้อมูล',           sub: 'ส่งออกรายการยื่นแบบเป็นไฟล์ Excel' },

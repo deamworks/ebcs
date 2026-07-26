@@ -338,6 +338,22 @@ async function saveSubmission() {
       throw new Error(result?.error?.message || result?.message || 'บันทึกไม่สำเร็จ');
     }
 
+    // ── อัปโหลดเอกสารแนบ (ถ้ามี) ไปเก็บไว้กับใบยื่นแบบที่เพิ่งสร้าง ──
+    const attachmentErrors = [];
+    const attached = appState.attachedFiles || {};
+    for (const idx of Object.keys(attached)) {
+      const entry = attached[idx];
+      if (!entry?.file) continue;
+      const formData = new FormData();
+      formData.append('file', entry.file);
+      formData.append('doc_type', entry.label || `เอกสาร ${idx}`);
+      try {
+        await api.upload(`/operator/submissions/${submissionId}/attachments`, formData);
+      } catch (e) {
+        attachmentErrors.push({ label: entry.label || `เอกสาร ${idx}`, message: e.message || 'แนบไฟล์ไม่สำเร็จ' });
+      }
+    }
+
     // ลบ draft หลัง submit สำเร็จ
     if (typeof clearDraft === 'function') clearDraft();
 
@@ -345,7 +361,7 @@ async function saveSubmission() {
       success:          true,
       submissionId:     submissionId,
       error:            null,
-      attachmentErrors: []
+      attachmentErrors
     };
 
   } catch (err) {

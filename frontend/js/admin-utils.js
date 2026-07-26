@@ -179,13 +179,13 @@ async function handleLicenseeFile(input) {
   tbody.innerHTML = rows.length ? rows.map((r, i) => `
       <tr>
         <td style="text-align:center">${i + 1}</td>
-        <td>${r.tax_id || ''}</td>
+        <td style="text-align:center">${r.tax_id || ''}</td>
         <td>${r.company_name || ''}</td>
-        <td>${r.license_no || ''}</td>
-        <td>${r.license_type || ''}</td>
-        <td>${fdISOToThai(r.license_start)}</td>
-        <td>${fdISOToThai(r.license_end)}</td>
-        <td>${r.license_status || ''}</td>
+        <td style="text-align:center">${r.license_no || ''}</td>
+        <td style="text-align:center">${r.license_type || ''}</td>
+        <td style="text-align:center">${fdISOToThai(r.license_start)}</td>
+        <td style="text-align:center">${fdISOToThai(r.license_end)}</td>
+        <td style="text-align:center">${r.license_status || ''}</td>
         <td style="text-align:center;color:#16a34a;">✓</td>
       </tr>`).join('')
     : `<tr><td colspan="9" style="text-align:center;color:#aaa;padding:12px;">ไม่มีแถวที่ถูกต้อง</td></tr>`;
@@ -273,11 +273,11 @@ async function handleTaxpayerFile(input) {
   tbody.innerHTML = rows.length ? rows.map((r, i) => `
       <tr>
         <td style="text-align:center">${i + 1}</td>
-        <td>${r.tax_id || ''}</td>
+        <td style="text-align:center">${r.tax_id || ''}</td>
         <td>${r.operator_name || ''}</td>
-        <td>${fdISOToThai(r.period_start)}</td>
-        <td>${fdISOToThai(r.period_end)}</td>
-        <td>${fdISOToThai(r.due_date)}</td>
+        <td style="text-align:center">${fdISOToThai(r.period_start)}</td>
+        <td style="text-align:center">${fdISOToThai(r.period_end)}</td>
+        <td style="text-align:center">${fdISOToThai(r.due_date)}</td>
         <td style="text-align:center">${r.fiscal_year || ''}</td>
         <td style="text-align:center;color:#16a34a;">✓</td>
       </tr>`).join('')
@@ -484,15 +484,14 @@ async function openFullDetailModal(submissionId) {
   _fdRenderPanel6(data);
 
   fdShowStep(1);
-  document.getElementById('fullDetailModal')?.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  if (typeof showPage === 'function') showPage('submission-detail');
+  document.querySelector('.sb-item[data-page="submissions"]')?.classList.add('active');
 }
 
-function closeFullDetailModal() {
-  document.getElementById('fullDetailModal')?.classList.remove('open');
-  document.body.style.overflow = '';
+function closeSubmissionDetail() {
   activeSubmissionId = null;
   _fdSubmission = null;
+  if (typeof showPage === 'function') showPage('submissions');
 }
 
 function fdShowStep(n) {
@@ -661,10 +660,33 @@ function _fdRenderPanel6(data) {
           <button type="button" class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteAttachment('${a.id}', null, '${(a.file_name || '').replace(/'/g, "\\'")}')">ลบ</button>
         </div>
       </div>`).join('')
-    : `<div style="padding:16px;text-align:center;color:#aaa;">ไม่มีเอกสารแนบ (ระบบยังไม่รองรับการอัปโหลดผ่านหน้าแอดมิน)</div>`;
+    : `<div style="padding:16px;text-align:center;color:#aaa;">ไม่มีเอกสารแนบ</div>`;
 }
 
-/** เรียกใหม่หลังลบไฟล์แนบ เพื่อรีเฟรชรายการใน Panel 6 */
+/** อัปโหลดเอกสารแนบเพิ่มให้ใบยื่นแบบ (แอดมิน) แล้วรีเฟรช Panel 6 */
+async function uploadFdAttachment(input) {
+  const file = input.files?.[0];
+  if (!file || !activeSubmissionId) return;
+
+  const doc_type = prompt('ระบุประเภทเอกสาร (เช่น งบดุลการเงิน, ชส.01, ชส.02):', '') || '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('doc_type', doc_type);
+
+  try {
+    await api.upload(`/admin/submissions/${activeSubmissionId}/attachments`, formData);
+  } catch (e) {
+    alert('แนบไฟล์ไม่สำเร็จ: ' + (e.message || ''));
+    input.value = '';
+    return;
+  }
+  input.value = '';
+  showToast('แนบไฟล์เรียบร้อยแล้ว');
+  await loadFdDocList(activeSubmissionId);
+}
+
+/** เรียกใหม่หลังลบ/เพิ่มไฟล์แนบ เพื่อรีเฟรชรายการใน Panel 6 */
 async function loadFdDocList(submissionId) {
   if (!submissionId) return;
   try {
@@ -697,7 +719,7 @@ async function saveFullDetailChanges() {
     await api.put(`/admin/submissions/${activeSubmissionId}`, payload);
     await writeAuditLog('แก้ไขใบยื่นแบบ (หน้าดูข้อมูล)', 'submissions', activeSubmissionId, payload);
     showToast('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว ✓');
-    closeFullDetailModal();
+    closeSubmissionDetail();
     await loadSubmissions();
   } catch (e) {
     showToast('บันทึกไม่สำเร็จ: ' + (e.message || ''));

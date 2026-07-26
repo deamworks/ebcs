@@ -421,7 +421,7 @@
        การ์ด "ข้อมูลการยื่นแบบ" จะยังฝืนแสดง 3 คอลัมน์ ทำให้ค่าต่างๆ ตัดคำ/
        ขึ้นบรรทัดใหม่แปลกๆ ต่างจาก index.html ที่ปรับเป็น 2 คอลัมน์แล้ว 1 คอลัมน์ ── */
   @media (max-width: 900px) {
-    #fullDetailModal .fd-userview { padding: 16px 14px 60px; }
+    #page-submission-detail .fd-userview { padding: 16px 14px 60px; }
     .fd-userview .info-bar-grid { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 600px) {
@@ -626,13 +626,13 @@
   }
 
   /* ── Override: fullDetailModal เป็นหน้าเต็มจอ แทนที่จะเป็น Centered Modal ── */
-  #fullDetailModal {
+  #page-submission-detail {
     background: #f0f2f5 !important;
     padding: 0 !important;
     align-items: flex-start !important;
     overflow-y: auto;
   }
-  #fullDetailModal .modal-box {
+  #page-submission-detail .modal-box {
     max-width: 100% !important;
     width: 100% !important;
     margin: 0;
@@ -643,7 +643,7 @@
     overflow-y: visible !important;
     padding: 0;
   }
-  #fullDetailModal .modal-head {
+  #page-submission-detail .modal-head {
     padding: 0 !important;
     border-bottom: none !important;
     position: sticky; top: 0; z-index: 20;
@@ -651,17 +651,17 @@
     display: block !important;
     border-radius: 0 !important;
   }
-  #fullDetailModal .modal-body {
+  #page-submission-detail .modal-body {
     padding: 0 !important;
     max-height: none !important;
     overflow: visible !important;
   }
-  #fullDetailModal .fd-userview {
+  #page-submission-detail .fd-userview {
     max-width: 100%;
     margin: 0;
     padding: 16px 14px 60px;
   }
-  #fullDetailModal .modal-footer {
+  #page-submission-detail .modal-footer {
     position: sticky; bottom: 0; z-index: 15;
     background: #fff; border-top: 2px solid #2e86ab;
     padding: 10px 16px; box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
@@ -708,7 +708,7 @@
   .fd-unit-badge strong { color: #1e2d5e; font-weight: 700; }
 
   /* stepper sticky offset accounts for 52px topnav + 34px breadcrumb = 86px */
-  #fullDetailModal .fd-userview .stepper-wrap {
+  #page-submission-detail .fd-userview .stepper-wrap {
     position: sticky; top: 86px; z-index: 9;
   }
 

@@ -10,11 +10,13 @@
 import io
 import json
 import os
+import uuid
 from datetime import datetime, date, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from werkzeug.utils import secure_filename
 
 from ..db import get_db
 from ..services.export_service import (
@@ -615,6 +617,78 @@ def delete_attachment(attachment_id):
         "success": True,
         "data": {"message": "ลบไฟล์เรียบร้อยแล้ว"}
     }), 200
+
+
+@admin_bp.route("/submissions/<submission_id>/attachments", methods=["POST"])
+@jwt_required()
+@require_admin
+def admin_upload_attachment(submission_id):
+    """แอดมินแนบเอกสารประกอบให้ใบยื่นแบบ — multipart/form-data: file, doc_type"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT id, operator_name FROM submissions WHERE id = %s",
+                (submission_id,)
+            )
+            submission = cur.fetchone()
+
+    if not submission:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}
+        }), 404
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({
+            "success": False,
+            "error": {"code": "MISSING_FILE", "message": "กรุณาแนบไฟล์"}
+        }), 400
+
+    doc_type = request.form.get("doc_type") or ""
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_FILE_TYPE",
+                      "message": f"รองรับเฉพาะไฟล์ {', '.join(sorted(current_app.config['ALLOWED_EXTENSIONS']))}"}
+        }), 400
+
+    upload_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    stored_name  = f"{uuid.uuid4()}{ext}"
+    storage_path = os.path.join(upload_dir, stored_name)
+    file.save(storage_path)
+    file_size = os.path.getsize(storage_path)
+
+    attachment_id = str(uuid.uuid4())
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                INSERT INTO document_attachments
+                    (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                attachment_id, submission_id, doc_type,
+                secure_filename(file.filename), storage_path,
+                file.mimetype, file_size
+            ))
+
+        save_audit_log(
+            db, admin_email,
+            f"แนบไฟล์ {file.filename} ให้ใบยื่นแบบของบริษัท {submission.get('operator_name') or '—'}",
+            "document_attachments", attachment_id,
+            record_label=submission.get("operator_name")
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": attachment_id, "file_name": file.filename, "doc_type": doc_type}
+    }), 201
 
 
 # ════════════════════════════════════════════════════════

@@ -286,6 +286,10 @@ function goToPhase3Next() {
   if (typeof saveSubmission === 'function') {
     saveSubmission().then(res => {
       if (res && res.success) {
+        if (res.attachmentErrors?.length) {
+          const names = res.attachmentErrors.map(e => `${e.label}: ${e.message}`).join('\n');
+          alert('ยื่นแบบสำเร็จ แต่แนบเอกสารบางรายการไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่เพื่อแนบเอกสารเพิ่มเติม:\n' + names);
+        }
         handlePhase3Success(); // สำเร็จ → เปลี่ยนหน้าไป Phase 4 ไม่ต้องเปิดปุ่มคืน
       } else {
         // ล้มเหลว → เปิดปุ่มคืนให้กดใหม่ได้ พร้อมแจ้งข้อผิดพลาด
