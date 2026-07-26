@@ -26,6 +26,20 @@ function spinRefreshIcon(btn, fn) {
   }
 }
 
+/** "YYYY-MM-DD HH:MM:SS" หรือ "YYYY-MM-DDTHH:MM:SS" → "DD/MM/YYYY HH:MM" (พ.ศ.)
+ *  แปลงจาก string โดยตรง ไม่ผ่าน Date object เพื่อไม่ให้ browser แปลง timezone ซ้ำ
+ *  ถ้าไม่มีเวลา (เป็นวันที่ล้วน) จะคืนค่าเป็น "DD/MM/YYYY" */
+function fdDateTime(v) {
+  if (!v) return '—';
+  const s = String(v).replace('T', ' ');
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ ](\d{2}):(\d{2})/);
+  if (m) {
+    const [, y, mo, d, h, mi] = m;
+    return `${d}/${mo}/${Number(y) + 543} ${h}:${mi}`;
+  }
+  return fdISOToThai(s);
+}
+
 /** "YYYY-MM-DD" (ค.ศ.) → "DD/MM/YYYY" (พ.ศ.) */
 function fdISOToThai(iso) {
   if (!iso) return '';

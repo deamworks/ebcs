@@ -17,6 +17,18 @@ function isoToBE(iso) {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()+543}`;
 }
+/** "YYYY-MM-DD HH:MM:SS" → "DD/MM/YYYY HH:MM" (พ.ศ.) — แปลงจาก string โดยตรง
+ *  ไม่ผ่าน Date object เพื่อไม่ให้ browser แปลง timezone ซ้ำ */
+function isoToBEDateTime(v) {
+  if (!v) return '—';
+  const s = String(v).replace('T', ' ');
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ ](\d{2}):(\d{2})/);
+  if (m) {
+    const [, y, mo, d, h, mi] = m;
+    return `${d}/${mo}/${Number(y) + 543} ${h}:${mi}`;
+  }
+  return isoToBE(s);
+}
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val || '—';
@@ -113,7 +125,7 @@ function showSubmitted(data) {
   setText('infoPeriod',      data.period_start && data.period_end
     ? `${isoToBE(data.period_start)} — ${isoToBE(data.period_end)}` : '—');
   setText('infoDue',         isoToBE(data.due_date));
-  setText('infoSubmittedAt', isoToBE(data.submitted_at || data.created_at));
+  setText('infoSubmittedAt', isoToBEDateTime(data.submitted_at || data.created_at));
 
   // ── Amounts ────────────────────────────────────────
   setText('amtIncome', fmt(data.total_income));

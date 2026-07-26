@@ -118,7 +118,7 @@ function renderOperatorAccountsTable() {
     <tr>
       <td style="text-align:center;font-size:11px;">${r.tax_id}</td>
       <td style="text-align:center;">${r.email}</td>
-      <td style="text-align:center;">${fmtDateDMY(r.created_at)}</td>
+      <td style="text-align:center;">${fdDateTime(r.created_at)}</td>
       <td style="text-align:center;">
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteOperatorAccount('${r.id}','${r.tax_id}')">ลบ</button>
       </td>

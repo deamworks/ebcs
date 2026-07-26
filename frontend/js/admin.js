@@ -131,14 +131,7 @@ async function loadAuditLogs() {
   });
 
   // created_at เป็นเวลาประเทศไทย (Asia/Bangkok) ที่ backend จัดรูปแบบมาแล้วเป็น "YYYY-MM-DD HH:MM:SS"
-  // แสดงผลตรงจาก string โดยไม่ผ่าน Date object เพื่อไม่ให้ browser แปลง timezone ซ้ำ
-  const fmtDT = str => {
-    if (!str) return '—';
-    const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-    if (!m) return str;
-    const [, y, mo, d, h, mi] = m;
-    return `${d}/${mo}/${Number(y)+543} ${h}:${mi}`;
-  };
+  const fmtDT = fdDateTime;
 
   const actionColor = a => {
     if (a.startsWith('เพิ่ม') || a.startsWith('นำเข้า')) return 'color:#16a34a;font-weight:600';
@@ -366,7 +359,7 @@ function renderTable() {
       <td style="text-align:center;font-size:12.5px">${s.fiscal_year || '—'}</td>
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${s.due_date ? fmtDate(s.due_date) : '—'}</td>
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${s.net_amount ? Number(s.net_amount).toLocaleString('th-TH',{minimumFractionDigits:2}) : '—'}</td>
-      <td style="text-align:center;font-size:12.5px;white-space:nowrap">${fmtDate(s.submitted_at)}</td>
+      <td style="text-align:center;font-size:12.5px;white-space:nowrap">${fdDateTime(s.submitted_at)}</td>
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-success" onclick="openReceiptModal('${s.id}')">บันทึกรับชำระ</button>` : ''}

@@ -505,6 +505,14 @@ def delete_submissions():
 
     with get_db() as db:
         with db.cursor() as cur:
+            # ดึงข้อมูลก่อนลบ (ปีบัญชี/ชื่อบริษัท) เพื่อบันทึกลง audit log ให้ละเอียด
+            cur.execute(
+                f"SELECT id, fiscal_year, operator_name FROM submissions "
+                f"WHERE id IN ({','.join(['%s'] * len(ids))})",
+                ids
+            )
+            submissions_to_delete = {row["id"]: row for row in cur.fetchall()}
+
             # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
             for sid in ids:
                 cur.execute(
@@ -512,14 +520,19 @@ def delete_submissions():
                     (sid,)
                 )
 
-        # Audit Log
-        save_audit_log(
-            db, admin_email,
-            f"ลบใบยื่นแบบ {len(ids)} รายการ",
-            "submissions",
-            None,
-            {"deleted_ids": ids}
-        )
+        # Audit Log — บันทึกแยกรายการ ระบุปีบัญชีและชื่อบริษัทของแต่ละใบยื่นที่ลบ
+        for sid in ids:
+            row = submissions_to_delete.get(sid)
+            fiscal_year   = row["fiscal_year"]   if row else None
+            operator_name = row["operator_name"] if row else None
+            save_audit_log(
+                db, admin_email,
+                f"ลบแบบยื่นปี {fiscal_year or '—'} ของบริษัท {operator_name or '—'}",
+                "submissions",
+                sid,
+                {"deleted_ids": ids},
+                record_label=operator_name
+            )
         db.commit()
 
     return jsonify({
@@ -804,10 +817,12 @@ def delete_taxpayer(taxpayer_id):
                 (taxpayer_id,)
             )
 
+        operator_name = old.get("operator_name") if old else None
         save_audit_log(
-            db, admin_email, "ลบผู้ประกอบการ",
+            db, admin_email,
+            f"ลบผู้ประกอบการ {operator_name or '—'}",
             "taxpayer_master", taxpayer_id,
-            record_label=old.get("operator_name") if old else None
+            record_label=operator_name
         )
         db.commit()
 
@@ -1016,10 +1031,13 @@ def delete_licensee(licensee_id):
                 (licensee_id,)
             )
 
+        license_no   = old.get("license_no")   if old else None
+        company_name = old.get("company_name") if old else None
         save_audit_log(
-            db, admin_email, "ลบใบอนุญาต",
+            db, admin_email,
+            f"ลบใบอนุญาตเลขที่ {license_no or '—'} ของบริษัท {company_name or '—'}",
             "licensee_master", licensee_id,
-            record_label=(old.get("company_name") or old.get("license_no")) if old else None
+            record_label=company_name or license_no
         )
         db.commit()
 
