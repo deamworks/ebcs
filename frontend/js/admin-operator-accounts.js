@@ -116,7 +116,7 @@ function renderOperatorAccountsTable() {
 
   tbody.innerHTML = allOperatorAccounts.length ? allOperatorAccounts.map(r => `
     <tr>
-      <td style="text-align:center;font-size:11px;">${r.tax_id}</td>
+      <td style="text-align:center;font-size:12.5px;">${r.tax_id}</td>
       <td style="text-align:center;">${r.operator_name || ''}</td>
       <td style="text-align:center;">${r.email}</td>
       <td style="text-align:center;">${fmtDateDMY(r.created_at)}</td>

@@ -1013,19 +1013,19 @@
       display: flex; align-items: center; justify-content: space-between;
     }
     .adm-card-title { font-size: 13px; font-weight: 600; color: #1e2d5e; }
-    .adm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; border: 1px solid #dfe4ea; }
+    /* [FIX] ใช้สไตล์ตารางรายการยื่นแบบ (#page-submissions) เป็นมาตรฐานกลาง —
+       เดิม border สีเข้ม (#dfe4ea/#2b3e73/#e6e9ee) ใช้กับทุกตาราง ยกเว้นหน้า
+       รายการยื่นแบบที่ override เป็น #e2e8f0 ไว้คนละที่ ทำให้แต่ละตารางเส้น
+       ไม่ตรงกัน ย้ายค่า #e2e8f0 มาเป็นค่าเริ่มต้นของ .adm-table ทั้งหมดแทน */
+    .adm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; border: 1px solid #e2e8f0; }
     .adm-table th {
       background: #1e2d5e; color: #fff; padding: 9px 12px;
       text-align: center; font-weight: 500; font-size: 12px;
-      border: 1px solid #2b3e73;
+      border: 1px solid #e2e8f0;
     }
-    .adm-table td { padding: 11px 12px; border: 1px solid #e6e9ee; color: #444; }
+    .adm-table td { padding: 11px 12px; border: 1px solid #e2e8f0; color: #444; }
     .adm-table tr:hover td { background: #f8fbff; }
-
-    /* ── ตารางรายการยื่นแบบ: เส้นตารางเต็มทั้งแถว/คอลัมน์ ────── */
-    #page-submissions .adm-table th,
-    #page-submissions .adm-table td { border: 1px solid #e2e8f0; }
-    #page-submissions .adm-table tr:last-child td { border-bottom: 1px solid #e2e8f0; }
+    .adm-table tr:last-child td { border-bottom: 1px solid #e2e8f0; }
 
     /* ── Buttons ─────────────────────────────────────────────── */
     .adm-btn {
@@ -1118,9 +1118,13 @@
     .import-warning strong { display: block; margin-bottom: 3px; }
 
     /* ── Audit ───────────────────────────────────────────────── */
-    .audit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .audit-table th { background: #1e2d5e; color: #fff; padding: 8px 12px; text-align: left; font-size: 11.5px; }
-    .audit-table td { padding: 7px 12px; border-bottom: 1px solid #f0f0f0; color: #444; }
+    /* [FIX] เดิม padding/font-size/border ต่างจากตารางอื่นทั้งหมด (7-8px,
+       11.5-12px, ไม่มี border รอบเซลล์) ปรับให้ตรงกับ .adm-table (มาตรฐาน
+       จากหน้ารายการยื่นแบบ) ทุกจุด */
+    .audit-table { width: 100%; border-collapse: collapse; font-size: 12.5px; border: 1px solid #e2e8f0; }
+    .audit-table th { background: #1e2d5e; color: #fff; padding: 9px 12px; text-align: left; font-weight: 500; font-size: 12px; border: 1px solid #e2e8f0; }
+    .audit-table td { padding: 11px 12px; border: 1px solid #e2e8f0; color: #444; }
+    .audit-table tr:hover td { background: #f8fbff; }
 
     /* ── Toast ───────────────────────────────────────────────── */
     #adm-toast {
