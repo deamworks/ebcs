@@ -170,15 +170,6 @@
               <input id="filterYearTo" class="adm-form-input" style="width:110px" placeholder="เช่น 2568" inputmode="numeric" oninput="renderTable()">
             </div>
             <div class="adm-filter-row">
-              <span class="adm-filter-label">ประเภท</span>
-              <div class="adm-filter-cbs">
-                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="ปกติ" onchange="renderTable()"> ปกติ</label>
-                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="ยกเลิก" onchange="renderTable()"> ยกเลิก</label>
-                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="สิ้นสุด" onchange="renderTable()"> สิ้นสุด</label>
-                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="เพิกถอน" onchange="renderTable()"> เพิกถอน</label>
-              </div>
-            </div>
-            <div class="adm-filter-row">
               <span class="adm-filter-label">รอบบัญชี</span>
               <div class="adm-filter-cbs">
                 <label class="adm-cb-item"><input type="checkbox" class="filter-cb-round" value="รอบปกติ" onchange="renderTable()"> รอบปกติ</label>
@@ -373,15 +364,6 @@
               <input id="tp-year-from" class="adm-form-input" style="width:110px" placeholder="เช่น 2567" inputmode="numeric" oninput="renderTaxpayerTable()">
               <span style="font-size:12px;color:#888;">ถึง</span>
               <input id="tp-year-to" class="adm-form-input" style="width:110px" placeholder="เช่น 2568" inputmode="numeric" oninput="renderTaxpayerTable()">
-            </div>
-            <div class="adm-filter-row">
-              <span class="adm-filter-label">ประเภท</span>
-              <div class="adm-filter-cbs">
-                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="ปกติ" onchange="renderTaxpayerTable()"> ปกติ</label>
-                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="ยกเลิก" onchange="renderTaxpayerTable()"> ยกเลิก</label>
-                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="สิ้นสุด" onchange="renderTaxpayerTable()"> สิ้นสุด</label>
-                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="เพิกถอน" onchange="renderTaxpayerTable()"> เพิกถอน</label>
-              </div>
             </div>
             <div class="adm-filter-row">
               <span class="adm-filter-label">รอบบัญชี</span>
@@ -774,7 +756,7 @@
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="audit-table">
-              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th></tr></thead>
+              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th><th>รายละเอียดการเปลี่ยนแปลง</th></tr></thead>
               <tbody id="audit-tbody"></tbody>
             </table>
           </div>

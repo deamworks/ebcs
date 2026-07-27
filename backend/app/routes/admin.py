@@ -144,7 +144,7 @@ def save_audit_log(db, admin_email, action, table_name,
             table_name,
             str(record_id) if record_id else None,
             record_label,
-            json.dumps(changes, ensure_ascii=False) if changes else None,
+            json.dumps(changes, ensure_ascii=False, default=str) if changes else None,
             now_bangkok()
         ))
 
@@ -612,6 +612,7 @@ def delete_attachment(attachment_id):
         save_audit_log(
             db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
             "document_attachments", attachment_id,
+            {"file_name": att.get("file_name"), "storage_path": att.get("storage_path")},
             record_label=att.get("file_name")
         )
         db.commit()
@@ -818,7 +819,7 @@ def delete_taxpayer(taxpayer_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT operator_name FROM taxpayer_master WHERE id = %s",
+                "SELECT * FROM taxpayer_master WHERE id = %s",
                 (taxpayer_id,)
             )
             old = cur.fetchone()
@@ -831,6 +832,7 @@ def delete_taxpayer(taxpayer_id):
         save_audit_log(
             db, admin_email, "ลบผู้ประกอบการ",
             "taxpayer_master", taxpayer_id,
+            {"deleted": dict(old)} if old else None,
             record_label=old.get("operator_name") if old else None
         )
         db.commit()
@@ -1030,7 +1032,7 @@ def delete_licensee(licensee_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT company_name, license_no FROM licensee_master WHERE id = %s",
+                "SELECT * FROM licensee_master WHERE id = %s",
                 (licensee_id,)
             )
             old = cur.fetchone()
@@ -1043,6 +1045,7 @@ def delete_licensee(licensee_id):
         save_audit_log(
             db, admin_email, "ลบใบอนุญาต",
             "licensee_master", licensee_id,
+            {"deleted": dict(old)} if old else None,
             record_label=(old.get("company_name") or old.get("license_no")) if old else None
         )
         db.commit()
@@ -1161,7 +1164,7 @@ def delete_operator_account(account_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT tax_id, email FROM operator_accounts WHERE id = %s",
+                "SELECT * FROM operator_accounts WHERE id = %s",
                 (account_id,)
             )
             old = cur.fetchone()
@@ -1174,6 +1177,7 @@ def delete_operator_account(account_id):
         save_audit_log(
             db, admin_email, "ลบบัญชีผู้ประกอบการ",
             "operator_accounts", account_id,
+            {"deleted": dict(old)} if old else None,
             record_label=f"{old['tax_id']} ({old['email']})" if old else None
         )
         db.commit()
