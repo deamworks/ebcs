@@ -119,6 +119,12 @@ def now_bangkok():
     return datetime.now(timezone.utc).astimezone(BANGKOK_TZ).replace(tzinfo=None)
 
 
+def export_date_label():
+    """วันที่ส่งออก (พ.ศ.) สำหรับใส่ในชื่อไฟล์รายงาน เช่น 27-07-2569"""
+    now = now_bangkok()
+    return f"{now.day:02d}-{now.month:02d}-{now.year + 543}"
+
+
 def save_audit_log(db, admin_email, action, table_name,
                    record_id=None, changes=None, record_label=None):
     """
@@ -1623,8 +1629,7 @@ def export_taxpayers():
     year_to   = request.args.get("year_to", type=int)
     with get_db() as db:
         output = export_taxpayer_report(db, year=year, year_from=year_from, year_to=year_to)
-    year_label = str(year) if year else "ทั้งหมด"
-    return send_excel_file(output, f"รายงานข้อมูลผู้ประกอบการ_{year_label}.xlsx")
+    return send_excel_file(output, f"รายงานข้อมูลผู้ประกอบการ_{export_date_label()}.xlsx")
 
 
 @admin_bp.route("/export/licensees", methods=["GET"])
@@ -1638,8 +1643,7 @@ def export_licensees_report():
     status    = request.args.get("status")
     with get_db() as db:
         output = export_licensee_report(db, year=year, year_from=year_from, year_to=year_to, status=status)
-    year_label = str(year) if year else "ทั้งหมด"
-    return send_excel_file(output, f"รายงานข้อมูลใบอนุญาต_{year_label}.xlsx")
+    return send_excel_file(output, f"รายงานข้อมูลใบอนุญาต_{export_date_label()}.xlsx")
 
 
 @admin_bp.route("/export/payments", methods=["GET"])
@@ -1654,8 +1658,7 @@ def export_payments():
     with get_db() as db:
         output = export_payment_report(db, year=year, year_from=year_from, year_to=year_to,
                                         statuses=statuses or None)
-    year_label = str(year) if year else "ทั้งหมด"
-    return send_excel_file(output, f"รายงานชำระเงินกองทุน_{year_label}.xlsx")
+    return send_excel_file(output, f"รายงานชำระเงินกองทุน_{export_date_label()}.xlsx")
 
 @admin_bp.route("/import/contacts", methods=["POST"])
 @jwt_required()
