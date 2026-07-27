@@ -159,10 +159,9 @@ async function loadAuditLogs() {
       <td style="font-size:12.5px">${r.admin_email || '—'}</td>
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
       <td style="font-size:12.5px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
-      <td style="font-size:12.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
       <td style="font-size:12.5px">${formatAuditChanges(r.changes)}</td>
     </tr>`).join('')
-    : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
+    : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
 }
 
 // ── ชื่อฟิลด์ภาษาไทย สำหรับแสดงรายละเอียด Audit Log ให้อ่านง่าย/เป็นทางการ ──
