@@ -10,7 +10,7 @@
 import os
 import uuid
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
 from functools import wraps
@@ -783,6 +783,84 @@ def download_own_attachment(attachment_id):
         download_name=att["file_name"],
         as_attachment=True,
     )
+
+
+# ════════════════════════════════════════════════════════
+# 4.6c อัปโหลดไฟล์แนบเอกสาร (Step 6)
+# POST /api/operator/submissions/<submission_id>/attachments
+# แนบได้เฉพาะใบยื่นที่ยังเป็น draft ของตัวเอง
+# ════════════════════════════════════════════════════════
+
+@operator_bp.route("/submissions/<submission_id>/attachments", methods=["POST"])
+@jwt_required()
+@require_operator
+def upload_attachment(submission_id):
+    tax_id = get_jwt_identity()
+
+    if "file" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE", "message": "กรุณาแนบไฟล์"}
+        }), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NO_FILE", "message": "กรุณาแนบไฟล์"}
+        }), 400
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_TYPE", "message": "ประเภทไฟล์ไม่รองรับ"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT id, status, tax_id FROM submissions WHERE id = %s LIMIT 1",
+                (submission_id,)
+            )
+            submission = cur.fetchone()
+
+    if not submission:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
+    if submission["tax_id"] != tax_id:
+        return jsonify({"success": False, "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์"}}), 403
+    if submission["status"] != "draft":
+        return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ใบยื่นแบบนี้ไม่สามารถแนบไฟล์เพิ่มได้"}}), 400
+
+    doc_type    = request.form.get("doc_type", "")[:50]
+    dest_dir    = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
+    os.makedirs(dest_dir, exist_ok=True)
+    stored_name = f"{uuid.uuid4()}{ext}"
+    storage_path = os.path.join(dest_dir, stored_name)
+    file.save(storage_path)
+    file_size = os.path.getsize(storage_path)
+
+    attachment_id = new_uuid()
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                INSERT INTO document_attachments
+                    (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                attachment_id, submission_id, doc_type,
+                file.filename, storage_path, file.mimetype, file_size
+            ))
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "id":        attachment_id,
+            "doc_type":  doc_type,
+            "file_name": file.filename,
+        }
+    }), 201
 
 
 # ════════════════════════════════════════════════════════

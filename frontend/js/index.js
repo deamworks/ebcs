@@ -360,6 +360,21 @@ async function saveSubmission() {
       throw new Error(result?.error?.message || result?.message || 'บันทึกไม่สำเร็จ');
     }
 
+    // อัปโหลดไฟล์แนบ (Step 6) ขึ้น server ก่อนยืนยันส่ง — เก็บไว้แค่ในเครื่อง
+    // จนถึงตอนนี้เพราะยังไม่มี submission_id ให้ผูกจนกว่าจะสร้างใบยื่นสำเร็จ
+    const attachmentErrors = [];
+    const attachedEntries  = Object.entries(appState.attachedFiles || {});
+    for (const [idx, entry] of attachedEntries) {
+      try {
+        const formData = new FormData();
+        formData.append('file', entry.file);
+        formData.append('doc_type', entry.label || `เอกสาร ${idx}`);
+        await api.upload(`/operator/submissions/${submissionId}/attachments`, formData);
+      } catch (err) {
+        attachmentErrors.push({ idx, label: entry.label, error: err });
+      }
+    }
+
     // [FIX] เดิมไม่เคยเรียก endpoint นี้เลย — ใบยื่นแบบเลยค้างสถานะ 'draft'
     // ตลอดไป ทำให้ผู้ประกอบการยื่นซ้ำ/แก้ไขได้ไม่จำกัดแม้กดยืนยันไปแล้ว
     // ต้องเรียกยืนยันสถานะทันทีหลังบันทึกสำเร็จ ให้ status เปลี่ยนเป็น
@@ -373,7 +388,7 @@ async function saveSubmission() {
       success:          true,
       submissionId:     submissionId,
       error:            null,
-      attachmentErrors: []
+      attachmentErrors
     };
 
   } catch (err) {

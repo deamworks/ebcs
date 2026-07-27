@@ -286,6 +286,10 @@ function goToPhase3Next() {
   if (typeof saveSubmission === 'function') {
     saveSubmission().then(res => {
       if (res && res.success) {
+        if (res.attachmentErrors?.length) {
+          const names = res.attachmentErrors.map(e => e.label).join(', ');
+          showToast(`ยื่นแบบสำเร็จ แต่แนบไฟล์บางส่วนไม่สำเร็จ: ${names} กรุณาแนบใหม่ภายหลัง`);
+        }
         handlePhase3Success(); // สำเร็จ → เปลี่ยนหน้าไป Phase 4 ไม่ต้องเปิดปุ่มคืน
       } else {
         // ล้มเหลว → เปิดปุ่มคืนให้กดใหม่ได้ พร้อมแจ้งข้อผิดพลาด
