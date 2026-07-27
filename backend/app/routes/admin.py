@@ -336,7 +336,7 @@ def get_submission_detail(submission_id):
             cur.execute("""
                 SELECT * FROM licenses
                 WHERE  submission_id = %s
-                ORDER  BY created_at
+                ORDER  BY sort_order, created_at
             """, (submission_id,))
             licenses = cur.fetchall()
 

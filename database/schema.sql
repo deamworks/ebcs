@@ -233,6 +233,11 @@ CREATE TABLE licenses (
   -- ON DELETE CASCADE: ถ้าลบใบยื่น → ลบใบอนุญาตของใบนั้นด้วยอัตโนมัติ
   submission_id CHAR(36)      NOT NULL,
 
+  -- sort_order: ตำแหน่งของแถวใน array licenses ที่ส่งมาตอนยื่นแบบ —
+  -- ใช้แทน ORDER BY created_at เพราะ insert ทุกแถวในคำขอเดียวกัน อาจตรงวินาที
+  -- เดียวกันหมด (created_at ไม่มี precision พอ) ทำให้ลำดับตอนอ่านกลับสลับกันได้
+  sort_order    INT           NOT NULL DEFAULT 0,
+
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
