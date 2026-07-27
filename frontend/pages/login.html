@@ -32,13 +32,10 @@
       </div>
     </div>
 
-    <div class="login-info-modal-overlay" id="loginInfoModal">
+    <div class="login-info-modal-overlay" id="loginInfoModal" onclick="if(event.target===this) this.classList.remove('open')">
       <div class="login-info-modal">
-        <div class="login-info-modal-body">
-          อีเมลที่ใช้รับรหัส OTP คืออีเมลที่ผู้ประกอบการแจ้งไว้สำหรับติดต่อ
-          หากต้องการเปลี่ยนแปลงหรือพบว่าไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ก่อนเข้าใช้งานระบบ
-        </div>
-        <button type="button" class="login-info-modal-close" onclick="document.getElementById('loginInfoModal').classList.remove('open')">รับทราบ</button>
+        อีเมลที่ใช้รับรหัส OTP คืออีเมลที่ผู้ประกอบการแจ้งไว้สำหรับติดต่อ
+        หากต้องการเปลี่ยนแปลงหรือพบว่าไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ก่อนเข้าใช้งานระบบ
       </div>
     </div>
 
