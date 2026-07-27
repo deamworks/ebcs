@@ -112,15 +112,13 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // แจ้งเตือนถ้าเคยยื่นปีนี้ไปแล้ว
-    if (info.existing_submission) {
-      const s = info.existing_submission;
-      const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
-      if (msgEl) {
-        msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
-        msgEl.style.color = '#d97706';
-      }
-    }
+    // [FIX] จำสถานะใบยื่นของปีนี้ไว้เงียบๆ (ใช้กันซ้ำตอนกด "เริ่มนำส่ง" ใน
+    // startProcess() เท่านั้น) — ไม่ต้องเด้งข้อความเตือนหรือปุ่มแยกตรงนี้
+    // เปลี่ยนปีในช่อง "รอบปีบัญชี" เมื่อไหร่ก็ดึงข้อมูลปีนั้นมาแสดงตามปกติ
+    appState._lockedSubmission =
+      (info.existing_submission && info.existing_submission.status !== 'draft')
+        ? info.existing_submission
+        : null;
 
     // fill ปีก่อน เพื่อให้ validation ผ่าน
     _setField('ph1-year', String(info.fiscal_year || ''));
@@ -154,11 +152,10 @@ async function autoFillFromAuth() {
       roundEl.style.background = '#f5f5f5';
     }
 
-    // ดึงใบอนุญาต
-    await loadLicenses(info.fiscal_year, taxId);
-    if (msgEl && !info.existing_submission) msgEl.textContent = '';
+    if (msgEl) msgEl.textContent = '';
 
      // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
+     // (คืนค่า income/deduction/ผู้สอบบัญชี ที่กรอกไว้ก่อนหน้า)
      await new Promise(r => setTimeout(r, 80));
      if (typeof loadDraft === 'function') {
        const hasDraft = loadDraft(taxId, String(info.fiscal_year));
@@ -176,18 +173,52 @@ async function autoFillFromAuth() {
 
        }
      }
+
+     // [FIX] ดึงใบอนุญาตจากฐานข้อมูล "หลัง" โหลด draft เสมอ — draft ใน
+     // localStorage เป็น cache เก่าที่อาจไม่ตรงกับข้อมูลจริงในระบบ (เช่น
+     // แอดมินแก้ไข/นำเข้าใบอนุญาตใหม่หลังผู้ประกอบการเคยบันทึก draft ไว้)
+     // loadDraft() เขียนทับ appState.rowsData ทั้งก้อนด้วยข้อมูลเก่านั้น
+     // จึงต้องดึงจาก DB ซ้ำเป็นขั้นตอนสุดท้ายเพื่อให้เลขที่ใบอนุญาต/ประเภท/
+     // วันที่/สถานะ ที่แสดงตรงกับฐานข้อมูลเสมอ (ไม่ทับ income/deduction ที่
+     // เพิ่งโหลดจาก draft เพราะ loadLicenses แก้เฉพาะฟิลด์โครงสร้างใบอนุญาต)
+     await loadLicenses(info.fiscal_year, taxId);
+
      // บันทึก key ให้ถูกต้องทันที
      if (typeof saveDraftNow === 'function') saveDraftNow(taxId, String(info.fiscal_year));
 
 
   } catch (err) {
-    if (msgEl) { msgEl.textContent = `❌ ${err.message}`; msgEl.style.color = '#dc2626'; }
+    if (msgEl) {
+      msgEl.textContent = err?.code === 'NOT_FOUND' ? 'ไม่มีข้อมูล' : `❌ ${err.message}`;
+      msgEl.style.color = '#dc2626';
+    }
   }
 }
 
 // ── autoFillFromTaxId — legacy compat ───────────────
 async function autoFillFromTaxId() {
   await autoFillFromAuth();
+}
+
+// ── เปิดดูใบยื่นแบบที่ยืนยันไปแล้ว (โหมดอ่านอย่างเดียว) ────
+async function viewExistingSubmission() {
+  const s = appState._lockedSubmission;
+  if (!s) return;
+  try {
+    const detail = await api.get(`/operator/submissions/${s.id}`);
+    // [FIX] detail.status คือสถานะจริง (คำนวณจากว่ามีใบเสร็จหรือยัง) ต่างจาก
+    // detail.submission.status ซึ่งเป็นค่า raw ในคอลัมน์ — ถ้าไม่ส่ง status
+    // นี้เข้าไป แบนเนอร์จะค้างโชว์ "รอชำระเงิน" แม้แอดมินบันทึกรับชำระแล้ว
+    const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+    if (typeof renderReadOnlySubmission === 'function') {
+      renderReadOnlySubmission(detail, {
+        downloadBase: '/operator',
+        statusLabel: statusTh[detail.status] || detail.status,
+      });
+    }
+  } catch (e) {
+    alert('เปิดดูใบยื่นแบบไม่สำเร็จ: ' + (e.message || ''));
+  }
 }
 
 function _setField(id, val) {
@@ -238,26 +269,11 @@ async function loadLicenses(year, taxId) {
   }
 }
 
-// ── startProcess — Phase 1 → Phase 2 ─────────────────
-function startProcess() {
-  appState.licensee    = document.getElementById('ph1-licensee')?.value    || '';
-  appState.taxId       = document.getElementById('ph1-taxid')?.value       || '';
-  appState.year        = document.getElementById('ph1-year')?.value        || '';
-  appState.type        = document.getElementById('ph1-type')?.value        || '';
-  appState.periodRound = document.getElementById('ph1-period-round')?.value || '';
-  const ps = document.getElementById('ph1-period-start')?.value || '';
-  const pe = document.getElementById('ph1-period-end')?.value   || '';
-  appState.period  = `${ps}-${pe}`;
-  appState.dueDate = document.getElementById('ph1-due-date')?.value || '';
-
-  if (!appState.licensee) { alert('กรุณาระบุชื่อผู้ได้รับใบอนุญาต'); return; }
-  if (!appState.year)     { alert('กรุณาระบุปีบัญชี'); return; }
-
-  document.getElementById('phase1').style.display = 'none';
-  document.getElementById('phase2').style.display = 'block';
-  if (typeof goToStep === 'function') goToStep(1);
-  window.scrollTo(0, 0);
-}
+// [FIX] startProcess (Phase 1 → Phase 2) ถูกลบออกจากไฟล์นี้ — เดิมมีนิยาม
+// ซ้ำกับ license.js ชื่อฟังก์ชันเดียวกัน ตัวไหนถูก parse ทีหลังจะทับตัวก่อน
+// (ทั้งคู่เป็น `function` declaration ธรรมดา ไม่ใช่ const) เวลาสลับลำดับ
+// <script> ในหน้า HTML จึงเปลี่ยนพฤติกรรมโดยไม่ตั้งใจ — นิยามใน license.js
+// สมบูรณ์กว่า (เติมข้อมูลสรุปด้านบน + คำนวณวันครบกำหนดอัตโนมัติ) เก็บไว้ที่เดียว
 
 // ── saveSubmission — บันทึกใบยื่นแบบไปที่ Flask API, เรียกจาก step5-summary.js ──
 async function saveSubmission() {
@@ -290,9 +306,15 @@ async function saveSubmission() {
       });
 
       licenses.push({
-        license_no: d.no       || '',
-        income:     d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
-        deduction:  d.deduction || 0,  // [FIX] ส่ง deduction แยก
+        license_no:     d.no       || '',
+        income:         d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
+        deduction:      d.deduction || 0,  // [FIX] ส่ง deduction แยก
+        // [FIX] เดิมไม่ส่ง 3 ฟิลด์นี้เลย ทำให้ snapshot ใบอนุญาตในใบยื่นแบบ
+        // ไม่มีประเภท/วันที่/สถานะ — หน้าดูรายละเอียด (แอดมิน) เลยข้อมูลไม่ครบ
+        license_type:   d.type          || '',
+        license_start:  thaiToISO(d.startDate),
+        license_end:    thaiToISO(d.endDate),
+        license_status: d.licenseStatus || 'active',
         incomes,
       });
     }
@@ -338,6 +360,27 @@ async function saveSubmission() {
       throw new Error(result?.error?.message || result?.message || 'บันทึกไม่สำเร็จ');
     }
 
+    // อัปโหลดไฟล์แนบ (Step 6) ขึ้น server ก่อนยืนยันส่ง — เก็บไว้แค่ในเครื่อง
+    // จนถึงตอนนี้เพราะยังไม่มี submission_id ให้ผูกจนกว่าจะสร้างใบยื่นสำเร็จ
+    const attachmentErrors = [];
+    const attachedEntries  = Object.entries(appState.attachedFiles || {});
+    for (const [idx, entry] of attachedEntries) {
+      try {
+        const formData = new FormData();
+        formData.append('file', entry.file);
+        formData.append('doc_type', entry.label || `เอกสาร ${idx}`);
+        await api.upload(`/operator/submissions/${submissionId}/attachments`, formData);
+      } catch (err) {
+        attachmentErrors.push({ idx, label: entry.label, error: err });
+      }
+    }
+
+    // [FIX] เดิมไม่เคยเรียก endpoint นี้เลย — ใบยื่นแบบเลยค้างสถานะ 'draft'
+    // ตลอดไป ทำให้ผู้ประกอบการยื่นซ้ำ/แก้ไขได้ไม่จำกัดแม้กดยืนยันไปแล้ว
+    // ต้องเรียกยืนยันสถานะทันทีหลังบันทึกสำเร็จ ให้ status เปลี่ยนเป็น
+    // pending_payment (ล็อกไม่ให้แก้ไขได้อีกจนกว่าแอดมินจะลบใบยื่นนี้)
+    await api.post(`/operator/submissions/${submissionId}/submit`, {});
+
     // ลบ draft หลัง submit สำเร็จ
     if (typeof clearDraft === 'function') clearDraft();
 
@@ -345,7 +388,7 @@ async function saveSubmission() {
       success:          true,
       submissionId:     submissionId,
       error:            null,
-      attachmentErrors: []
+      attachmentErrors
     };
 
   } catch (err) {

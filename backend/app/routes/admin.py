@@ -144,7 +144,7 @@ def save_audit_log(db, admin_email, action, table_name,
             table_name,
             str(record_id) if record_id else None,
             record_label,
-            json.dumps(changes, ensure_ascii=False) if changes else None,
+            json.dumps(changes, ensure_ascii=False, default=str) if changes else None,
             now_bangkok()
         ))
 
@@ -186,7 +186,13 @@ def get_submissions():
         conditions.append("s.fiscal_year = %s")
         params.append(year)
 
-    if status:
+    # [FIX] "pending_attach" ไม่ใช่ค่าจริงใน submissions.status (enum มีแค่
+    # draft/pending_payment/paid) — เป็นสถานะที่คำนวณจาก "ยื่นแบบแล้วแต่แนบ
+    # เอกสารบังคับ (3 อย่าง) ไม่ครบ" ต้องกรองจาก HAVING ของ attachment count แทน
+    having_pending_attach = False
+    if status == "pending_attach":
+        having_pending_attach = True
+    elif status:
         conditions.append("s.status = %s")
         params.append(status)
 
@@ -204,16 +210,26 @@ def get_submissions():
         with db.cursor() as cur:
 
             # ── ดึงรายการ (แบ่งหน้า) ─────────────────
+            # required_ok: ยื่นแบบแล้ว (ไม่ใช่ draft) ต้องมีเอกสารแนบครบ 3 อย่างบังคับ
+            # (งบดุลการเงิน, ชส.01, ชส.02 — idx 1-3 ฝั่ง frontend) ไม่งั้นถือว่า
+            # "รอแนบ" (pending_attach) แม้ status ดิบจะเป็น pending_payment แล้วก็ตาม
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
                     s.fiscal_year, s.ref_no, s.due_date,
                     s.net_amount, s.submitted_at, s.created_at,
+                    COUNT(da.id) AS attachment_count,
                     CASE WHEN r.id IS NOT NULL THEN 'paid'
+                         WHEN s.status = 'pending_payment' AND COUNT(da.id) < 3 THEN 'pending_attach'
                          ELSE s.status END AS status
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
+                LEFT JOIN document_attachments da ON da.submission_id = s.id
                 {where}
+                GROUP BY s.id, s.tax_id, s.operator_name, s.fiscal_year, s.ref_no,
+                         s.due_date, s.net_amount, s.submitted_at, s.created_at,
+                         r.id, s.status
+                {"HAVING status = 'pending_attach'" if having_pending_attach else ""}
                 ORDER BY s.created_at DESC
                 LIMIT %s OFFSET %s
             """, params + [per_page, offset])
@@ -221,10 +237,18 @@ def get_submissions():
 
             # ── นับทั้งหมดสำหรับ pagination ─────────
             cur.execute(f"""
-                SELECT COUNT(*) as total
-                FROM submissions s
-                LEFT JOIN receipt r ON r.submission_id = s.id
-                {where}
+                SELECT COUNT(*) AS total FROM (
+                    SELECT s.id,
+                           CASE WHEN r.id IS NOT NULL THEN 'paid'
+                                WHEN s.status = 'pending_payment' AND COUNT(da.id) < 3 THEN 'pending_attach'
+                                ELSE s.status END AS status
+                    FROM submissions s
+                    LEFT JOIN receipt r ON r.submission_id = s.id
+                    LEFT JOIN document_attachments da ON da.submission_id = s.id
+                    {where}
+                    GROUP BY s.id, r.id, s.status
+                    {"HAVING status = 'pending_attach'" if having_pending_attach else ""}
+                ) t
             """, params)
             total = cur.fetchone()["total"]
 
@@ -505,6 +529,14 @@ def delete_submissions():
 
     with get_db() as db:
         with db.cursor() as cur:
+            # ดึงข้อมูลก่อนลบ (ชื่อบริษัท/ปีบัญชี) เพื่อบันทึก audit log ให้ละเอียด
+            placeholders = ",".join(["%s"] * len(ids))
+            cur.execute(
+                f"SELECT * FROM submissions WHERE id IN ({placeholders})",
+                ids
+            )
+            old_by_id = {row["id"]: row for row in cur.fetchall()}
+
             # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
             for sid in ids:
                 cur.execute(
@@ -512,14 +544,21 @@ def delete_submissions():
                     (sid,)
                 )
 
-        # Audit Log
-        save_audit_log(
-            db, admin_email,
-            f"ลบใบยื่นแบบ {len(ids)} รายการ",
-            "submissions",
-            None,
-            {"deleted_ids": ids}
-        )
+        # Audit Log — บันทึกทีละรายการ ระบุปีบัญชีและชื่อบริษัทที่ถูกลบ
+        for sid in ids:
+            old = old_by_id.get(sid)
+            operator_name = old.get("operator_name") if old else None
+            fiscal_year   = old.get("fiscal_year") if old else None
+            label = f"ลบแบบยื่นปี {fiscal_year} ของบริษัท {operator_name}" if old \
+                else "ลบแบบยื่นแบบ (ไม่พบข้อมูลเดิม)"
+            save_audit_log(
+                db, admin_email,
+                label,
+                "submissions",
+                sid,
+                {"deleted": dict(old)} if old else None,
+                record_label=operator_name
+            )
         db.commit()
 
     return jsonify({
@@ -571,10 +610,12 @@ def delete_attachment(attachment_id):
 
     with get_db() as db:
         with db.cursor() as cur:
-            cur.execute(
-                "SELECT storage_path, file_name FROM document_attachments WHERE id = %s",
-                (attachment_id,)
-            )
+            cur.execute("""
+                SELECT da.storage_path, da.file_name, s.operator_name
+                FROM   document_attachments da
+                JOIN   submissions s ON s.id = da.submission_id
+                WHERE  da.id = %s
+            """, (attachment_id,))
             att = cur.fetchone()
 
             if not att:
@@ -586,9 +627,11 @@ def delete_attachment(attachment_id):
             cur.execute("DELETE FROM document_attachments WHERE id = %s", (attachment_id,))
 
         save_audit_log(
-            db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
+            db, admin_email,
+            f"ลบไฟล์แนบ {att['file_name']} ของบริษัท {att.get('operator_name')}",
             "document_attachments", attachment_id,
-            record_label=att.get("file_name")
+            {"file_name": att.get("file_name"), "storage_path": att.get("storage_path")},
+            record_label=att.get("operator_name")
         )
         db.commit()
 
@@ -794,7 +837,7 @@ def delete_taxpayer(taxpayer_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT operator_name FROM taxpayer_master WHERE id = %s",
+                "SELECT * FROM taxpayer_master WHERE id = %s",
                 (taxpayer_id,)
             )
             old = cur.fetchone()
@@ -804,9 +847,12 @@ def delete_taxpayer(taxpayer_id):
                 (taxpayer_id,)
             )
 
+        label = (f"ลบข้อมูลผู้ประกอบการปี {old.get('fiscal_year')} ของบริษัท {old.get('operator_name')}"
+                 if old else "ลบข้อมูลผู้ประกอบการ (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบผู้ประกอบการ",
+            db, admin_email, label,
             "taxpayer_master", taxpayer_id,
+            {"deleted": dict(old)} if old else None,
             record_label=old.get("operator_name") if old else None
         )
         db.commit()
@@ -1006,7 +1052,7 @@ def delete_licensee(licensee_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT company_name, license_no FROM licensee_master WHERE id = %s",
+                "SELECT * FROM licensee_master WHERE id = %s",
                 (licensee_id,)
             )
             old = cur.fetchone()
@@ -1016,9 +1062,12 @@ def delete_licensee(licensee_id):
                 (licensee_id,)
             )
 
+        label = (f"ลบใบอนุญาตเลขที่ {old.get('license_no')} ของบริษัท {old.get('company_name')}"
+                 if old else "ลบใบอนุญาต (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบใบอนุญาต",
+            db, admin_email, label,
             "licensee_master", licensee_id,
+            {"deleted": dict(old)} if old else None,
             record_label=(old.get("company_name") or old.get("license_no")) if old else None
         )
         db.commit()
@@ -1043,7 +1092,7 @@ def get_operator_accounts():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT id, tax_id, email, created_at
+                SELECT id, tax_id, operator_name, email, created_at
                 FROM operator_accounts
                 ORDER BY created_at DESC
             """)
@@ -1062,18 +1111,26 @@ def get_operator_accounts():
 @jwt_required()
 @require_admin
 def create_operator_account():
-    """เพิ่มบัญชีผู้ประกอบการทีละรายการ (tax_id + email)"""
+    """เพิ่มบัญชีผู้ประกอบการทีละรายการ (tax_id + operator_name + email)"""
     admin_email = get_jwt_identity()
     data        = request.get_json() or {}
 
-    tax_id = str(data.get("tax_id", "")).strip().replace("-", "")
-    email  = str(data.get("email", "")).strip()
+    tax_id        = str(data.get("tax_id", "")).strip().replace("-", "")
+    operator_name = str(data.get("operator_name", "")).strip()
+    email         = str(data.get("email", "")).strip()
 
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         return jsonify({
             "success": False,
             "error": {"code": "INVALID_TAX_ID",
                       "message": "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก"}
+        }), 400
+
+    if not operator_name:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_OPERATOR_NAME",
+                      "message": "กรุณาระบุชื่อผู้ประกอบการ"}
         }), 400
 
     if not email or not EMAIL_RE.match(email):
@@ -1087,8 +1144,8 @@ def create_operator_account():
         with db.cursor() as cur:
             try:
                 cur.execute(
-                    "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
-                    (tax_id, email)
+                    "INSERT INTO operator_accounts (tax_id, operator_name, email) VALUES (%s, %s, %s)",
+                    (tax_id, operator_name, email)
                 )
                 cur.execute(
                     "SELECT id FROM operator_accounts WHERE tax_id = %s",
@@ -1107,7 +1164,8 @@ def create_operator_account():
 
         save_audit_log(
             db, admin_email, "เพิ่มบัญชีผู้ประกอบการ",
-            "operator_accounts", new_id, {"tax_id": tax_id, "email": email},
+            "operator_accounts", new_id,
+            {"tax_id": tax_id, "operator_name": operator_name, "email": email},
             record_label=f"{tax_id} ({email})"
         )
         db.commit()
@@ -1128,7 +1186,7 @@ def delete_operator_account(account_id):
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(
-                "SELECT tax_id, email FROM operator_accounts WHERE id = %s",
+                "SELECT * FROM operator_accounts WHERE id = %s",
                 (account_id,)
             )
             old = cur.fetchone()
@@ -1138,9 +1196,12 @@ def delete_operator_account(account_id):
                 (account_id,)
             )
 
+        label = (f"ลบบัญชีผู้ประกอบการ {old.get('email')} ของบริษัท {old.get('operator_name') or old.get('tax_id')}"
+                 if old else "ลบบัญชีผู้ประกอบการ (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบบัญชีผู้ประกอบการ",
+            db, admin_email, label,
             "operator_accounts", account_id,
+            {"deleted": dict(old)} if old else None,
             record_label=f"{old['tax_id']} ({old['email']})" if old else None
         )
         db.commit()
@@ -1242,6 +1303,30 @@ def create_receipt():
 # ════════════════════════════════════════════════════════
 # 5.6 Audit Logs
 # ════════════════════════════════════════════════════════
+
+@admin_bp.route("/audit-logs", methods=["POST"])
+@jwt_required()
+@require_admin
+def post_audit_log():
+    """
+    บันทึก Audit Log จากฝั่ง frontend (เช่น import สำเร็จ, bulk delete)
+    Request: POST /api/admin/audit-logs { action, table_name, record_id, changes }
+    """
+    body = request.get_json(silent=True) or {}
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        save_audit_log(
+            db, admin_email,
+            body.get("action"),
+            body.get("table_name"),
+            body.get("record_id"),
+            body.get("changes"),
+        )
+        db.commit()
+
+    return jsonify({"success": True}), 201
+
 
 @admin_bp.route("/audit-logs", methods=["GET"])
 @jwt_required()
@@ -1452,7 +1537,7 @@ def import_licensees_route():
 def import_operator_accounts_route():
     """
     Import Excel บัญชีผู้ประกอบการ
-    คอลัมน์: tax_id | email
+    คอลัมน์: tax_id | operator_name | email
     mode=preview → ตรวจข้อมูล ยังไม่บันทึก
     mode=commit  → บันทึกจริง
     """
