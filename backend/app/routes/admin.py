@@ -111,6 +111,7 @@ TABLE_NAME_TH = {
     "operator_accounts":    "บัญชีผู้ประกอบการ",
     "contact_master":       "ที่อยู่ผู้ประกอบการ",
     "receipt":              "ใบเสร็จรับเงิน",
+    "export":               "ส่งออกข้อมูล",
 }
 
 
