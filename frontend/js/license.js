@@ -71,20 +71,6 @@ async function startProcess(){
     return;
   }
 
-  // [FIX] ตรวจสอบปีบัญชีที่กรอกอยู่ตอนนี้ซ้ำอีกครั้งก่อนเข้าฟอร์ม — เผื่อ
-  // ผู้ประกอบการเปลี่ยนช่อง "รอบปีบัญชี" เป็นปีอื่นหลังโหลดหน้าครั้งแรก
-  // (ปีแรกที่ auto-detect อาจถูกยื่นไปแล้ว แต่ปีที่เพิ่งพิมพ์ใหม่ยังไม่ถูกยื่น
-  // ต้องให้เข้าฟอร์มของปีนั้นได้ตามปกติ — เดิมเช็คแค่ตอนโหลดหน้าครั้งเดียว)
-  if (typeof autoFillFromAuth === 'function') {
-    await autoFillFromAuth();
-    // [FIX] ปีนี้ยืนยันไปแล้ว — เปิดโหมดดูอย่างเดียวให้เห็นใบยื่นแบบจริงเลย
-    // แทนที่จะแค่เตือนด้วย alert แล้วค้างอยู่หน้าฟอร์มเปล่า
-    if (appState._lockedSubmission && typeof viewExistingSubmission === 'function') {
-      await viewExistingSubmission();
-      return;
-    }
-  }
-
   const _refFieldVal = (document.getElementById('ph1-ref')?.value || '').trim();
   const _isPlaceholderRef = !_refFieldVal || _refFieldVal === '—' || _refFieldVal.includes('กรุณากรอก');
   appState.refNo = _isPlaceholderRef ? '' : _refFieldVal;
@@ -98,11 +84,32 @@ async function startProcess(){
   if (!_ps || !_pe) { alert('กรุณาระบุวันเริ่มต้นและวันสิ้นสุดรอบบัญชีให้ครบถ้วน'); return; }
   appState.period = `${_ps}-${_pe}`;
   
-  // [FIX] วันครบกำหนดชำระ ต้องใช้ค่าจริงจากฐานข้อมูล (autoFillFromAuth
-  // เติมให้แล้วด้านบน) ห้ามคำนวณเอง (เดิมคำนวณ วันสิ้นสุดรอบบัญชี + 150 วัน
-  // ทับค่าจริงเสมอ ทำให้ไม่ตรงกับข้อมูลในระบบเวลาเปลี่ยนปีบัญชี)
+  // ── คำนวณวันครบกำหนดชำระอัตโนมัติ: วันสิ้นสุดรอบบัญชี + 150 วัน ──────────
+  let autoComputedDue = '';
+  try {
+    const parts = _pe.split('/');           
+    if (parts.length === 3) {
+      const dd  = parseInt(parts[0], 10);
+      const mm  = parseInt(parts[1], 10) - 1; 
+      const yy  = parseInt(parts[2], 10) - 543; 
+      const endDate = new Date(yy, mm, dd);
+      endDate.setDate(endDate.getDate() + 150);
+      const dueDD   = String(endDate.getDate()).padStart(2, '0');
+      const dueMM   = String(endDate.getMonth() + 1).padStart(2, '0');
+      const dueYYYY = endDate.getFullYear() + 543; 
+      autoComputedDue = `${dueDD}/${dueMM}/${dueYYYY}`;
+    }
+  } catch(e) { /* fallback */ }
+
   const dueDateEl = document.getElementById('ph1-due-date');
-  appState.dueDate = dueDateEl ? dueDateEl.value.trim() : '';
+  if (autoComputedDue && dueDateEl) {
+    if (dueDateEl._flatpickr) {
+      dueDateEl._flatpickr.setDate(autoComputedDue, true, "d/m/Y");
+    } else {
+      dueDateEl.value = autoComputedDue;
+    }
+  }
+  appState.dueDate = autoComputedDue || (dueDateEl ? dueDateEl.value.trim() : '');
 
   const roundEl = document.getElementById('ph1-period-round');
   appState.periodRound = roundEl ? roundEl.value : '';

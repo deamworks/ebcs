@@ -1043,7 +1043,7 @@ def get_operator_accounts():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT id, tax_id, operator_name, email, created_at
+                SELECT id, tax_id, email, created_at
                 FROM operator_accounts
                 ORDER BY created_at DESC
             """)
@@ -1062,26 +1062,18 @@ def get_operator_accounts():
 @jwt_required()
 @require_admin
 def create_operator_account():
-    """เพิ่มบัญชีผู้ประกอบการทีละรายการ (tax_id + operator_name + email)"""
+    """เพิ่มบัญชีผู้ประกอบการทีละรายการ (tax_id + email)"""
     admin_email = get_jwt_identity()
     data        = request.get_json() or {}
 
-    tax_id        = str(data.get("tax_id", "")).strip().replace("-", "")
-    operator_name = str(data.get("operator_name", "")).strip()
-    email         = str(data.get("email", "")).strip()
+    tax_id = str(data.get("tax_id", "")).strip().replace("-", "")
+    email  = str(data.get("email", "")).strip()
 
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         return jsonify({
             "success": False,
             "error": {"code": "INVALID_TAX_ID",
                       "message": "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก"}
-        }), 400
-
-    if not operator_name:
-        return jsonify({
-            "success": False,
-            "error": {"code": "INVALID_OPERATOR_NAME",
-                      "message": "กรุณาระบุชื่อผู้ประกอบการ"}
         }), 400
 
     if not email or not EMAIL_RE.match(email):
@@ -1095,8 +1087,8 @@ def create_operator_account():
         with db.cursor() as cur:
             try:
                 cur.execute(
-                    "INSERT INTO operator_accounts (tax_id, operator_name, email) VALUES (%s, %s, %s)",
-                    (tax_id, operator_name, email)
+                    "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
+                    (tax_id, email)
                 )
                 cur.execute(
                     "SELECT id FROM operator_accounts WHERE tax_id = %s",
@@ -1115,8 +1107,7 @@ def create_operator_account():
 
         save_audit_log(
             db, admin_email, "เพิ่มบัญชีผู้ประกอบการ",
-            "operator_accounts", new_id,
-            {"tax_id": tax_id, "operator_name": operator_name, "email": email},
+            "operator_accounts", new_id, {"tax_id": tax_id, "email": email},
             record_label=f"{tax_id} ({email})"
         )
         db.commit()
@@ -1251,30 +1242,6 @@ def create_receipt():
 # ════════════════════════════════════════════════════════
 # 5.6 Audit Logs
 # ════════════════════════════════════════════════════════
-
-@admin_bp.route("/audit-logs", methods=["POST"])
-@jwt_required()
-@require_admin
-def post_audit_log():
-    """
-    บันทึก Audit Log จากฝั่ง frontend (เช่น import สำเร็จ, bulk delete)
-    Request: POST /api/admin/audit-logs { action, table_name, record_id, changes }
-    """
-    body = request.get_json(silent=True) or {}
-    admin_email = get_jwt_identity()
-
-    with get_db() as db:
-        save_audit_log(
-            db, admin_email,
-            body.get("action"),
-            body.get("table_name"),
-            body.get("record_id"),
-            body.get("changes"),
-        )
-        db.commit()
-
-    return jsonify({"success": True}), 201
-
 
 @admin_bp.route("/audit-logs", methods=["GET"])
 @jwt_required()
@@ -1485,7 +1452,7 @@ def import_licensees_route():
 def import_operator_accounts_route():
     """
     Import Excel บัญชีผู้ประกอบการ
-    คอลัมน์: tax_id | operator_name | email
+    คอลัมน์: tax_id | email
     mode=preview → ตรวจข้อมูล ยังไม่บันทึก
     mode=commit  → บันทึกจริง
     """
