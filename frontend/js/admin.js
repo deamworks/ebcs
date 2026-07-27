@@ -916,11 +916,11 @@ async function deleteLicense(id, no) {
     const licRow = l => `
       <tr>
         <td style="font-weight:500;color:#1e2d5e;font-size:12.5px">${l.license_no || '—'}</td>
-        <td><span class="lic-type-badge">${l.licensee_type || '—'}</span></td>
-        <td style="font-size:12.5px">${fmtBE(l.start_date)}</td>
-        <td style="font-size:12.5px">${fmtBE(l.end_date)}</td>
+        <td style="text-align:center"><span class="lic-type-badge">${l.licensee_type || '—'}</span></td>
+        <td style="text-align:center;font-size:12.5px">${fmtBE(l.start_date)}</td>
+        <td style="text-align:center;font-size:12.5px">${fmtBE(l.end_date)}</td>
         <td>${statusBadge(l.license_status)}</td>
-        <td style="text-align:right;white-space:nowrap;">
+        <td style="text-align:center;white-space:nowrap;">
           <button class="adm-btn adm-btn-sm" onclick="openEditLicenseModal('${l.id}')">แก้ไข</button>
           <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteLicense('${l.id}','${l.license_no}')">ลบ</button>
         </td>
@@ -932,7 +932,7 @@ async function deleteLicense(id, no) {
     const html = `
       <div class="tp-year-block">
         <table class="adm-table">
-          <thead><tr><th>เลขที่ใบอนุญาต</th><th>ประเภท</th><th>วันเริ่มต้น</th><th>วันสิ้นสุด</th><th>สถานะ</th><th></th></tr></thead>
+          <thead><tr><th>เลขที่ใบอนุญาต</th><th>ประเภท</th><th>วันเริ่มต้น</th><th>วันสิ้นสุด</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
           <tbody>${licenses.length ? licenses.map(licRow).join('') : '<tr><td colspan="6" style="padding:12px;text-align:center;color:#aaa;">ไม่มีใบอนุญาต</td></tr>'}</tbody>
         </table>
       </div>`;
