@@ -233,11 +233,13 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
     รายงานข้อมูลผู้ประกอบการ - ตรงตามรูปแบบไฟล์ราชการ (กสทช.):
     "รายงานข้อมูลผู้ประกอบการที่นำส่งเงินรายปีเข้ากองทุน..."
 
-    คอลัมน์แรก 5 คอลัมน์ดึงจาก taxpayer_master โดยตรง
-    (ลำดับ / เลขที่ผู้เสียภาษี / ผู้ประกอบการ / รอบระยะเวลาบัญชี
-     / วันครบกำหนดชำระ) ส่วนคอลัมน์ที่เหลือเป็นคอลัมน์ติดตามการแจ้งเตือน
-     ทางไปรษณีย์ตามแบบฟอร์มต้นฉบับ ซึ่งยังไม่มีข้อมูลใน schema ปัจจุบัน
-     จึงปล่อยว่างไว้เพื่อให้โครงสร้างไฟล์ตรงกับต้นฉบับ
+    คอลัมน์แรก 5 คอลัมน์ดึงจาก submissions โดยตรง (ลำดับ / เลขที่ผู้เสียภาษี /
+    ผู้ประกอบการ / รอบระยะเวลาบัญชี / วันครบกำหนดชำระ) — [FIX] เดิมดึงจาก
+    taxpayer_master (ข้อมูลนำเข้า/ทะเบียนกลาง) ซึ่งมีทุกบริษัทไม่ว่าจะยื่นแบบ
+    หรือยัง เปลี่ยนมาดึงจาก submissions แทน ให้เห็นเฉพาะบริษัทที่ยื่นแบบเข้ามาจริง
+    ส่วนคอลัมน์ที่เหลือเป็นคอลัมน์ติดตามการแจ้งเตือนทางไปรษณีย์ตามแบบฟอร์ม
+    ต้นฉบับ ซึ่งยังไม่มีข้อมูลใน schema ปัจจุบัน จึงปล่อยว่างไว้เพื่อให้โครงสร้าง
+    ไฟล์ตรงกับต้นฉบับ
 
     - year_from/year_to: กรองช่วงปีบัญชี (ใช้แทน year เดี่ยวถ้าส่งมา)
     """
@@ -262,7 +264,7 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
                 tax_id, operator_name, ref_no,
                 fiscal_year, period_start, period_end,
                 due_date
-            FROM taxpayer_master
+            FROM submissions
             {where}
             ORDER BY fiscal_year DESC, operator_name
         """, params)
@@ -378,12 +380,17 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     รายงานข้อมูลใบอนุญาต - ตรงตามรูปแบบไฟล์ราชการ (กสทช.):
     "ผลการจัดเก็บเงินรายปีเข้ากองทุนวิจัยและพัฒนา..."
 
+    [FIX] เดิมดึงจาก licensee_master (ทะเบียนใบอนุญาตกลาง/ข้อมูลนำเข้า) เปลี่ยน
+    มาดึงจาก licenses (snapshot ใบอนุญาตของแต่ละใบยื่นแบบจริง) join submissions
+    แทน ให้เห็นเฉพาะใบอนุญาตที่มีการยื่นแบบเข้ามาจริง ไม่ใช่ทะเบียนทั้งหมด
+
     คอลัมน์การเงิน (รายได้จากใบอนุญาต / ค่าลดหย่อน / เงินนำส่งเข้ากองทุน
-    / ภาษีมูลค่าเพิ่ม / เงินเพิ่ม / จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ) ยังไม่มีใน
-    licensee_master schema ปัจจุบัน จึงปล่อยว่างไว้เพื่อให้โครงสร้างคอลัมน์ตรงกับ
-    ต้นฉบับ — "รหัสอ้างอิง" join มาจาก taxpayer_master, "สถานะ" (แนบเอกสาร) derive
-    จากใบยื่นแบบของ tax_id/ปีเดียวกัน, "ประเภท"/"รอบ" ยังไม่มีแนวคิดแยกในระบบ
-    จึงใช้ค่า "ปกติ" คงที่เหมือนรายงานชำระเงินกองทุน
+    / ภาษีมูลค่าเพิ่ม / เงินเพิ่ม / จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ) ยังคำนวณ
+    แยกต่อใบอนุญาตไม่ได้ (ยอดเหล่านี้คำนวณรวมทั้งใบยื่นแบบ ไม่ได้แยกเก็บต่อ
+    ใบอนุญาต) จึงปล่อยว่างไว้เพื่อให้โครงสร้างคอลัมน์ตรงกับต้นฉบับ — "รหัสอ้างอิง"
+    มาจาก submissions.ref_no โดยตรง, "สถานะ" (แนบเอกสาร) derive จาก submission_id
+    เดียวกันตรงๆ, "ประเภท"/"รอบ" ยังไม่มีแนวคิดแยกในระบบ จึงใช้ค่า "ปกติ" คงที่
+    เหมือนรายงานชำระเงินกองทุน
 
     - year_from/year_to: กรองช่วงปีบัญชี (ใช้แทน year เดี่ยวถ้าส่งมา)
     """
@@ -391,17 +398,17 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     params     = []
 
     if year_from:
-        conditions.append("lm.fiscal_year >= %s")
+        conditions.append("s.fiscal_year >= %s")
         params.append(year_from)
     if year_to:
-        conditions.append("lm.fiscal_year <= %s")
+        conditions.append("s.fiscal_year <= %s")
         params.append(year_to)
     if not year_from and not year_to and year:
-        conditions.append("lm.fiscal_year = %s")
+        conditions.append("s.fiscal_year = %s")
         params.append(year)
 
     if status:
-        conditions.append("lm.license_status = %s")
+        conditions.append("l.license_status = %s")
         params.append(status)
 
     where = "WHERE " + " AND ".join(conditions) if conditions else ""
@@ -414,19 +421,16 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     }
 
     with db.cursor() as cur:
-        # [FIX] "รหัสอ้างอิง" (ref_no) ไม่เคยดึงมาเลย — ref_no อยู่ใน
-        # taxpayer_master (key ด้วย tax_id + fiscal_year) ต้อง join เอา
         cur.execute(f"""
             SELECT
-                lm.license_no, lm.tax_id, lm.company_name,
-                lm.licensee_type AS license_type, lm.license_status,
-                lm.start_date AS license_start, lm.end_date AS license_end,
-                lm.fiscal_year, tm.ref_no
-            FROM licensee_master lm
-            LEFT JOIN taxpayer_master tm
-                   ON tm.tax_id = lm.tax_id AND tm.fiscal_year = lm.fiscal_year
+                l.license_no, s.tax_id, s.operator_name AS company_name,
+                l.licensee_type AS license_type, l.license_status,
+                l.start_date AS license_start, l.end_date AS license_end,
+                s.fiscal_year, s.ref_no, s.id AS submission_id
+            FROM licenses l
+            JOIN submissions s ON s.id = l.submission_id
             {where}
-            ORDER BY lm.license_no
+            ORDER BY l.license_no
         """, params)
         rows = cur.fetchall()
 
@@ -495,23 +499,27 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
             license_counts.get(row["tax_id"], 0) + 1
         )
 
-    # [FIX] "สถานะ" (สถานะแนบเอกสาร) ไม่เคยดึงมาเลย — หาจากใบยื่นแบบ (submissions)
-    # ของ tax_id + fiscal_year เดียวกัน คำนวณ pending_attach เหมือนรายงาน/หน้ารายการอื่น
+    # [FIX] "สถานะ" (สถานะแนบเอกสาร) หาจาก submission_id ของแถวนี้ตรงๆ (ตอนนี้
+    # แต่ละแถวมาจาก licenses ซึ่งผูกกับใบยื่นแบบเดียวอยู่แล้ว ไม่ต้องเดาผ่าน
+    # tax_id/fiscal_year เหมือนตอนดึงจาก licensee_master)
+    submission_ids = list({row["submission_id"] for row in rows})
     submission_status_map = {}
-    with db.cursor() as cur:
-        cur.execute("""
-            SELECT s.tax_id, s.fiscal_year, s.status,
-                   r.id AS receipt_id,
-                   (SELECT COUNT(*) FROM document_attachments da
-                    WHERE da.submission_id = s.id) AS attachment_count
-            FROM submissions s
-            LEFT JOIN receipt r ON r.submission_id = s.id
-        """)
-        for srow in cur.fetchall():
-            st = "paid" if srow["receipt_id"] else srow["status"]
-            if st == "pending_payment" and (srow["attachment_count"] or 0) < 3:
-                st = "pending_attach"
-            submission_status_map[(srow["tax_id"], srow["fiscal_year"])] = st
+    if submission_ids:
+        placeholders = ",".join(["%s"] * len(submission_ids))
+        with db.cursor() as cur:
+            cur.execute(f"""
+                SELECT s.id, s.status, r.id AS receipt_id,
+                       (SELECT COUNT(*) FROM document_attachments da
+                        WHERE da.submission_id = s.id) AS attachment_count
+                FROM submissions s
+                LEFT JOIN receipt r ON r.submission_id = s.id
+                WHERE s.id IN ({placeholders})
+            """, submission_ids)
+            for srow in cur.fetchall():
+                st = "paid" if srow["receipt_id"] else srow["status"]
+                if st == "pending_payment" and (srow["attachment_count"] or 0) < 3:
+                    st = "pending_attach"
+                submission_status_map[srow["id"]] = st
 
     submission_status_labels = {
         "draft":           "ร่าง",
@@ -522,7 +530,7 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
 
     for i, row in enumerate(rows, start=1):
         r = i + 3
-        sub_status = submission_status_map.get((row["tax_id"], row["fiscal_year"]))
+        sub_status = submission_status_map.get(row["submission_id"])
         data = [
             i,
             row["fiscal_year"] or "",
