@@ -139,6 +139,15 @@ function renderReadOnlySubmission(data, opts = {}) {
       date:    _vsIsoToBE(s.audited_date),
     };
 
+    // [FIX] "รายได้รวมตามงบการเงิน" (Step 1) เดิมไม่ถูกส่งไป hydrate เลย —
+    // ช่องนี้เลยโชว์ 0.00 เสมอในหน้าดูอย่างเดียว ทั้งที่ backend เก็บค่าไว้แล้ว
+    // (submissions.total_income_financial, ดู migration 006)
+    appState.financialIncome = s.total_income_financial != null
+      ? Number(s.total_income_financial).toFixed(2)
+      : '';
+    const finEl = document.getElementById('total-income-financial');
+    if (finEl) finEl.value = appState.financialIncome;
+
     if (typeof generateRows === 'function') generateRows();
     if (typeof goToStep === 'function') goToStep(1);
     _vsRenderAttachments(attachments, downloadBase);

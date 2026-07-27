@@ -196,6 +196,7 @@ CREATE TABLE submissions (
 
   -- ยอดเงินต่างๆ (ใช้ DECIMAL ไม่ใช่ FLOAT เพราะต้องการความแม่นยำ)
   total_income     DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวม',
+  total_income_financial DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมตามงบการเงิน (กรอกเอง Step 1)',
   deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน Step3',
   fund_amount      DECIMAL(18,2) DEFAULT 0 COMMENT 'เงินกองทุน 2%',
   vat_amount       DECIMAL(18,2) DEFAULT 0 COMMENT 'VAT 7%',

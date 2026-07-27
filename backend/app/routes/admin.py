@@ -458,7 +458,8 @@ def update_submission(submission_id):
 
             # ── อัปเดตข้อมูลที่ส่งมา ─────────────────
             updatable = [
-                "operator_name", "total_income", "deduction_amount",
+                "operator_name", "total_income", "total_income_financial",
+                "deduction_amount",
                 "fund_amount", "vat_amount", "extra_amount", "net_amount",
                 "auditor_name", "auditor_license", "auditor_office",
                 "audited_date"

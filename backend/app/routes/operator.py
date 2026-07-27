@@ -342,6 +342,9 @@ def create_submission():
     licenses_data    = data.get("licenses", [])
     other_incomes    = data.get("other_incomes", [])
     deduction_amount = float(data.get("deduction_amount", 0))
+    # [FIX] "รายได้รวมตามงบการเงิน" ที่ผู้ประกอบการกรอกเอง Step 1 — เดิมไม่เคย
+    # ส่งมาบันทึกเลย เก็บไว้แค่ localStorage draft ทำให้หน้าดูอย่างเดียวโชว์ 0.00 เสมอ
+    total_income_financial = float(data.get("total_income_financial", 0))
 
     # [FIX] รับ auditor เป็น flat fields (ตรงกับที่ Frontend ส่งมา)
     auditor_name    = data.get("auditor_name", "")
@@ -419,13 +422,13 @@ def create_submission():
                 INSERT INTO submissions (
                     id, tax_id, ref_no, fiscal_year,
                     operator_name, period_start, period_end, due_date,
-                    status, total_income, deduction_amount,
+                    status, total_income, total_income_financial, deduction_amount,
                     fund_amount, vat_amount, extra_amount, net_amount,
                     auditor_name, auditor_license, auditor_office, audited_date
                 ) VALUES (
                     %s, %s, %s, %s,
                     %s, %s, %s, %s,
-                    'draft', %s, %s,
+                    'draft', %s, %s, %s,
                     %s, %s, %s, %s,
                     %s, %s, %s, %s
                 )
@@ -439,6 +442,7 @@ def create_submission():
                 taxpayer["period_end"],
                 taxpayer["due_date"],
                 total_income,
+                total_income_financial,
                 deduction_amount,
                 calculation["fund_amount"],
                 calculation["vat_amount"],
