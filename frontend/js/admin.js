@@ -155,7 +155,7 @@ async function loadAuditLogs() {
   if (!tbody) return;
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="color:#888;font-size:12.5px">${fmtDT(r.created_at)}</td>
+      <td style="color:#888;font-size:12.5px;text-align:center">${fmtDT(r.created_at)}</td>
       <td style="font-size:12.5px">${r.admin_email || '—'}</td>
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
       <td style="font-size:12.5px;color:#888">${r.table_name_th || r.table_name || '—'}</td>

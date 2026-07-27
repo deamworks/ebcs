@@ -741,14 +741,13 @@
       <!-- ══ PAGE: audit ══ -->
       <div class="adm-page" id="page-audit">
         <div class="adm-search-bar">
-          <div class="adm-search-input-wrap">
+          <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input id="audit-search" placeholder="อีเมล / การดำเนินการ / ตารางข้อมูล" oninput="loadAuditLogs()" onkeydown="if(event.key==='Enter') loadAuditLogs()">
+            <button class="adm-search-inline-filter-btn" id="filter-trigger-audit-filter-card" onclick="toggleAdmFilter('audit-filter-card')" title="ตัวกรองข้อมูล">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+            </button>
           </div>
-          <button class="adm-search-btn" onclick="toggleAdmFilter('audit-filter-card')" title="ตัวกรองข้อมูล">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
-            คัดกรองข้อมูล
-          </button>
         </div>
         <div class="adm-filter-popover collapsed" id="audit-filter-card">
           <div class="adm-filter-popover-hd">
@@ -778,7 +777,7 @@
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="audit-table">
-              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th><th>รายละเอียดการเปลี่ยนแปลง</th></tr></thead>
+              <thead><tr><th style="text-align:center">วันเวลา</th><th style="text-align:center">ผู้ดำเนินการ</th><th style="text-align:center">การกระทำ</th><th style="text-align:center">ตาราง</th><th style="text-align:center">รายการที่เกี่ยวข้อง</th><th style="text-align:center">รายละเอียดการเปลี่ยนแปลง</th></tr></thead>
               <tbody id="audit-tbody"></tbody>
             </table>
           </div>
