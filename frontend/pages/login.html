@@ -28,14 +28,13 @@
           <h2>เข้าสู่ระบบผู้ประกอบการ</h2>
           <p>ยืนยันตัวตนด้วยรหัส OTP ทางอีเมล</p>
         </div>
-        <button type="button" class="login-info-btn" aria-label="ข้อความแจ้ง" onclick="document.getElementById('loginInfoModal').classList.add('open')">i</button>
-      </div>
-    </div>
-
-    <div class="login-info-modal-overlay" id="loginInfoModal" onclick="if(event.target===this) this.classList.remove('open')">
-      <div class="login-info-modal">
-        อีเมลที่ใช้รับรหัส OTP คืออีเมลที่ผู้ประกอบการแจ้งไว้สำหรับติดต่อ
-        หากต้องการเปลี่ยนแปลงหรือพบว่าไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ก่อนเข้าใช้งานระบบ
+        <div class="login-info-wrap">
+          <button type="button" class="login-info-btn" aria-label="ข้อความแจ้ง" onclick="this.parentElement.classList.toggle('open')">i</button>
+          <div class="login-info-tip">
+            อีเมลที่ใช้รับรหัส OTP คืออีเมลที่ผู้ประกอบการแจ้งไว้สำหรับติดต่อ
+            หากต้องการเปลี่ยนแปลงหรือพบว่าไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ก่อนเข้าใช้งานระบบ
+          </div>
+        </div>
       </div>
     </div>
 
