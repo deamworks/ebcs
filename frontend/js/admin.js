@@ -130,10 +130,14 @@ async function loadAuditLogs() {
     return true;
   });
 
-  const fmtDT = iso => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()+543} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  // created_at เป็นเวลาประเทศไทย (Asia/Bangkok) ที่ backend จัดรูปแบบมาแล้วเป็น "YYYY-MM-DD HH:MM:SS"
+  // แสดงผลตรงจาก string โดยไม่ผ่าน Date object เพื่อไม่ให้ browser แปลง timezone ซ้ำ
+  const fmtDT = str => {
+    if (!str) return '—';
+    const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (!m) return str;
+    const [, y, mo, d, h, mi] = m;
+    return `${d}/${mo}/${Number(y)+543} ${h}:${mi}`;
   };
 
   const actionColor = a => {
@@ -149,8 +153,8 @@ async function loadAuditLogs() {
       <td style="color:#888;font-size:11px">${fmtDT(r.created_at)}</td>
       <td style="font-size:11px">${r.admin_email || '—'}</td>
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
-      <td style="font-size:11px;color:#888">${r.table_name || '—'}</td>
-      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_id || '—'}</td>
+      <td style="font-size:11px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
+      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
     </tr>`).join('')
     : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
 }
@@ -311,6 +315,10 @@ function renderTable() {
   const yearFrom    = parseInt(yearFromVal) || null;
   const yearTo      = parseInt(yearToVal)   || null;
   const payStatuses = [...document.querySelectorAll('.filter-cb-paystatus:checked')].map(el => el.value);
+  const types       = [...document.querySelectorAll('.filter-cb-type:checked')].map(el => el.value);
+  const rounds      = [...document.querySelectorAll('.filter-cb-round:checked')].map(el => el.value);
+  const licStatuses = [...document.querySelectorAll('.filter-cb-licstatus:checked')].map(el => el.value);
+  const licTypes    = [...document.querySelectorAll('.filter-cb-lictype:checked')].map(el => el.value);
 
   let rows = allSubmissions;
   if (search) rows = rows.filter(s =>
@@ -322,6 +330,12 @@ function renderTable() {
   if (yearTo)   rows = rows.filter(s => (s.fiscal_year || 0) <= yearTo);
   if (activeSubmissionYear !== null) rows = rows.filter(s => s.fiscal_year === activeSubmissionYear);
   if (payStatuses.length) rows = rows.filter(s => payStatuses.includes(s.status || ''));
+  if (types.length) rows = rows.filter(s => types.includes(s.licensee_type || ''));
+  if (rounds.length) rows = rows.filter(s => rounds.some(rd => (s.period_round || '').includes(rd.replace('รอบ', ''))));
+  if (licStatuses.length) rows = rows.filter(s =>
+    (allLicenses || []).some(l => l.tax_id === s.tax_id && licStatuses.includes(l.license_status || '')));
+  if (licTypes.length) rows = rows.filter(s =>
+    (allLicenses || []).some(l => l.tax_id === s.tax_id && licTypes.includes(l.licensee_type || '')));
 
   document.getElementById('tableCount').textContent = `แสดง ${rows.length} / ${allSubmissions.length} รายการ`;
 
@@ -366,6 +380,10 @@ function clearFilters() {
   const yf = document.getElementById('filterYearFrom'); if (yf) yf.value = '';
   const yt = document.getElementById('filterYearTo');   if (yt) yt.value = '';
   document.querySelectorAll('.filter-cb-paystatus').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.filter-cb-type').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.filter-cb-round').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.filter-cb-licstatus').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.filter-cb-lictype').forEach(cb => cb.checked = false);
   renderTable();
 }
 
@@ -572,7 +590,8 @@ async function deleteLicense(id, no) {
   const PAGE_META = {
     submissions:       { title: 'รายการยื่นแบบ',       sub: 'ข้อมูลการนำส่งเงินรายปีเข้ากองทุน กสทช.' },
     licenses:          { title: 'ใบอนุญาต',               sub: 'จัดการข้อมูลใบอนุญาตทั้งหมด' },
-    'operator-accounts': { title: 'บัญชีผู้ประกอบการ',   sub: 'นำเข้าและจัดการอีเมลสำหรับรับ OTP ของผู้ประกอบการ' },
+    'operator-accounts': { title: 'บัญชีผู้ประกอบการ',   sub: 'จัดการอีเมลสำหรับรับ OTP ของผู้ประกอบการ' },
+    'import-operator-accounts': { title: 'นำเข้าบัญชีผู้ประกอบการ', sub: 'นำเข้าอีเมลสำหรับรับ OTP ของผู้ประกอบการจากไฟล์ Excel' },
     taxpayers:         { title: 'ผู้ประกอบการ',          sub: 'ข้อมูลผู้ประกอบการและใบอนุญาต' },
     'taxpayer-detail': { title: 'รายละเอียดผู้ประกอบการ', sub: 'ใบอนุญาตทั้งหมดของบริษัทนี้' },
     'import-licensee': { title: 'นำเข้าข้อมูลใบอนุญาต', sub: 'นำเข้าข้อมูลใบอนุญาตจากไฟล์ Excel' },
@@ -613,6 +632,7 @@ async function deleteLicense(id, no) {
     if (page === 'submissions') { loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'licenses')    loadLicenses();
     if (page === 'operator-accounts') loadOperatorAccounts();
+    if (page === 'import-operator-accounts' && typeof resetOperatorAccountImportPage === 'function') resetOperatorAccountImportPage();
     if (page === 'taxpayers')   { loadTaxpayers(); loadLicenses(); loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'audit')       loadAuditLogs();
     if (page === 'export')      loadExportPage();

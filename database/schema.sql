@@ -371,6 +371,7 @@ CREATE TABLE audit_logs (
   action      VARCHAR(255) NOT NULL COMMENT 'ทำอะไร',
   table_name  VARCHAR(100) NOT NULL COMMENT 'ตารางไหน',
   record_id   VARCHAR(50)  NULL     COMMENT 'แถวไหน',
+  record_label VARCHAR(255) NULL    COMMENT 'ของใคร เช่น ชื่อผู้ประกอบการ/เลขผู้เสียภาษี',
 
   -- changes: เก็บค่าก่อน/หลังเปลี่ยนแปลง
   -- ตัวอย่าง: {"phone": {"old": "0812345678", "new": "0898765432"}}

@@ -75,6 +75,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             นำเข้าข้อมูลใบอนุญาต
           </div>
+          <div class="sb-item" data-page="import-operator-accounts" onclick="navigateFromSidebar('import-operator-accounts')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            นำเข้าบัญชีผู้ประกอบการ
+          </div>
         </div>
       </div>
 
@@ -469,8 +473,8 @@
         <div id="tp-detail-body"></div>
       </div>
 
-      <!-- ══ PAGE: operator-accounts (บัญชีผู้ประกอบการ — อีเมลรับ OTP) ══ -->
-      <div class="adm-page" id="page-operator-accounts">
+      <!-- ══ PAGE: import-operator-accounts (นำเข้าบัญชีผู้ประกอบการจาก Excel) ══ -->
+      <div class="adm-page" id="page-import-operator-accounts">
         <div class="adm-card">
           <div class="adm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
             <span class="adm-card-title">นำเข้าบัญชีผู้ประกอบการ (Excel)</span>
@@ -506,7 +510,10 @@
             </div>
           </div>
         </div>
+      </div>
 
+      <!-- ══ PAGE: operator-accounts (บัญชีผู้ประกอบการ — อีเมลรับ OTP) ══ -->
+      <div class="adm-page" id="page-operator-accounts">
         <!-- table toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
           <span id="oa-count" style="font-size:12px;color:#888;"></span>
@@ -767,7 +774,7 @@
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="audit-table">
-              <thead><tr><th>วันเวลา</th><th>Admin</th><th>การกระทำ</th><th>ตาราง</th><th>Record ID</th></tr></thead>
+              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th></tr></thead>
               <tbody id="audit-tbody"></tbody>
             </table>
           </div>
