@@ -113,14 +113,10 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // แจ้งเตือนถ้าเคยยื่นปีนี้ไปแล้ว
+    // ถ้าเคยยื่นปีนี้ไปแล้ว ไม่ให้กรอกฟอร์มซ้ำ — พาไปหน้าดูข้อมูล (โหมดดูอย่างเดียว) แทน
     if (info.existing_submission) {
-      const s = info.existing_submission;
-      const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
-      if (msgEl) {
-        msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
-        msgEl.style.color = '#d97706';
-      }
+      window.location.href = `/pages/view-submission.html?id=${encodeURIComponent(info.existing_submission.id)}`;
+      return;
     }
 
     // fill ปีก่อน เพื่อให้ validation ผ่าน

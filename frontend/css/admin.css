@@ -1084,6 +1084,10 @@
       border: 1px solid #c8d0db; border-radius: 6px; padding: 7px 10px;
       font-family: 'Sarabun',sans-serif; font-size: 13px; width: 100%; box-sizing: border-box;
     }
+    .adm-f-view-value {
+      border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px 10px;
+      background: #f8fafc; font-size: 13px; color: #333; min-height: 16px;
+    }
 
     /* ── Import ──────────────────────────────────────────────── */
     .import-file-zone {

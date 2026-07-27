@@ -10,7 +10,7 @@
 import os
 import uuid
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
 from functools import wraps
@@ -374,6 +374,21 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
+    # กันยื่นซ้ำ: ถ้ามีใบยื่นปีนี้อยู่แล้ว (ไม่ว่าสถานะใด) ห้ามสร้างใหม่
+    # ต้องให้เจ้าหน้าที่ลบใบยื่นเก่าออกก่อนถึงจะยื่นใหม่ได้
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM submissions WHERE tax_id = %s AND fiscal_year = %s LIMIT 1",
+                (tax_id, fiscal_year)
+            )
+            if cur.fetchone():
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "ALREADY_SUBMITTED",
+                              "message": "มีใบยื่นแบบปีนี้อยู่แล้วในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อลบใบยื่นเดิมก่อนยื่นใหม่"}
+                }), 409
+
     # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
         float(lic.get("income", 0))
@@ -693,6 +708,37 @@ def upload_attachment(submission_id):
         "success": True,
         "data": {"id": attachment_id, "file_name": file.filename, "doc_type": doc_type}
     }), 201
+
+
+@operator_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
+@jwt_required()
+@require_operator
+def download_attachment(attachment_id):
+    """ดาวน์โหลดไฟล์แนบของตัวเอง (ตรวจสิทธิ์ผ่าน tax_id ของใบยื่นที่ผูกไฟล์นี้อยู่)"""
+    tax_id = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT a.storage_path, a.file_name, a.mime_type
+                FROM   document_attachments a
+                JOIN   submissions s ON s.id = a.submission_id
+                WHERE  a.id = %s AND s.tax_id = %s
+            """, (attachment_id, tax_id))
+            att = cur.fetchone()
+
+    if not att or not os.path.exists(att["storage_path"]):
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+        }), 404
+
+    return send_file(
+        att["storage_path"],
+        mimetype=att.get("mime_type") or "application/octet-stream",
+        download_name=att["file_name"],
+        as_attachment=True,
+    )
 
 
 # ════════════════════════════════════════════════════════
