@@ -337,6 +337,9 @@ async function saveSubmission() {
     const result = await api.post('/operator/submissions', {
       fiscal_year:      parseInt(appState.year) || 0,
       total_income:     totals.totalIncome,
+      // [FIX] เดิมไม่เคยส่งค่านี้ไปเก็บเลย มีแค่ใน localStorage draft ทำให้
+      // หายไปหลังยื่นแบบ และหน้าดูอย่างเดียวโชว์ 0.00 เสมอ
+      total_income_financial: pv(document.getElementById('total-income-financial')?.value),
       deduction_amount: totals.totalDeduct,
       fund_amount:      totals.totalFund,
       vat_amount:       totals.totalVat,
