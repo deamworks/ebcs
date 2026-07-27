@@ -113,11 +113,24 @@
 }
 
 /* ── OTP Input ─────────────────────────────────────── */
-.otp-input {
+.otp-boxes {
+  display: flex; gap: 10px; margin-bottom: 8px;
+}
+.otp-box {
+  flex: 1; min-width: 0; aspect-ratio: 1 / 1;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--accent-bg);
   text-align: center;
-  letter-spacing: 0.5em;
-  font-size: 28px; font-weight: 700;
+  font-family: var(--font);
+  font-size: 22px; font-weight: 700;
   color: var(--primary);
+}
+.otp-box:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(90,139,250,0.18);
 }
 
 /* ── Error message ─────────────────────────────────── */

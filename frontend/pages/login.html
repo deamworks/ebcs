@@ -93,17 +93,18 @@
       <!-- ── Step 3: กรอก OTP ── -->
       <div class="login-step" id="stepVerifyOtp">
 
-        <label class="login-label" for="otpInput">
+        <label class="login-label" for="otpBox1">
           รหัส OTP (6 หลัก)
         </label>
-        <input
-          type="text" id="otpInput"
-          class="login-input otp-input"
-          placeholder="● ● ● ● ● ●"
-          maxlength="6"
-          inputmode="numeric"
-          autocomplete="one-time-code"
-        >
+        <input type="hidden" id="otpInput">
+        <div class="otp-boxes" id="otpBoxes">
+          <input type="text" id="otpBox1" class="otp-box" maxlength="1" inputmode="numeric" autocomplete="one-time-code">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+          <input type="text" class="otp-box" maxlength="1" inputmode="numeric">
+        </div>
 
         <div class="otp-meta">
           <span>

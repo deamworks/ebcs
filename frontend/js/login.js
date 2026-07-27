@@ -23,18 +23,50 @@ let _countdown   = null;   // interval id
   document.getElementById('taxIdInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleCheckTaxId();
   });
-  document.getElementById('otpInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleVerifyOtp();
-  });
-
   // Auto-format: ตัวเลขเท่านั้น
   document.getElementById('taxIdInput').addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\D/g, '');
   });
-  document.getElementById('otpInput').addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/\D/g, '');
-  });
+
+  initOtpBoxes();
 })();
+
+// ── กล่อง OTP 6 ช่อง: พิมพ์แล้วเลื่อนไปช่องถัดไปอัตโนมัติ, backspace ย้อนกลับ, วางรหัสได้ ──
+function initOtpBoxes() {
+  const boxes = Array.from(document.querySelectorAll('.otp-box'));
+  const hidden = document.getElementById('otpInput');
+
+  const syncHidden = () => { hidden.value = boxes.map(b => b.value).join(''); };
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1);
+      syncHidden();
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].focus();
+      } else if (e.key === 'Enter') {
+        handleVerifyOtp();
+      }
+    });
+    box.addEventListener('paste', e => {
+      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, boxes.length);
+      if (!digits) return;
+      e.preventDefault();
+      digits.split('').forEach((d, j) => { if (boxes[j]) boxes[j].value = d; });
+      syncHidden();
+      boxes[Math.min(digits.length, boxes.length - 1)].focus();
+    });
+  });
+}
+
+function resetOtpBoxes() {
+  document.querySelectorAll('.otp-box').forEach(b => b.value = '');
+  document.getElementById('otpInput').value = '';
+  document.querySelector('.otp-box')?.focus();
+}
 
 // ── Step Navigation ───────────────────────────────────
 function goToStep(stepId) {
@@ -109,6 +141,7 @@ async function handleRequestOtp() {
     });
 
     goToStep('stepVerifyOtp');
+    resetOtpBoxes();
     startCountdown(300);   // 5 นาที
 
   } catch (err) {
@@ -129,6 +162,7 @@ async function handleResendOtp() {
       tax_id:  _taxId,
       channel: 'email',
     });
+    resetOtpBoxes();
     startCountdown(300);
   } catch (err) {
     showError(err.message || 'ส่ง OTP ใหม่ไม่สำเร็จ');
