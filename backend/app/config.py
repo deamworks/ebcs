@@ -37,4 +37,4 @@ class Config:
     # ── Upload ────────────────────────────────────────────
     UPLOAD_FOLDER      = "/app/uploads"
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_UPLOAD_MB", 10)) * 1024 * 1024
-    ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png"}
+    ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx"}

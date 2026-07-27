@@ -93,35 +93,35 @@
                 <div class="form-field">
                   <label class="form-field-label">เลขประจำตัวผู้เสียภาษี</label>
                   <div style="flex:1;min-width:0;">
-                    <input class="form-field-input ph1-locked-field" id="ph1-taxid" type="text"
+                    <input class="form-field-input" id="ph1-taxid" type="text"
                       placeholder="กรอก 13 หลัก" maxlength="13" style="width:100%;"
-                      readonly oninput="">
+                      oninput="">
                     <span id="taxid-autofill-msg" class="taxid-status"></span>
                   </div>
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ผู้ได้รับใบอนุญาต</label>
-                  <input class="form-field-input ph1-locked-field" id="ph1-licensee" type="text" placeholder="ชื่อบริษัท / ผู้รับใบอนุญาต" readonly>
+                  <input class="form-field-input" id="ph1-licensee" type="text" placeholder="ชื่อบริษัท / ผู้รับใบอนุญาต">
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันเริ่มต้นรอบบัญชี</label>
-                  <input class="form-field-input buddhist-datepicker ph1-locked-field" id="ph1-period-start" type="text" placeholder="วัน/เดือน/ปี" readonly>
+                  <input class="form-field-input buddhist-datepicker" id="ph1-period-start" type="text" placeholder="วัน/เดือน/ปี">
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันสิ้นสุดรอบบัญชี</label>
-                  <input class="form-field-input buddhist-datepicker ph1-locked-field" id="ph1-period-end" type="text" placeholder="วัน/เดือน/ปี" readonly>
+                  <input class="form-field-input buddhist-datepicker" id="ph1-period-end" type="text" placeholder="วัน/เดือน/ปี">
                 </div>
               </div>
 
               <!-- Right column -->
               <div>
                 <div class="form-field">
-                  <label class="form-field-label">รอบปีบัญชี (พ.ศ.)</label>
-                  <input class="form-field-input" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)" onchange="if(typeof autoFillFromAuth==='function') autoFillFromAuth();">
+                  <label class="form-field-label">ปีบัญชี (พ.ศ.)</label>
+                  <input class="form-field-input" type="text" id="ph1-year" placeholder="เช่น 2568" oninput="autoUpdateRefNo(this.value)">
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">ประเภท</label>
-                  <select class="form-field-input ph1-locked-field" id="ph1-type" onchange="autoDetectPeriodType(); autoUnlockRoundOnTypeChange()" disabled>
+                  <select class="form-field-input" id="ph1-type" onchange="autoDetectPeriodType(); autoUnlockRoundOnTypeChange()">
                     <option value="ปกติ" selected>ปกติ</option>
                     <option value="ยกเลิก">ยกเลิก</option>
                     <option value="เพิกถอน">เพิกถอน</option>
@@ -130,7 +130,7 @@
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">รอบบัญชี</label>
-                  <select class="form-field-input select-arrow ph1-locked-field" id="ph1-period-round"
+                  <select class="form-field-input select-arrow" id="ph1-period-round"
                     disabled>
                     <option value="">-- เลือกรอบบัญชี --</option>
                     <option value="รอบปกติ">รอบปกติ (1 ม.ค. – 31 ธ.ค.)</option>
@@ -139,7 +139,7 @@
                 </div>
                 <div class="form-field">
                   <label class="form-field-label">วันครบกำหนดชำระ</label>
-                  <input class="form-field-input buddhist-datepicker ph1-locked-field" id="ph1-due-date" type="text" placeholder="วัน/เดือน/ปี" readonly>
+                  <input class="form-field-input buddhist-datepicker" id="ph1-due-date" type="text" placeholder="วัน/เดือน/ปี">
                 </div>
               </div>
 
@@ -855,7 +855,7 @@
 
           <!-- ช่องทาง Analog: toggleDeductSection('analog') เปิด/ปิดช่องกรอก, liveCalcDeductIncome() คำนวณรายได้อัตโนมัติ, ค่าลดหย่อน = 60% ของรายได้ -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
-            <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+            <div style="background: #3b82f6; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-analog" checked onchange="toggleDeductSection('analog')" />
               <label for="dm-ch-analog" style="cursor: pointer; margin: 0;">Analog (60% ของรายได้ แต่ไม่เกินรายได้จากการประกอบกิจการ)</label>
             </div>
@@ -877,7 +877,7 @@
 
           <!-- ช่องทาง Digital -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
-            <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+            <div style="background: #3b82f6; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-digital" onchange="toggleDeductSection('digital')" />
               <label for="dm-ch-digital" style="cursor: pointer; margin: 0;">Digital (สูงสุด 300,000 บาท แต่ไม่เกินรายได้จากการประกอบกิจการ)</label>
             </div>
@@ -899,7 +899,7 @@
 
           <!-- ช่องทาง IPTV -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden;">
-            <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+            <div style="background: #3b82f6; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-iptv" onchange="toggleDeductSection('iptv')" />
               <label for="dm-ch-iptv" style="cursor: pointer; margin: 0;">IPTV (สูงสุด 300,000 บาท แต่ไม่เกินรายได้จากการประกอบกิจการ)</label>
             </div>
@@ -938,14 +938,13 @@
   <script src="../js/auth.js"></script>
   <script src="../js/calc.js"></script>
   <script src="../js/ui.js"></script> 
+  <script src="../js/index.js"></script>
   <script src="../js/license.js"></script>
   <script src="../js/step1-income.js"></script>
   <script src="../js/step2-other.js"></script>
   <script src="../js/step3-deduct.js"></script>
   <script src="../js/step5-summary.js"></script>
   <script src="../js/print.js"></script>
-  <script src="../js/view-submission.js"></script>
-  <script src="../js/index.js"></script>
-
+ 
 </body>
 </html>

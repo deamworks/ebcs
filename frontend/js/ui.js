@@ -149,19 +149,6 @@ let _currentStep = 1;
 
 /** สลับไปแสดง Step ที่กำหนดและอัปเดต Stepper */
 function goToStep(n) {
-  // [FIX] เดิมคลิกวงกลม Step ใน stepper กระโดดข้าม Step 1 ไปได้เลยโดยไม่ผ่าน
-  // handleNextStep1() ทำให้ไม่กรอกราคารวมตามงบการเงินก็ไปหน้าถัดไปได้ —
-  // บังคับเช็คตรงนี้ด้วยเพื่อกันทุกทางที่จะออกจาก Step 1
-  if (_currentStep === 1 && n !== 1) {
-    const finEl  = document.getElementById('total-income-financial');
-    const finVal = (finEl?.value || '').trim();
-    if (!finVal || pv(finVal) <= 0) {
-      if (typeof showToast === 'function') showToast('กรุณากรอกราคารวมตามงบการเงินก่อนไปขั้นตอนถัดไป');
-      if (finEl) finEl.focus();
-      return;
-    }
-  }
-
   // บันทึกค่าจาก step ปัจจุบันก่อนออก
   saveCurrentStepState(_currentStep);
 

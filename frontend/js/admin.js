@@ -155,72 +155,8 @@ async function loadAuditLogs() {
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
       <td style="font-size:11px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
       <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
-      <td style="font-size:11px">${formatAuditChanges(r.changes)}</td>
     </tr>`).join('')
-    : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
-}
-
-// ── ชื่อฟิลด์ภาษาไทย สำหรับแสดงรายละเอียด Audit Log ให้อ่านง่าย/เป็นทางการ ──
-const AUDIT_FIELD_TH = {
-  operator_name:    'ชื่อผู้ประกอบการ',
-  tax_id:           'เลขประจำตัวผู้เสียภาษี',
-  email:            'อีเมล',
-  total_income:     'รายได้รวม',
-  deduction_amount: 'เงินลดหย่อน',
-  fund_amount:      'เงินนำส่งกองทุน',
-  vat_amount:       'ภาษีมูลค่าเพิ่ม',
-  extra_amount:     'เงินเพิ่ม',
-  net_amount:       'ยอดสุทธิ',
-  auditor_name:     'ชื่อผู้สอบบัญชี',
-  auditor_license:  'เลขทะเบียนผู้สอบบัญชี',
-  auditor_office:   'สำนักงานสอบบัญชี',
-  audited_date:     'วันที่ตรวจสอบบัญชี',
-  company_name:     'ชื่อบริษัท',
-  license_no:       'เลขที่ใบอนุญาต',
-  file_name:        'ชื่อไฟล์',
-  amount:           'จำนวนเงิน',
-  receipt_no:       'เลขที่ใบเสร็จ',
-};
-
-/** จัดรูปแบบ r.changes (JSON) ให้อ่านง่ายและเป็นทางการในตาราง Audit Log */
-function formatAuditChanges(changes) {
-  if (!changes || typeof changes !== 'object') return '<span style="color:#bbb">—</span>';
-
-  const fieldTh = k => AUDIT_FIELD_TH[k] || k;
-  const esc = v => String(v ?? '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // กรณีลบข้อมูล: { deleted: {...แถวเดิมทั้งแถว} }
-  if (changes.deleted && typeof changes.deleted === 'object') {
-    const items = Object.entries(changes.deleted)
-      .filter(([k]) => !['id', 'created_at', 'updated_at'].includes(k))
-      .map(([k, v]) => `<div>${fieldTh(k)}: <strong>${esc(v)}</strong></div>`)
-      .join('');
-    return `<details><summary style="cursor:pointer;color:#dc2626;">ข้อมูลที่ถูกลบ</summary>${items}</details>`;
-  }
-
-  // กรณี import: { total_rows, valid_rows, error_rows, ... }
-  if ('valid_rows' in changes || 'error_rows' in changes) {
-    return `<div>สำเร็จ ${esc(changes.valid_rows)} แถว / ผิดพลาด ${esc(changes.error_rows)} แถว</div>`;
-  }
-
-  // กรณีแก้ไข: { field: { old, new }, ... }
-  const entries = Object.entries(changes);
-  const isDiff  = entries.length && entries.every(([, v]) => v && typeof v === 'object' && 'old' in v && 'new' in v);
-  if (isDiff) {
-    const items = entries
-      .map(([k, v]) => `<div>${fieldTh(k)}: <span style="color:#888">${esc(v.old)}</span> → <strong>${esc(v.new)}</strong></div>`)
-      .join('');
-    return `<details><summary style="cursor:pointer;color:#2e86ab;">รายละเอียด (${entries.length})</summary>${items}</details>`;
-  }
-
-  // กรณีอื่น: เพิ่มข้อมูลใหม่ทั้งแถว หรือ struct อื่นๆ
-  const items = entries
-    .filter(([k]) => !['id', 'created_at', 'updated_at'].includes(k))
-    .map(([k, v]) => `<div>${fieldTh(k)}: <strong>${esc(v)}</strong></div>`)
-    .join('');
-  return items
-    ? `<details><summary style="cursor:pointer;color:#2e86ab;">รายละเอียด</summary>${items}</details>`
-    : '<span style="color:#bbb">—</span>';
+    : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
 }
 
 function clearAuditFilters() {
@@ -238,7 +174,7 @@ function clearAuditFilters() {
 async function loadSubmissions() {
   const tbody = document.getElementById('submissionsTableBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:#888">กำลังโหลดข้อมูล...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" style="padding:20px;text-align:center;color:#888">กำลังโหลดข้อมูล...</td></tr>';
 
   const selectAllCb = document.getElementById('selectAll');
   if (selectAllCb) selectAllCb.checked = false;
@@ -247,7 +183,7 @@ async function loadSubmissions() {
   try {
     data = await api.get('/admin/submissions?per_page=500');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">เกิดข้อผิดพลาด: ${e.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">เกิดข้อผิดพลาด: ${e.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
     return;
   }
 
@@ -312,7 +248,6 @@ function setSubmissionYearFilter(year) {
 // ── สถานะ ──────────────────────────────────────────────────────
 const SUBMISSION_STATUS_META = {
   draft:           { label: 'ร่าง',          color: '#888',    bg: '#f5f5f5' },
-  pending_attach:  { label: 'รอแนบ',        color: '#d97706', bg: '#fff8e1' },
   pending_payment: { label: 'รอชำระเงิน',   color: '#dc2626', bg: '#fff0f0' },
   paid:            { label: 'ชำระเงินแล้ว',  color: '#2e86ab', bg: '#f0f6ff' },
 };
@@ -380,6 +315,7 @@ function renderTable() {
   const yearFrom    = parseInt(yearFromVal) || null;
   const yearTo      = parseInt(yearToVal)   || null;
   const payStatuses = [...document.querySelectorAll('.filter-cb-paystatus:checked')].map(el => el.value);
+  const types       = [...document.querySelectorAll('.filter-cb-type:checked')].map(el => el.value);
   const rounds      = [...document.querySelectorAll('.filter-cb-round:checked')].map(el => el.value);
   const licStatuses = [...document.querySelectorAll('.filter-cb-licstatus:checked')].map(el => el.value);
   const licTypes    = [...document.querySelectorAll('.filter-cb-lictype:checked')].map(el => el.value);
@@ -394,6 +330,7 @@ function renderTable() {
   if (yearTo)   rows = rows.filter(s => (s.fiscal_year || 0) <= yearTo);
   if (activeSubmissionYear !== null) rows = rows.filter(s => s.fiscal_year === activeSubmissionYear);
   if (payStatuses.length) rows = rows.filter(s => payStatuses.includes(s.status || ''));
+  if (types.length) rows = rows.filter(s => types.includes(s.licensee_type || ''));
   if (rounds.length) rows = rows.filter(s => rounds.some(rd => (s.period_round || '').includes(rd.replace('รอบ', ''))));
   if (licStatuses.length) rows = rows.filter(s =>
     (allLicenses || []).some(l => l.tax_id === s.tax_id && licStatuses.includes(l.license_status || '')));
@@ -416,7 +353,7 @@ function renderTable() {
   }
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
     return;
   }
 
@@ -433,7 +370,7 @@ function renderTable() {
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-success" onclick="openReceiptModal('${s.id}')">บันทึกรับชำระ</button>` : ''}
-        <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
+        <button class="adm-btn adm-btn-sm" onclick="openFullDetailModal('${s.id}')">ดูข้อมูล</button>
       </td>
     </tr>`).join('');
 }
@@ -443,6 +380,7 @@ function clearFilters() {
   const yf = document.getElementById('filterYearFrom'); if (yf) yf.value = '';
   const yt = document.getElementById('filterYearTo');   if (yt) yt.value = '';
   document.querySelectorAll('.filter-cb-paystatus').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.filter-cb-type').forEach(cb => cb.checked = false);
   document.querySelectorAll('.filter-cb-round').forEach(cb => cb.checked = false);
   document.querySelectorAll('.filter-cb-licstatus').forEach(cb => cb.checked = false);
   document.querySelectorAll('.filter-cb-lictype').forEach(cb => cb.checked = false);
@@ -768,6 +706,7 @@ async function deleteLicense(id, no) {
     const search = (document.getElementById('tp-search')?.value || '').toLowerCase();
     const yearFrom     = parseInt(document.getElementById('tp-year-from')?.value || '') || null;
     const yearTo       = parseInt(document.getElementById('tp-year-to')?.value || '') || null;
+    const types        = [...document.querySelectorAll('.tp-cb-type:checked')].map(el => el.value);
     const rounds       = [...document.querySelectorAll('.tp-cb-round:checked')].map(el => el.value);
     const licStatuses  = [...document.querySelectorAll('.tp-cb-licstatus:checked')].map(el => el.value);
     const licTypes     = [...document.querySelectorAll('.tp-cb-lictype:checked')].map(el => el.value);
@@ -784,7 +723,9 @@ async function deleteLicense(id, no) {
     if (yearTo) rows = rows.filter(r =>
       (allTaxpayers || []).some(t => t.tax_id === r.tax_id && (t.fiscal_year || 0) <= yearTo));
 
-    // รอบบัญชี / สถานะการชำระเงิน: เช็คจาก submissions ของบริษัทนั้น (match ด้วย tax_id)
+    // ประเภท / รอบบัญชี / สถานะการชำระเงิน: เช็คจาก submissions ของบริษัทนั้น (match ด้วย tax_id)
+    if (types.length) rows = rows.filter(r =>
+      (allSubmissions || []).some(s => s.tax_id === r.tax_id && types.includes(s.licensee_type || '')));
     if (rounds.length) rows = rows.filter(r =>
       (allSubmissions || []).some(s => s.tax_id === r.tax_id && rounds.some(rd => (s.period_round || '').includes(rd.replace('รอบ', '')))));
     if (payStatuses.length) rows = rows.filter(r =>
@@ -828,7 +769,7 @@ async function deleteLicense(id, no) {
     const s = document.getElementById('tp-search'); if (s) s.value = '';
     const yf = document.getElementById('tp-year-from'); if (yf) yf.value = '';
     const yt = document.getElementById('tp-year-to');   if (yt) yt.value = '';
-    document.querySelectorAll('.tp-cb-round,.tp-cb-licstatus,.tp-cb-lictype,.tp-cb-paystatus').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.tp-cb-type,.tp-cb-round,.tp-cb-licstatus,.tp-cb-lictype,.tp-cb-paystatus').forEach(cb => cb.checked = false);
     renderTaxpayerTable();
   }
 

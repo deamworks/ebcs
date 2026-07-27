@@ -7,10 +7,9 @@
 # 3. ตอบ JSON format เดียวกันทุกตัว: { success, data } หรือ { success, error }
 # ════════════════════════════════════════════════════════
 
-import os
 import uuid
 
-from flask import Blueprint, jsonify, request, send_file, current_app
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
 from functools import wraps
@@ -373,28 +372,6 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # [FIX] กันยื่นซ้ำ: ถ้ามีใบยื่นปีนี้อยู่แล้วและยืนยันแล้ว (ไม่ใช่ draft)
-    # ห้ามสร้างใหม่ — ต้องรอแอดมินลบใบเดิมก่อนเท่านั้น ถ้ายังเป็น draft เก่า
-    # (เช่น ค้างจากครั้งก่อนที่ยืนยันไม่สำเร็จ) ให้ลบทิ้งแล้วสร้างใหม่แทนได้
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                SELECT id, status FROM submissions
-                WHERE  tax_id = %s AND fiscal_year = %s LIMIT 1
-            """, (tax_id, fiscal_year))
-            existing = cur.fetchone()
-            if existing:
-                if existing["status"] != "draft":
-                    return jsonify({
-                        "success": False,
-                        "error": {
-                            "code":    "ALREADY_SUBMITTED",
-                            "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
-                        }
-                    }), 400
-                cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
-        db.commit()
-
     # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
         float(lic.get("income", 0))
@@ -451,24 +428,17 @@ def create_submission():
             ))
 
             # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
-            # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่น
-            # ด้วย (เดิมไม่เก็บเลย ทำให้หน้าดูรายละเอียดไม่มีข้อมูลนี้)
             for lic in licenses_data:
                 license_id = new_uuid()
                 cur.execute("""
                     INSERT INTO licenses (
                         id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s)
                 """, (
                     license_id,
                     submission_id,
                     lic.get("license_no", ""),
-                    lic.get("license_type"),
-                    lic.get("license_status"),
-                    lic.get("license_start"),
-                    lic.get("license_end"),
                     float(lic.get("income", 0)),
                     float(lic.get("deduction", 0)),
                 ))
@@ -583,14 +553,9 @@ def update_submission(submission_id):
             for lic in licenses_data:
                 license_id = new_uuid()
                 cur.execute("""
-                    INSERT INTO licenses (
-                        id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
-                        fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO licenses (id, submission_id, license_no, fee_amount, deduction_amount)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (license_id, submission_id, lic.get("license_no", ""),
-                      lic.get("license_type"), lic.get("license_status"),
-                      lic.get("license_start"), lic.get("license_end"),
                       float(lic.get("income", 0)), float(lic.get("deduction", 0))))
 
                 for income_item in lic.get("incomes", []):
@@ -746,121 +711,6 @@ def get_submission(submission_id):
             ]
         }
     }), 200
-
-
-# ════════════════════════════════════════════════════════
-# 4.6b ดาวน์โหลดไฟล์แนบของใบยื่นตัวเอง
-# GET /api/operator/attachments/<id>/download
-# nginx บล็อกการเข้าถึง /uploads/ ตรงๆ ต้องผ่าน endpoint นี้เท่านั้น
-# เพื่อตรวจว่าไฟล์แนบนี้เป็นของ tax_id ที่ login อยู่จริง
-# ════════════════════════════════════════════════════════
-
-@operator_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
-@jwt_required()
-@require_operator
-def download_own_attachment(attachment_id):
-    tax_id = get_jwt_identity()
-
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                SELECT da.storage_path, da.file_name, da.mime_type
-                FROM   document_attachments da
-                JOIN   submissions s ON s.id = da.submission_id
-                WHERE  da.id = %s AND s.tax_id = %s
-            """, (attachment_id, tax_id))
-            att = cur.fetchone()
-
-    if not att or not os.path.exists(att["storage_path"]):
-        return jsonify({
-            "success": False,
-            "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
-        }), 404
-
-    return send_file(
-        att["storage_path"],
-        mimetype=att.get("mime_type") or "application/octet-stream",
-        download_name=att["file_name"],
-        as_attachment=True,
-    )
-
-
-# ════════════════════════════════════════════════════════
-# 4.6c อัปโหลดไฟล์แนบเอกสาร (Step 6)
-# POST /api/operator/submissions/<submission_id>/attachments
-# แนบได้เฉพาะใบยื่นที่ยังเป็น draft ของตัวเอง
-# ════════════════════════════════════════════════════════
-
-@operator_bp.route("/submissions/<submission_id>/attachments", methods=["POST"])
-@jwt_required()
-@require_operator
-def upload_attachment(submission_id):
-    tax_id = get_jwt_identity()
-
-    if "file" not in request.files:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NO_FILE", "message": "กรุณาแนบไฟล์"}
-        }), 400
-
-    file = request.files["file"]
-    if not file.filename:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NO_FILE", "message": "กรุณาแนบไฟล์"}
-        }), 400
-
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in current_app.config["ALLOWED_EXTENSIONS"]:
-        return jsonify({
-            "success": False,
-            "error": {"code": "INVALID_TYPE", "message": "ประเภทไฟล์ไม่รองรับ"}
-        }), 400
-
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute(
-                "SELECT id, status, tax_id FROM submissions WHERE id = %s LIMIT 1",
-                (submission_id,)
-            )
-            submission = cur.fetchone()
-
-    if not submission:
-        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
-    if submission["tax_id"] != tax_id:
-        return jsonify({"success": False, "error": {"code": "FORBIDDEN", "message": "ไม่มีสิทธิ์"}}), 403
-    if submission["status"] != "draft":
-        return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ใบยื่นแบบนี้ไม่สามารถแนบไฟล์เพิ่มได้"}}), 400
-
-    doc_type    = request.form.get("doc_type", "")[:50]
-    dest_dir    = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
-    os.makedirs(dest_dir, exist_ok=True)
-    stored_name = f"{uuid.uuid4()}{ext}"
-    storage_path = os.path.join(dest_dir, stored_name)
-    file.save(storage_path)
-    file_size = os.path.getsize(storage_path)
-
-    attachment_id = new_uuid()
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                INSERT INTO document_attachments
-                    (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                attachment_id, submission_id, doc_type,
-                file.filename, storage_path, file.mimetype, file_size
-            ))
-        db.commit()
-
-    return jsonify({
-        "success": True,
-        "data": {
-            "id":        attachment_id,
-            "doc_type":  doc_type,
-            "file_name": file.filename,
-        }
-    }), 201
 
 
 # ════════════════════════════════════════════════════════

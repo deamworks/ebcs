@@ -170,6 +170,15 @@
               <input id="filterYearTo" class="adm-form-input" style="width:110px" placeholder="เช่น 2568" inputmode="numeric" oninput="renderTable()">
             </div>
             <div class="adm-filter-row">
+              <span class="adm-filter-label">ประเภท</span>
+              <div class="adm-filter-cbs">
+                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="ปกติ" onchange="renderTable()"> ปกติ</label>
+                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="ยกเลิก" onchange="renderTable()"> ยกเลิก</label>
+                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="สิ้นสุด" onchange="renderTable()"> สิ้นสุด</label>
+                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-type" value="เพิกถอน" onchange="renderTable()"> เพิกถอน</label>
+              </div>
+            </div>
+            <div class="adm-filter-row">
               <span class="adm-filter-label">รอบบัญชี</span>
               <div class="adm-filter-cbs">
                 <label class="adm-cb-item"><input type="checkbox" class="filter-cb-round" value="รอบปกติ" onchange="renderTable()"> รอบปกติ</label>
@@ -236,6 +245,8 @@
                   <th style="text-align:center">ผู้รับใบอนุญาต</th>
                   <th style="text-align:center">เลขผู้เสียภาษี</th>
                   <th style="text-align:center">ปีบัญชี</th>
+                  <th style="text-align:center">ประเภท</th>
+                  <th style="text-align:center">รอบ</th>
                   <th style="text-align:center">วันครบกำหนด</th>
                   <th style="text-align:center">ยอดสุทธิ (บาท)</th>
                   <th style="text-align:center">วันที่ยื่น</th>
@@ -366,6 +377,15 @@
               <input id="tp-year-to" class="adm-form-input" style="width:110px" placeholder="เช่น 2568" inputmode="numeric" oninput="renderTaxpayerTable()">
             </div>
             <div class="adm-filter-row">
+              <span class="adm-filter-label">ประเภท</span>
+              <div class="adm-filter-cbs">
+                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="ปกติ" onchange="renderTaxpayerTable()"> ปกติ</label>
+                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="ยกเลิก" onchange="renderTaxpayerTable()"> ยกเลิก</label>
+                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="สิ้นสุด" onchange="renderTaxpayerTable()"> สิ้นสุด</label>
+                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-type" value="เพิกถอน" onchange="renderTaxpayerTable()"> เพิกถอน</label>
+              </div>
+            </div>
+            <div class="adm-filter-row">
               <span class="adm-filter-label">รอบบัญชี</span>
               <div class="adm-filter-cbs">
                 <label class="adm-cb-item"><input type="checkbox" class="tp-cb-round" value="รอบปกติ" onchange="renderTaxpayerTable()"> รอบปกติ</label>
@@ -467,7 +487,7 @@
           </div>
           <div style="padding:20px;">
             <div style="background:#f0f6ff;border:1px solid #c8ddf5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;">
-              ระบบจะอ่านข้อมูลจากคอลัมน์ที่ชื่อ <strong>เลขผู้เสียภาษี (tax_id)</strong>, <strong>ชื่อผู้ประกอบการ (operator_name)</strong> และ <strong>email / อีเมล</strong> โดยหาตำแหน่งคอลัมน์และแถวหัวตารางให้โดยอัตโนมัติ (ไม่จำเป็นต้องอยู่ติดกันหรืออยู่แถวที่ 1) — รองรับทั้งไฟล์ template อย่างง่ายและรายงานที่ export จากระบบอื่น
+              ระบบจะอ่านข้อมูลจากคอลัมน์ดังต่อไปนี้ (แถวหัวตารางอยู่แถวที่ 1): <strong>tax_id (เลขผู้เสียภาษี 13 หลัก), email</strong>
               — เมื่อนำเข้าแล้ว ตอนผู้ประกอบการกรอกเลขผู้เสียภาษีในหน้า Login ระบบจะส่ง OTP ไปยังอีเมลนี้แทนอีเมลเดิมในระบบ
             </div>
             <div class="import-file-zone" onclick="document.getElementById('operatorAccountFile').click()">
@@ -483,7 +503,7 @@
               <div style="overflow-x:auto;max-height:320px;overflow-y:auto;margin-bottom:12px;border:1px solid #e2e8f0;border-radius:8px;">
                 <table class="adm-table">
                   <thead>
-                    <tr><th>ลำดับ</th><th>เลขผู้เสียภาษี</th><th>ชื่อผู้ประกอบการ</th><th>อีเมล</th><th>ตรวจสอบ</th></tr>
+                    <tr><th>ลำดับ</th><th>Tax ID</th><th>อีเมล</th><th>ตรวจสอบ</th></tr>
                   </thead>
                   <tbody id="oa-import-preview-body"></tbody>
                 </table>
@@ -509,7 +529,6 @@
             <table class="adm-table">
               <thead><tr>
                 <th style="text-align:center">เลขผู้เสียภาษี</th>
-                <th style="text-align:center">ชื่อผู้ประกอบการ</th>
                 <th style="text-align:center">อีเมล</th>
                 <th style="text-align:center">วันที่สร้าง</th>
                 <th style="text-align:center">จัดการ</th>
@@ -756,7 +775,7 @@
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="audit-table">
-              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th><th>รายละเอียดการเปลี่ยนแปลง</th></tr></thead>
+              <thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>การกระทำ</th><th>ตาราง</th><th>ของใคร</th></tr></thead>
               <tbody id="audit-tbody"></tbody>
             </table>
           </div>
