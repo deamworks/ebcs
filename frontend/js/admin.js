@@ -605,14 +605,14 @@ function renderLicenseTable() {
   const tbody = document.getElementById('lic-tbody');
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="font-size:12.5px">${r.tax_id}</td>
+      <td style="text-align:center;font-size:12.5px">${r.tax_id}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.company_name||'—'}</td>
-      <td style="font-size:12.5px;font-weight:500">${r.license_no||'—'}</td>
-      <td><span class="lic-type-badge">${r.licensee_type||'—'}</span></td>
-      <td>${fmtBE(r.start_date)}</td>
-      <td>${fmtBE(r.end_date)}</td>
-      <td>${statusBadge(r.license_status)}</td>
-      <td>
+      <td style="text-align:center;font-size:12.5px;font-weight:500">${r.license_no||'—'}</td>
+      <td style="text-align:center"><span class="lic-type-badge">${r.licensee_type||'—'}</span></td>
+      <td style="text-align:center">${fmtBE(r.start_date)}</td>
+      <td style="text-align:center">${fmtBE(r.end_date)}</td>
+      <td style="text-align:center">${statusBadge(r.license_status)}</td>
+      <td style="text-align:center">
         <button class="adm-btn adm-btn-sm" onclick="openEditLicenseModal('${r.id}')">แก้ไข</button>
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteLicense('${r.id}','${r.license_no}')">ลบ</button>
       </td>
