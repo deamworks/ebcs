@@ -248,6 +248,7 @@ function setSubmissionYearFilter(year) {
 // ── สถานะ ──────────────────────────────────────────────────────
 const SUBMISSION_STATUS_META = {
   draft:           { label: 'ร่าง',          color: '#888',    bg: '#f5f5f5' },
+  pending_attach:  { label: 'รอแนบ',        color: '#d97706', bg: '#fff8e1' },
   pending_payment: { label: 'รอชำระเงิน',   color: '#dc2626', bg: '#fff0f0' },
   paid:            { label: 'ชำระเงินแล้ว',  color: '#2e86ab', bg: '#f0f6ff' },
 };
