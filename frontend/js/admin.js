@@ -850,7 +850,7 @@ async function deleteLicense(id, no) {
 
     document.getElementById('tp-tbody').innerHTML = rows.length
       ? rows.map(r => `<tr>
-          <td style="font-size:12.5px;font-weight:600;color:#1e2d5e;white-space:nowrap;text-align:center">${r.ref_no || '—'}</td>
+          <td style="font-size:12.5px;font-weight:600;color:#1565c0;white-space:nowrap;text-align:center">${r.ref_no || '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.tax_id}</td>
           <td style="font-size:12.5px">${r.operator_name || '—'}</td>
           <td style="text-align:center">${r.periodRound === 'ปกติ' ? '<span class="badge-lic-ok">ปกติ</span>' : r.periodRound === 'อื่นๆ' ? '<span class="badge-lic-warn">อื่นๆ</span>' : '—'}</td>
