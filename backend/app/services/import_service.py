@@ -289,7 +289,7 @@ def import_taxpayers(db, rows):
 # ════════════════════════════════════════════════════════
 # col index (จาก header แถว 3):
 #  0  ลำดับ
-#  1  ปี (BE)                    → fiscal_year (เก็บเป็น พ.ศ. ตรงกับ taxpayer_master)
+#  1  ปี (BE)                    → fiscal_year (แปลงเป็น CE)
 #  2  รหัสอ้างอิง                → ref_code
 #  3  ประเภท                     → sub_type
 #  4  รอบ                        → round_type
@@ -356,15 +356,12 @@ def _parse_licensee_row(row, excel_row_num):
     if not license_no:
         errs.append("เลขที่ใบอนุญาตว่าง")
 
-    # fiscal_year — เก็บเป็น พ.ศ. (BE) ตรงกับ taxpayer_master.fiscal_year
-    # (เดิมแปลงเป็น ค.ศ. ก่อนเก็บ ทำให้ licensee_master.fiscal_year ไม่ตรงกับ
-    # taxpayer_master.fiscal_year — เวลาผู้ประกอบการเปิดหน้า index จะดึง
-    # licenses ด้วยปี พ.ศ. จาก taxpayer_master แต่ licensee_master เก็บ ค.ศ.
-    # ทำให้ WHERE fiscal_year=%s ไม่ match เลย แสดงใบอนุญาต 0 รายการ)
+    # fiscal_year (BE → CE)
     try:
         fiscal_year_be = int(str(row[1]).split(".")[0].strip()) if len(row) > 1 and row[1] else None
+        fiscal_year_ce = (fiscal_year_be - 543) if fiscal_year_be and fiscal_year_be > 2400 else fiscal_year_be
     except (TypeError, ValueError):
-        fiscal_year_be = None
+        fiscal_year_ce = None
         errs.append(f"ปี '{row[1] if len(row) > 1 else ''}' อ่านไม่ได้")
 
     # license_status: ต้อง map ภาษาไทย → ENUM literal ก่อน ไม่งั้น insert ล้มเหลว
@@ -377,7 +374,7 @@ def _parse_licensee_row(row, excel_row_num):
 
     return {
         "tax_id":         tax_id,
-        "fiscal_year":    fiscal_year_be,
+        "fiscal_year":    fiscal_year_ce,
         "ref_code":       _s(2),
         "sub_type":       _s(3),
         "round_type":     _s(4),
@@ -566,78 +563,20 @@ def parse_contact_excel(file_stream):
 # ════════════════════════════════════════════════════════
 # OPERATOR ACCOUNTS  →  operator_accounts
 # ════════════════════════════════════════════════════════
-# รองรับ 2 รูปแบบไฟล์:
-#  1) template อย่างง่าย — header แถว 1: tax_id | operator_name | email (ติดกัน)
-#  2) รายงานจริงของ กสทช. — header อยู่แถวอื่น คอลัมน์ไม่ติดกัน
-#     (เช่น "เลขประจำตัวผู้เสียภาษี" อยู่คอลัมน์ B, "อีเมล" อยู่คอลัมน์ X)
-# ตำแหน่งคอลัมน์จึงหาจาก "ชื่อ header" แทนตำแหน่งตายตัว
+# col index (header แถว 1):
+#  0  tax_id  (เลขประจำตัวผู้เสียภาษี 13 หลัก)
+#  1  email
 
-_TAX_ID_HEADER_ALIASES = {"tax_id", "เลขประจำตัวผู้เสียภาษี", "เลขที่ผู้เสียภาษี"}
-_OPERATOR_NAME_HEADER_ALIASES = {
-    "operator_name", "ชื่อผู้ประกอบการ", "รายชื่อผู้ประกอบการ", "รายชื่อผู้รับใบอนุญาต"
-}
-_EMAIL_HEADER_ALIASES = {"email", "อีเมล", "อีเมล์"}
-
-
-def _is_greenish_fill(cell):
-    """
-    True ถ้าเซลล์ header ถูกไฮไลต์สีเขียว (ใช้แยกคอลัมน์ "อีเมล" ที่ถูกต้อง
-    เวลาไฟล์มีคอลัมน์ชื่อ "อีเมล" ซ้ำหลายคอลัมน์ — กสทช. ใช้สีไฮไลต์แยกกลุ่ม
-    ที่อยู่แต่ละบล็อก เช่น สีชมพู = ที่อยู่ออกใบเสร็จ, สีเขียว = ที่อยู่ติดต่อได้จริง)
-    """
-    fill = cell.fill
-    if fill is None or fill.patternType != "solid":
-        return False
-    fg = fill.fgColor
-    if fg is None or fg.type != "rgb" or not fg.rgb or len(fg.rgb) != 8:
-        return False
-    try:
-        r, g, b = int(fg.rgb[2:4], 16), int(fg.rgb[4:6], 16), int(fg.rgb[6:8], 16)
-    except ValueError:
-        return False
-    return g > r + 15 and g > b + 15
-
-
-def _find_operator_account_columns(ws, max_scan_rows=10):
-    """
-    สแกนแถวแรกๆ ของไฟล์หาแถวที่มี header ตรงกับชื่อคอลัมน์ tax_id, operator_name, email
-    ถ้าคอลัมน์ "อีเมล" ปรากฏมากกว่า 1 คอลัมน์ในแถวเดียวกัน (ไฟล์รายงานจริงที่มี
-    บล็อกที่อยู่หลายชุด) ให้เลือกคอลัมน์ที่ไฮไลต์สีเขียว ถ้าไม่มีสีเขียวเลย
-    ให้ใช้คอลัมน์ขวาสุดที่ชื่อตรงกัน (fallback)
-    คืน (header_row_idx (0-based), tax_col, name_col, email_col) หรือ None ถ้าไม่พบ
-    """
-    for r_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=max_scan_rows)):
-        tax_col = name_col = None
-        email_candidates = []   # [(col_idx, is_green)]
-        for c_idx, cell in enumerate(row):
-            text = str(cell.value).strip().lower() if cell.value is not None else ""
-            if tax_col is None and text in _TAX_ID_HEADER_ALIASES:
-                tax_col = c_idx
-            elif name_col is None and text in _OPERATOR_NAME_HEADER_ALIASES:
-                name_col = c_idx
-            elif text in _EMAIL_HEADER_ALIASES:
-                email_candidates.append((c_idx, _is_greenish_fill(cell)))
-        if tax_col is not None and name_col is not None and email_candidates:
-            green_cols = [c for c, is_green in email_candidates if is_green]
-            email_col = green_cols[-1] if green_cols else email_candidates[-1][0]
-            return r_idx, tax_col, name_col, email_col
-    return None
-
-
-def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, name_col=1, email_col=2):
+def _parse_operator_account_row(row, excel_row_num, seen_tax_ids):
     errs = []
 
-    tax_id = _clean_tax_id(row[tax_col] if len(row) > tax_col else None)
+    tax_id = _clean_tax_id(row[0] if len(row) > 0 else None)
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
-        errs.append(f"เลขผู้เสียภาษี '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
+        errs.append(f"tax_id '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
     elif tax_id in seen_tax_ids:
-        errs.append(f"เลขผู้เสียภาษี '{tax_id}' ซ้ำในไฟล์")
+        errs.append(f"tax_id '{tax_id}' ซ้ำในไฟล์")
 
-    operator_name = str(row[name_col]).strip() if len(row) > name_col and row[name_col] is not None else ""
-    if not operator_name:
-        errs.append("ชื่อผู้ประกอบการว่าง")
-
-    email = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
+    email = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ""
     if not email or not EMAIL_RE.match(email):
         errs.append(f"email '{email}' รูปแบบไม่ถูกต้อง")
 
@@ -645,43 +584,24 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, nam
         return None, {"row": excel_row_num, "message": ", ".join(errs)}
 
     seen_tax_ids.add(tax_id)
-    return {"tax_id": tax_id, "operator_name": operator_name, "email": email}, None
+    return {"tax_id": tax_id, "email": email}, None
 
 
 def parse_operator_account_excel(file_stream):
     """
-    อ่านไฟล์ Excel บัญชีผู้ประกอบการ — หาตำแหน่งคอลัมน์ tax_id/operator_name/email
-    จาก header (ดู _find_operator_account_columns) รองรับทั้ง template อย่างง่าย
-    และรายงานจริงที่ header อยู่แถวอื่น
+    อ่านไฟล์ Excel บัญชีผู้ประกอบการ (header แถว 1, ข้อมูลแถว 2+)
+    คอลัมน์: tax_id | email
     คืน: (rows: list[dict], errors: list[dict])
     """
-    if isinstance(file_stream, (bytes, bytearray)):
-        file_stream = io.BytesIO(file_stream)
     try:
-        wb = openpyxl.load_workbook(file_stream, data_only=True)
-        ws = wb.active
-        found = _find_operator_account_columns(ws)
-        all_rows = list(ws.iter_rows(values_only=True))
-        wb.close()
+        _, data = _read_data_rows(file_stream, header_row=1)
     except Exception as e:
         return [], [{"row": 0, "message": f"เปิดไฟล์ไม่ได้: {e}"}]
 
-    if not found:
-        return [], [{
-            "row": 0,
-            "message": "ไม่พบคอลัมน์ที่จำเป็น (เลขผู้เสียภาษี, ชื่อผู้ประกอบการ, อีเมล) ในไฟล์"
-        }]
-    header_row_idx, tax_col, name_col, email_col = found
-
-    data = [
-        list(r) for r in all_rows[header_row_idx + 1:]
-        if any(c is not None and str(c).strip() for c in r)
-    ]
-
     rows, errors = [], []
     seen_tax_ids = set()
-    for idx, row in enumerate(data, start=header_row_idx + 2):   # Excel row number จริง
-        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids, tax_col, name_col, email_col)
+    for idx, row in enumerate(data, start=2):   # Excel row 2 เป็นต้นไป
+        rec, err = _parse_operator_account_row(row, idx, seen_tax_ids)
         if err:
             errors.append(err)
         else:
@@ -692,7 +612,7 @@ def parse_operator_account_excel(file_stream):
 def import_operator_accounts(db, rows):
     """
     Upsert operator_accounts  unique: tax_id
-    - มีอยู่แล้ว → UPDATE operator_name, email
+    - มีอยู่แล้ว → UPDATE email
     - ยังไม่มี   → INSERT
     คืน: {"inserted": n, "updated": n}
     """
@@ -702,14 +622,14 @@ def import_operator_accounts(db, rows):
         cur.execute("SELECT id FROM operator_accounts WHERE tax_id=%s", (row["tax_id"],))
         if cur.fetchone():
             cur.execute(
-                "UPDATE operator_accounts SET operator_name=%s, email=%s WHERE tax_id=%s",
-                (row["operator_name"], row["email"], row["tax_id"])
+                "UPDATE operator_accounts SET email=%s WHERE tax_id=%s",
+                (row["email"], row["tax_id"])
             )
             updated += 1
         else:
             cur.execute(
-                "INSERT INTO operator_accounts (tax_id, operator_name, email) VALUES (%s, %s, %s)",
-                (row["tax_id"], row["operator_name"], row["email"])
+                "INSERT INTO operator_accounts (tax_id, email) VALUES (%s, %s)",
+                (row["tax_id"], row["email"])
             )
             inserted += 1
     db.commit()

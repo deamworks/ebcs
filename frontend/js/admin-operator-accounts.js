@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════
 // js/admin-operator-accounts.js — บัญชีผู้ประกอบการ (อีเมลรับ OTP)
-// Import จาก Excel (tax_id, operator_name, email) + ตารางแสดง/ลบบัญชีที่มีอยู่
+// Import จาก Excel (tax_id, email) + ตารางแสดง/ลบบัญชีที่มีอยู่
 // ════════════════════════════════════════════════════
 
 let allOperatorAccounts = [];
@@ -43,11 +43,10 @@ async function handleOperatorAccountFile(input) {
       <tr>
         <td style="text-align:center">${i + 1}</td>
         <td>${r.tax_id || ''}</td>
-        <td>${r.operator_name || ''}</td>
         <td>${r.email || ''}</td>
         <td style="text-align:center;color:#16a34a;">✓</td>
       </tr>`).join('')
-    : `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:12px;">ไม่มีแถวที่ถูกต้อง</td></tr>`;
+    : `<tr><td colspan="4" style="text-align:center;color:#aaa;padding:12px;">ไม่มีแถวที่ถูกต้อง</td></tr>`;
 
   if (data.errors?.length) {
     if (logEl) logEl.innerHTML = data.errors
@@ -118,14 +117,13 @@ function renderOperatorAccountsTable() {
   tbody.innerHTML = allOperatorAccounts.length ? allOperatorAccounts.map(r => `
     <tr>
       <td style="text-align:center;font-size:11px;">${r.tax_id}</td>
-      <td style="text-align:center;">${r.operator_name || ''}</td>
       <td style="text-align:center;">${r.email}</td>
       <td style="text-align:center;">${fmtDateDMY(r.created_at)}</td>
       <td style="text-align:center;">
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteOperatorAccount('${r.id}','${r.tax_id}')">ลบ</button>
       </td>
     </tr>`).join('')
-    : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+    : '<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
 }
 
 async function deleteOperatorAccount(id, taxId) {

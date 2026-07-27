@@ -7,10 +7,9 @@
 # 3. ตอบ JSON format เดียวกันทุกตัว: { success, data } หรือ { success, error }
 # ════════════════════════════════════════════════════════
 
-import os
 import uuid
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, date
 from functools import wraps
@@ -373,28 +372,6 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # [FIX] กันยื่นซ้ำ: ถ้ามีใบยื่นปีนี้อยู่แล้วและยืนยันแล้ว (ไม่ใช่ draft)
-    # ห้ามสร้างใหม่ — ต้องรอแอดมินลบใบเดิมก่อนเท่านั้น ถ้ายังเป็น draft เก่า
-    # (เช่น ค้างจากครั้งก่อนที่ยืนยันไม่สำเร็จ) ให้ลบทิ้งแล้วสร้างใหม่แทนได้
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                SELECT id, status FROM submissions
-                WHERE  tax_id = %s AND fiscal_year = %s LIMIT 1
-            """, (tax_id, fiscal_year))
-            existing = cur.fetchone()
-            if existing:
-                if existing["status"] != "draft":
-                    return jsonify({
-                        "success": False,
-                        "error": {
-                            "code":    "ALREADY_SUBMITTED",
-                            "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
-                        }
-                    }), 400
-                cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
-        db.commit()
-
     # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
         float(lic.get("income", 0))
@@ -451,24 +428,17 @@ def create_submission():
             ))
 
             # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
-            # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่น
-            # ด้วย (เดิมไม่เก็บเลย ทำให้หน้าดูรายละเอียดไม่มีข้อมูลนี้)
             for lic in licenses_data:
                 license_id = new_uuid()
                 cur.execute("""
                     INSERT INTO licenses (
                         id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s)
                 """, (
                     license_id,
                     submission_id,
                     lic.get("license_no", ""),
-                    lic.get("license_type"),
-                    lic.get("license_status"),
-                    lic.get("license_start"),
-                    lic.get("license_end"),
                     float(lic.get("income", 0)),
                     float(lic.get("deduction", 0)),
                 ))
@@ -583,14 +553,9 @@ def update_submission(submission_id):
             for lic in licenses_data:
                 license_id = new_uuid()
                 cur.execute("""
-                    INSERT INTO licenses (
-                        id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
-                        fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO licenses (id, submission_id, license_no, fee_amount, deduction_amount)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (license_id, submission_id, lic.get("license_no", ""),
-                      lic.get("license_type"), lic.get("license_status"),
-                      lic.get("license_start"), lic.get("license_end"),
                       float(lic.get("income", 0)), float(lic.get("deduction", 0))))
 
                 for income_item in lic.get("incomes", []):
@@ -746,43 +711,6 @@ def get_submission(submission_id):
             ]
         }
     }), 200
-
-
-# ════════════════════════════════════════════════════════
-# 4.6b ดาวน์โหลดไฟล์แนบของใบยื่นตัวเอง
-# GET /api/operator/attachments/<id>/download
-# nginx บล็อกการเข้าถึง /uploads/ ตรงๆ ต้องผ่าน endpoint นี้เท่านั้น
-# เพื่อตรวจว่าไฟล์แนบนี้เป็นของ tax_id ที่ login อยู่จริง
-# ════════════════════════════════════════════════════════
-
-@operator_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
-@jwt_required()
-@require_operator
-def download_own_attachment(attachment_id):
-    tax_id = get_jwt_identity()
-
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                SELECT da.storage_path, da.file_name, da.mime_type
-                FROM   document_attachments da
-                JOIN   submissions s ON s.id = da.submission_id
-                WHERE  da.id = %s AND s.tax_id = %s
-            """, (attachment_id, tax_id))
-            att = cur.fetchone()
-
-    if not att or not os.path.exists(att["storage_path"]):
-        return jsonify({
-            "success": False,
-            "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
-        }), 404
-
-    return send_file(
-        att["storage_path"],
-        mimetype=att.get("mime_type") or "application/octet-stream",
-        download_name=att["file_name"],
-        as_attachment=True,
-    )
 
 
 # ════════════════════════════════════════════════════════
