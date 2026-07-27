@@ -236,6 +236,7 @@ CREATE TABLE licenses (
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
+  station       VARCHAR(255)  NULL COMMENT 'สถานี/ช่องรายการ',
   start_date    DATE          NULL,
   end_date      DATE          NULL,
 

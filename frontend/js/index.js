@@ -315,6 +315,8 @@ async function saveSubmission() {
         license_start:  thaiToISO(d.startDate),
         license_end:    thaiToISO(d.endDate),
         license_status: d.licenseStatus || 'active',
+        // [FIX] เดิมไม่ส่ง "สถานี/ช่องรายการ" ไปเก็บเลย พิมพ์แล้วหายหลังยื่นแบบ
+        station:        d.station || '',
         incomes,
       });
     }

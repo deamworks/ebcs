@@ -462,15 +462,16 @@ def create_submission():
                 cur.execute("""
                     INSERT INTO licenses (
                         id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
+                        licensee_type, license_status, station, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     license_id,
                     submission_id,
                     lic.get("license_no", ""),
                     lic.get("license_type"),
                     lic.get("license_status"),
+                    lic.get("station"),
                     lic.get("license_start"),
                     lic.get("license_end"),
                     float(lic.get("income", 0)),
@@ -589,11 +590,11 @@ def update_submission(submission_id):
                 cur.execute("""
                     INSERT INTO licenses (
                         id, submission_id, license_no,
-                        licensee_type, license_status, start_date, end_date,
+                        licensee_type, license_status, station, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (license_id, submission_id, lic.get("license_no", ""),
-                      lic.get("license_type"), lic.get("license_status"),
+                      lic.get("license_type"), lic.get("license_status"), lic.get("station"),
                       lic.get("license_start"), lic.get("license_end"),
                       float(lic.get("income", 0)), float(lic.get("deduction", 0))))
 
