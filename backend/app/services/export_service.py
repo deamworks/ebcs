@@ -495,13 +495,6 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     ws.row_dimensions[2].height = 80
     set_header_row(ws, headers, row=3)
 
-    # นับจำนวนใบอนุญาตต่อ tax_id เพื่อกรอกคอลัมน์ "จำนวนใบอนุญาต"
-    license_counts = {}
-    for row in rows:
-        license_counts[row["tax_id"]] = (
-            license_counts.get(row["tax_id"], 0) + 1
-        )
-
     # หาสถานะแนบเอกสารจาก submission_id ตรงๆ (แต่ละแถวผูกกับใบยื่นแบบเดียวอยู่แล้ว)
     submission_ids = list({row["submission_id"] for row in rows})
     submission_status_map = {}
@@ -552,7 +545,7 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
             submission_status_labels.get(sub_status, "") if sub_status else "",  # สถานะแนบเอกสาร
             row["tax_id"] or "",
             row["company_name"],
-            license_counts.get(row["tax_id"], 1),
+            1,
             row["license_no"],
             row["license_type"] or "",
             to_thai_date(row["license_start"]),
