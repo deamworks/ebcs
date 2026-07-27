@@ -77,7 +77,7 @@ def send_email(email, otp, operator_name=""):
 
     try:
         msg            = MIMEMultipart("alternative")
-        msg["Subject"] = f"รหัส OTP ระบบ e-BCS กสทช. : {otp}"
+        msg["Subject"] = "รหัสยืนยันตัวตน (OTP) สำหรับเข้าสู่ระบบ e-BCS กสทช."
         msg["From"]    = (
             f"{Config.MAIL_FROM_NAME} <{Config.MAIL_FROM}>"
         )
@@ -91,7 +91,7 @@ def send_email(email, otp, operator_name=""):
                 ระบบ e-BCS กสทช.
             </h2>
             <p>เรียน {operator_name or 'ผู้ประกอบการ'}</p>
-            <p>รหัส OTP สำหรับเข้าสู่ระบบของท่านคือ:</p>
+            <p>ท่านได้ทำรายการขอรหัสยืนยันตัวตน (OTP) เพื่อเข้าสู่ระบบ e-BCS กรุณาใช้รหัสด้านล่างนี้เพื่อยืนยันตัวตน:</p>
             <div style="background:#EEF2FF; padding:20px;
                         text-align:center; border-radius:8px;
                         margin:20px 0;">
@@ -101,12 +101,13 @@ def send_email(email, otp, operator_name=""):
                 </span>
             </div>
             <p style="color:#555;">
-                รหัสนี้มีอายุ <strong>5 นาที</strong> เท่านั้น<br>
-                หากท่านไม่ได้ขอรหัสนี้ กรุณาเพิกเฉย
+                รหัสนี้มีอายุการใช้งาน <strong>5 นาที</strong> นับจากเวลาที่ได้รับอีเมลฉบับนี้<br>
+                หากท่านไม่ได้เป็นผู้ทำรายการดังกล่าว กรุณาเพิกเฉยต่ออีเมลฉบับนี้
             </p>
             <hr style="border:none; border-top:1px solid #eee;">
             <p style="color:#999; font-size:12px; margin-bottom:0;">
-                สำนักงาน กสทช.
+                สำนักงานคณะกรรมการกิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมแห่งชาติ (สำนักงาน กสทช.)<br>
+                อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติ กรุณาอย่าตอบกลับ
             </p>
         </div>
         """
