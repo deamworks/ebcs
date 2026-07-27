@@ -155,12 +155,12 @@ async function loadAuditLogs() {
   if (!tbody) return;
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="color:#888;font-size:11px">${fmtDT(r.created_at)}</td>
-      <td style="font-size:11px">${r.admin_email || '—'}</td>
+      <td style="color:#888;font-size:12.5px">${fmtDT(r.created_at)}</td>
+      <td style="font-size:12.5px">${r.admin_email || '—'}</td>
       <td style="${actionColor(r.action || '')}">${r.action || '—'}</td>
-      <td style="font-size:11px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
-      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
-      <td style="font-size:11px">${formatAuditChanges(r.changes)}</td>
+      <td style="font-size:12.5px;color:#888">${r.table_name_th || r.table_name || '—'}</td>
+      <td style="font-size:12.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.record_label || r.record_id || '—'}</td>
+      <td style="font-size:12.5px">${formatAuditChanges(r.changes)}</td>
     </tr>`).join('')
     : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูลประวัติการดำเนินการ</td></tr>';
 }
@@ -605,9 +605,9 @@ function renderLicenseTable() {
   const tbody = document.getElementById('lic-tbody');
   tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td style="font-size:11px">${r.tax_id}</td>
+      <td style="font-size:12.5px">${r.tax_id}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.company_name||'—'}</td>
-      <td style="font-size:11px;font-weight:500">${r.license_no||'—'}</td>
+      <td style="font-size:12.5px;font-weight:500">${r.license_no||'—'}</td>
       <td><span class="lic-type-badge">${r.licensee_type||'—'}</span></td>
       <td>${fmtBE(r.start_date)}</td>
       <td>${fmtBE(r.end_date)}</td>
@@ -915,10 +915,10 @@ async function deleteLicense(id, no) {
     };
     const licRow = l => `
       <tr>
-        <td style="font-weight:500;color:#1e2d5e;font-size:12px">${l.license_no || '—'}</td>
+        <td style="font-weight:500;color:#1e2d5e;font-size:12.5px">${l.license_no || '—'}</td>
         <td><span class="lic-type-badge">${l.licensee_type || '—'}</span></td>
-        <td style="font-size:11px">${fmtBE(l.start_date)}</td>
-        <td style="font-size:11px">${fmtBE(l.end_date)}</td>
+        <td style="font-size:12.5px">${fmtBE(l.start_date)}</td>
+        <td style="font-size:12.5px">${fmtBE(l.end_date)}</td>
         <td>${statusBadge(l.license_status)}</td>
         <td style="text-align:right;white-space:nowrap;">
           <button class="adm-btn adm-btn-sm" onclick="openEditLicenseModal('${l.id}')">แก้ไข</button>
