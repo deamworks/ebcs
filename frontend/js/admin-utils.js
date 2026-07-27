@@ -352,6 +352,7 @@ async function _fdDownloadReport(path, params) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  return filename;
 }
 
 async function handleExportSubmit() {
@@ -399,10 +400,18 @@ async function handleExportSubmit() {
     statuses.forEach(s => { if (payStatusMap[s]) params.append('status', payStatusMap[s]); });
   }
 
+  // [FIX] เดิม audit log ระบุแค่เลขรายงาน (1/2/3) และไม่บอกชื่อไฟล์ที่ได้เลย
+  const reportNames = {
+    1: 'รายงานข้อมูลใบอนุญาต',
+    2: 'รายงานข้อมูลผู้ประกอบการ',
+    3: 'รายงานข้อมูลการชำระเงินกองทุนประจำปี',
+  };
+  const reportName = reportNames[reportType] || `รายงาน ${reportType}`;
+
   try {
-    await _fdDownloadReport(path, params);
-    await writeAuditLog('ส่งออกข้อมูล', 'export', String(reportType), {
-      year_from: yearFrom || null, year_to: yearTo || null,
+    const filename = await _fdDownloadReport(path, params);
+    await writeAuditLog(`ส่งออก${reportName}`, 'export', reportName, {
+      file_name: filename, year_from: yearFrom || null, year_to: yearTo || null,
     });
     showToast('ส่งออกข้อมูลสำเร็จ');
   } catch (e) {
@@ -427,7 +436,12 @@ async function exportFromApi(selectedRows) {
   );
 
   try {
-    await _fdDownloadReport('/api/admin/export/payments', params);
+    const filename = await _fdDownloadReport('/api/admin/export/payments', params);
+    await writeAuditLog(
+      'ส่งออกรายงานข้อมูลการชำระเงินกองทุนประจำปี',
+      'export', 'รายงานข้อมูลการชำระเงินกองทุนประจำปี',
+      { file_name: filename, year: years.length === 1 ? years[0] : null }
+    );
   } catch (e) {
     showToast('ส่งออกไม่สำเร็จ: ' + (e.message || ''));
   }

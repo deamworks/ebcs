@@ -1452,8 +1452,8 @@ def import_taxpayers_route():
         result = import_taxpayers(db, rows)
         save_audit_log(
             db, admin_email,
-            f"Import ผู้ประกอบการ {len(rows)} แถว",
-            "taxpayer_master", None, result
+            f"นำเข้าข้อมูลผู้ประกอบการจากไฟล์ {file.filename}",
+            "taxpayer_master", None, {**result, "file_name": file.filename}
         )
         db.commit()
 
@@ -1518,8 +1518,8 @@ def import_licensees_route():
         result = import_licensees(db, rows)
         save_audit_log(
             db, admin_email,
-            f"Import ใบอนุญาต {len(rows)} แถว",
-            "licensee_master", None, result
+            f"นำเข้าข้อมูลใบอนุญาตจากไฟล์ {file.filename}",
+            "licensee_master", None, {**result, "file_name": file.filename}
         )
         db.commit()
 
@@ -1589,8 +1589,8 @@ def import_operator_accounts_route():
         result = import_operator_accounts(db, rows)
         save_audit_log(
             db, admin_email,
-            f"Import บัญชีผู้ประกอบการ {len(rows)} แถว",
-            "operator_accounts", None, result
+            f"นำเข้าบัญชีผู้ประกอบการจากไฟล์ {file.filename}",
+            "operator_accounts", None, {**result, "file_name": file.filename}
         )
         db.commit()
 
@@ -1708,8 +1708,8 @@ def import_contacts_route():
         result = import_contacts(db, rows)
         save_audit_log(
             db, admin_email,
-            f"Import ที่อยู่ผู้ประกอบการ {len(rows)} แถว",
-            "contact_master", None, result
+            f"นำเข้าที่อยู่ผู้ประกอบการจากไฟล์ {file.filename}",
+            "contact_master", None, {**result, "file_name": file.filename}
         )
         db.commit()
 
