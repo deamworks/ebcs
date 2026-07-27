@@ -124,7 +124,12 @@ async function loadAuditLogs() {
     return;
   }
 
+  // [FIX] ก่อนแก้บั๊ก frontend ยิง audit log ซ้ำ (ดู PR #12) แถวสรุปรวม
+  // "ลบรายการยื่นแบบ N รายการ" (record_id/record_label = 'bulk') ถูกบันทึกไว้คู่
+  // กับแถวรายละเอียดต่อรายการเสมอ — ของเก่าที่ค้างอยู่ในฐานข้อมูลยังไงก็ซ้ำ
+  // ซ่อนแถว "bulk" ทิ้งไปเลย เพราะแถวรายละเอียดที่มากับมันให้ข้อมูลครบกว่าอยู่แล้ว
   const rows = (data.logs || []).filter(r => {
+    if (r.record_id === 'bulk' || r.record_label === 'bulk') return false;
     if (search && !`${r.admin_email} ${r.action} ${r.table_name}`.toLowerCase().includes(search)) return false;
     if (actions.length && !actions.some(a => (r.action || '').startsWith(a))) return false;
     return true;
