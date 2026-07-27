@@ -111,10 +111,17 @@ function renderOperatorAccountsTable() {
   const tbody = document.getElementById('oa-tbody');
   if (!tbody) return;
 
-  const countEl = document.getElementById('oa-count');
-  if (countEl) countEl.textContent = `ทั้งหมด ${allOperatorAccounts.length} รายการ`;
+  const search = (document.getElementById('oa-search')?.value || '').trim().toLowerCase();
+  const rows = search
+    ? allOperatorAccounts.filter(r =>
+        (r.tax_id || '').toLowerCase().includes(search) ||
+        (r.operator_name || '').toLowerCase().includes(search))
+    : allOperatorAccounts;
 
-  tbody.innerHTML = allOperatorAccounts.length ? allOperatorAccounts.map(r => `
+  const countEl = document.getElementById('oa-count');
+  if (countEl) countEl.textContent = `แสดง ${rows.length} / ${allOperatorAccounts.length} รายการ`;
+
+  tbody.innerHTML = rows.length ? rows.map(r => `
     <tr>
       <td style="text-align:center;font-size:12.5px;">${r.tax_id}</td>
       <td style="text-align:center;">${r.operator_name || ''}</td>
