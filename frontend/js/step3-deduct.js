@@ -18,8 +18,7 @@ const LICENSE_STATUS_TH = {
   ended:     'สิ้นสุด',
 };
 
-// อัตรา/เพดานค่าลดหย่อน (DEDUCT_RATE_ANALOG, DEDUCT_CAP_DIGITAL, DEDUCT_CAP_IPTV)
-// ย้ายไปอยู่ที่ js/fund-calc.js แล้ว เพื่อใช้ร่วมกับ admin.html
+// อัตรา/เพดานค่าลดหย่อนย้ายไปอยู่ที่ js/fund-calc.js แล้ว (ใช้ร่วมกับ admin.html)
 
 // SECTION A: ตารางค่าลดหย่อน (Step 3)
 
@@ -222,9 +221,7 @@ function saveDeductData() {
   // รวมค่าลดหย่อนทุกช่องทางของใบอนุญาตนี้
   const licenseIncome  = appState.rowsData[activeDeductRowIdx]?.income || 0;
 
-  // เงื่อนไข A: ผลรวม "รายได้" ของทุกช่องทางที่ติ๊กเลือก (Analog+Digital+IPTV)
-  // ต้องไม่เกินรายได้รวมของใบอนุญาตนี้ (เช่น Analog สมาชิก×ราคาเกินรายได้จริง
-  // ของใบอนุญาตไปแล้ว ก็ถือว่ากรอกผิด ต้องเตือนตั้งแต่จุดนี้)
+  // เงื่อนไข A: รายได้รวมของทุกช่องทางที่เลือก ต้องไม่เกินรายได้ของใบอนุญาตนี้
   const totalChannelIncome = ['analog', 'digital', 'iptv']
     .reduce((sum, ch) => sum + (state[ch].checked ? pv(state[ch].income) : 0), 0);
 
@@ -238,8 +235,7 @@ function saveDeductData() {
 
   const requestedDeduct = calcDeductAmount(state);
 
-  // เงื่อนไข B: ค่าลดหย่อนของ "ใบอนุญาตนี้" ต้องไม่เกินรายได้ของใบอนุญาตนี้
-  // (เช็คแยกเป็นรายใบ ไม่ใช่ยอดรวมทั้งฉบับ) หากเกินให้แจ้งเตือนและห้ามบันทึก
+  // เงื่อนไข B: ค่าลดหย่อนของใบอนุญาตนี้ (เช็คแยกรายใบ ไม่ใช่ยอดรวมทั้งฉบับ)
   if (requestedDeduct > licenseIncome) {
     showAppAlert(
       'ค่าลดหย่อน ' + fmt(requestedDeduct) + ' บาท\nเกินรายได้ของใบอนุญาตนี้ (' + fmt(licenseIncome) + ' บาท)\nกรุณาแก้ไขก่อนบันทึก',

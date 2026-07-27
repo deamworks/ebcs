@@ -320,8 +320,7 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
     ]
 
     # ── title รายงาน 2 ผู้ประกอบการ ────────────────────────
-    # row2: ชื่อรายงาน + วันที่ 2 บรรทัดใน cell เดียว — left, size=14, bold
-    # [FIX] ปีที่รับมาเป็น พ.ศ. อยู่แล้วเสมอ ไม่ต้องบวก 543 ซ้ำ — รองรับช่วงปีด้วย
+    # ปีที่รับมาเป็น พ.ศ. อยู่แล้ว ไม่บวก 543 ซ้ำ; รองรับช่วงปีด้วย
     if year_from and year_to:
         year_be_tp = f"{year_from} - {year_to}"
     elif year_from:
@@ -349,7 +348,7 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
 
     for i, row in enumerate(rows, start=1):
         r = i + 3
-        # 5 คอลัมน์แรกมีข้อมูลจริง ที่เหลือปล่อยว่าง (ยังไม่มีใน schema)
+        # 5 คอลัมน์แรกมีข้อมูลจริง ที่เหลือยังว่าง
         data = [
             i,
             row["tax_id"],
@@ -503,9 +502,7 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
             license_counts.get(row["tax_id"], 0) + 1
         )
 
-    # [FIX] "สถานะ" (สถานะแนบเอกสาร) หาจาก submission_id ของแถวนี้ตรงๆ (ตอนนี้
-    # แต่ละแถวมาจาก licenses ซึ่งผูกกับใบยื่นแบบเดียวอยู่แล้ว ไม่ต้องเดาผ่าน
-    # tax_id/fiscal_year เหมือนตอนดึงจาก licensee_master)
+    # หาสถานะแนบเอกสารจาก submission_id ตรงๆ (แต่ละแถวผูกกับใบยื่นแบบเดียวอยู่แล้ว)
     submission_ids = list({row["submission_id"] for row in rows})
     submission_status_map = {}
     if submission_ids:
@@ -536,9 +533,7 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
         r = i + 3
         sub_status = submission_status_map.get(row["submission_id"])
 
-        # [FIX] แบ่งสัดส่วนยอดรวมระดับใบยื่นแบบ (fund/vat/extra/net) ตามสัดส่วน
-        # รายได้ของใบอนุญาตนี้ (fee_amount) เทียบกับรายได้รวมทั้งใบยื่นแบบ —
-        # รายได้/ค่าลดหย่อนเป็นของใบอนุญาตนี้ตรงๆ อยู่แล้ว ไม่ต้องแบ่งสัดส่วน
+        # แบ่งสัดส่วนยอดรวมระดับใบยื่นแบบ (fund/vat/extra/net) ตาม fee_amount/total_income
         fee_amount    = float(row.get("fee_amount") or 0)
         deduction_amt = float(row.get("deduction_amount") or 0)
         total_income  = float(row.get("total_income") or 0)
@@ -689,9 +684,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
         """, params)
         rows = cur.fetchall()
 
-    # [FIX] เดิม actual_status คำนวณแค่ paid/status ดิบ ไม่เคยเช็คเอกสารแนบ
-    # บังคับ 3 อย่างครบไหม ทำให้รายงาน export ไม่ตรงกับสถานะ "รอแนบ" ที่แสดง
-    # ในหน้ารายการแอดมิน (GET /admin/submissions) ให้คำนวณเหมือนกัน
+    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับสถานะ "รอแนบ" ในหน้าแอดมิน
     for row in rows:
         if row["actual_status"] == "pending_payment" and (row.get("attachment_count") or 0) < 3:
             row["actual_status"] = "pending_attach"
@@ -709,8 +702,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
 
     now = report_date if isinstance(report_date, datetime) else datetime.now()
     month_th = THAI_MONTHS[now.month]
-    # [FIX] ปีที่รับมาทาง query param เป็น พ.ศ. อยู่แล้วเสมอ (ตรงกับที่เก็บใน
-    # fiscal_year) ไม่ต้องบวก 543 ซ้ำ — และรองรับแสดงเป็นช่วงถ้าใช้ year_from/year_to
+    # ปีที่รับมาเป็น พ.ศ. อยู่แล้ว ไม่บวก 543 ซ้ำ; รองรับช่วงปีด้วย
     if year_from and year_to:
         year_be = f"{year_from} - {year_to}"
     elif year_from:
@@ -902,8 +894,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     for i, row in enumerate(rows, start=1):
         excel_row = i + 8
 
-        # [FIX] fiscal_year เก็บเป็น พ.ศ. อยู่แล้ว (import_service.py แปลงไว้ตอน
-        # นำเข้า) เดิมบวก 543 ซ้ำอีกรอบตรงนี้ ทำให้ปี 2569 กลายเป็น 3112
+        # [FIX] fiscal_year เก็บเป็น พ.ศ. อยู่แล้ว ห้ามบวก 543 ซ้ำ (2569 → 3112)
         fiscal_be = row["fiscal_year"] if row.get("fiscal_year") else ""
         fin_yr_be = fiscal_be
 

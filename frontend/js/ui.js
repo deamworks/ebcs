@@ -149,11 +149,8 @@ let _currentStep = 1;
 
 /** สลับไปแสดง Step ที่กำหนดและอัปเดต Stepper */
 function goToStep(n) {
-  // [FIX] เดิมคลิกวงกลม Step ใน stepper กระโดดข้าม Step 1 ไปได้เลยโดยไม่ผ่าน
-  // handleNextStep1() ทำให้ไม่กรอกราคารวมตามงบการเงินก็ไปหน้าถัดไปได้ —
-  // บังคับเช็คตรงนี้ด้วยเพื่อกันทุกทางที่จะออกจาก Step 1
-  // [FIX] โหมดดูอย่างเดียว (แอดมิน/ผู้ประกอบการดูใบยื่นที่ยืนยันแล้ว) ต้องกด
-  // ดูข้ามไปมาระหว่าง step ไหนก็ได้เสมอ ไม่ควรโดน validation ของฟอร์มกรอกใหม่บล็อก
+  // [FIX] คลิกวงกลม Step เดิมข้าม Step 1 ได้โดยไม่เช็ค — บังคับเช็คซ้ำตรงนี้
+  // [FIX] โหมดดูอย่างเดียวต้องข้าม step ไปมาได้เสมอ ไม่โดน validation บล็อก
   const isReadOnly = document.body.classList.contains('vs-readonly');
   if (!isReadOnly && _currentStep === 1 && n !== 1) {
     const finEl  = document.getElementById('total-income-financial');

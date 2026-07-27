@@ -193,9 +193,7 @@ def get_submissions():
         conditions.append("s.fiscal_year = %s")
         params.append(year)
 
-    # [FIX] "pending_attach" ไม่ใช่ค่าจริงใน submissions.status (enum มีแค่
-    # draft/pending_payment/paid) — เป็นสถานะที่คำนวณจาก "ยื่นแบบแล้วแต่แนบ
-    # เอกสารบังคับ (3 อย่าง) ไม่ครบ" ต้องกรองจาก HAVING ของ attachment count แทน
+    # pending_attach ไม่ใช่ค่าจริงใน status enum — กรองจาก HAVING ของ attachment count แทน
     having_pending_attach = False
     if status == "pending_attach":
         having_pending_attach = True
@@ -217,9 +215,7 @@ def get_submissions():
         with db.cursor() as cur:
 
             # ── ดึงรายการ (แบ่งหน้า) ─────────────────
-            # required_ok: ยื่นแบบแล้ว (ไม่ใช่ draft) ต้องมีเอกสารแนบครบ 3 อย่างบังคับ
-            # (งบดุลการเงิน, ชส.01, ชส.02 — idx 1-3 ฝั่ง frontend) ไม่งั้นถือว่า
-            # "รอแนบ" (pending_attach) แม้ status ดิบจะเป็น pending_payment แล้วก็ตาม
+            # required_ok: ยื่นแบบแล้วต้องมีเอกสารแนบครบ 3 อย่างบังคับ ไม่งั้นเป็น pending_attach
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
@@ -397,9 +393,7 @@ def get_submission_detail(submission_id):
             )
             receipt = cur.fetchone()
 
-    # [FIX] เดิม actual_status คำนวณแค่ paid/ราย status ดิบ ไม่เคยเช็คว่าเอกสาร
-    # บังคับ 3 อย่างครบไหม ทำให้ใบที่แนบไม่ครบขึ้น "รอชำระเงิน" ผิด ไม่ตรงกับ
-    # หน้ารายการ (GET /admin/submissions) ที่คำนวณ pending_attach ถูกอยู่แล้ว
+    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับ pending_attach ของหน้ารายการ
     if submission["actual_status"] == "pending_payment" and len(attachments) < 3:
         submission["actual_status"] = "pending_attach"
 
