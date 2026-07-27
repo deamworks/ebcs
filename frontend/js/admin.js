@@ -174,7 +174,7 @@ function clearAuditFilters() {
 async function loadSubmissions() {
   const tbody = document.getElementById('submissionsTableBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="12" style="padding:20px;text-align:center;color:#888">กำลังโหลดข้อมูล...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:#888">กำลังโหลดข้อมูล...</td></tr>';
 
   const selectAllCb = document.getElementById('selectAll');
   if (selectAllCb) selectAllCb.checked = false;
@@ -183,7 +183,7 @@ async function loadSubmissions() {
   try {
     data = await api.get('/admin/submissions?per_page=500');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">เกิดข้อผิดพลาด: ${e.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">เกิดข้อผิดพลาด: ${e.message || 'ไม่ทราบสาเหตุ'}</td></tr>`;
     return;
   }
 
@@ -353,7 +353,7 @@ function renderTable() {
   }
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
     return;
   }
 
@@ -370,7 +370,7 @@ function renderTable() {
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-success" onclick="openReceiptModal('${s.id}')">บันทึกรับชำระ</button>` : ''}
-        <button class="adm-btn adm-btn-sm" onclick="openFullDetailModal('${s.id}')">ดูข้อมูล</button>
+        <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
       </td>
     </tr>`).join('');
 }
