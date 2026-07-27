@@ -81,7 +81,6 @@
   border: 7px solid transparent;
   border-right-color: #1f2937;
 }
-.login-info-wrap.open .login-info-tip,
 .login-info-wrap:hover .login-info-tip { display: block; }
 
 /* ── Steps (tax_id → email → otp) ─────────────────── */
