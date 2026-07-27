@@ -167,32 +167,68 @@ async function loadAuditLogs() {
 
 // ── ชื่อฟิลด์ภาษาไทย สำหรับแสดงรายละเอียด Audit Log ให้อ่านง่าย/เป็นทางการ ──
 const AUDIT_FIELD_TH = {
-  operator_name:    'ชื่อผู้ประกอบการ',
-  tax_id:           'เลขประจำตัวผู้เสียภาษี',
-  email:            'อีเมล',
-  total_income:     'รายได้รวม',
-  deduction_amount: 'เงินลดหย่อน',
-  fund_amount:      'เงินนำส่งกองทุน',
-  vat_amount:       'ภาษีมูลค่าเพิ่ม',
-  extra_amount:     'เงินเพิ่ม',
-  net_amount:       'ยอดสุทธิ',
-  auditor_name:     'ชื่อผู้สอบบัญชี',
-  auditor_license:  'เลขทะเบียนผู้สอบบัญชี',
-  auditor_office:   'สำนักงานสอบบัญชี',
-  audited_date:     'วันที่ตรวจสอบบัญชี',
-  company_name:     'ชื่อบริษัท',
-  license_no:       'เลขที่ใบอนุญาต',
-  file_name:        'ชื่อไฟล์',
-  amount:           'จำนวนเงิน',
-  receipt_no:       'เลขที่ใบเสร็จ',
+  operator_name:          'ชื่อผู้ประกอบการ',
+  tax_id:                 'เลขประจำตัวผู้เสียภาษี',
+  email:                  'อีเมล',
+  total_income:           'รายได้รวม',
+  total_income_financial: 'รายได้รวมตามงบการเงิน',
+  deduction_amount:       'เงินลดหย่อน',
+  fund_amount:            'เงินนำส่งกองทุน',
+  vat_amount:             'ภาษีมูลค่าเพิ่ม',
+  extra_amount:           'เงินเพิ่ม',
+  net_amount:             'ยอดสุทธิ',
+  auditor_name:           'ชื่อผู้สอบบัญชี',
+  auditor_license:        'เลขทะเบียนผู้สอบบัญชี',
+  auditor_office:         'สำนักงานสอบบัญชี',
+  audited_date:           'วันที่ตรวจสอบบัญชี',
+  company_name:           'ชื่อบริษัท',
+  license_no:             'เลขที่ใบอนุญาต',
+  licensee_type:          'ประเภทใบอนุญาต',
+  license_status:         'สถานะใบอนุญาต',
+  license_type:           'ประเภทใบอนุญาต',
+  station:                'สถานี/ช่องรายการ',
+  start_date:             'วันเริ่มต้น',
+  end_date:               'วันสิ้นสุด',
+  file_name:              'ชื่อไฟล์',
+  storage_path:           'ตำแหน่งไฟล์',
+  amount:                 'จำนวนเงิน',
+  receipt_no:             'เลขที่ใบเสร็จ',
+  received_at:            'วันที่รับเงิน',
+  ref_no:                 'รหัสอ้างอิง',
+  fiscal_year:            'ปีบัญชี',
+  period_start:           'วันเริ่มต้นรอบบัญชี',
+  period_end:             'วันสิ้นสุดรอบบัญชี',
+  due_date:               'วันครบกำหนดชำระ',
+  status:                 'สถานะ',
+  submitted_at:           'วันที่ยื่นแบบ',
+  address:                'ที่อยู่',
+  ids:                    'รายการที่ลบ',
+  deleted_ids:            'รายการที่ลบ',
+  inserted:               'เพิ่มใหม่',
+  updated:                'อัปเดต',
+  year_from:              'ปีบัญชีตั้งแต่',
+  year_to:                'ปีบัญชีถึง',
 };
+
+/** แปลงวันที่ ISO/DATETIME (YYYY-MM-DD หรือ YYYY-MM-DD HH:MM:SS) เป็น พ.ศ. ไทย */
+function auditFormatValue(val) {
+  if (val === null || val === undefined || val === '') return val;
+  const s = String(val);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (!m) return val;
+  const [, y, mo, d, h, mi] = m;
+  const be = Number(y) + 543;
+  return h !== undefined
+    ? `${d}/${mo}/${be} ${h}:${mi}`
+    : `${d}/${mo}/${be}`;
+}
 
 /** จัดรูปแบบ r.changes (JSON) ให้อ่านง่ายและเป็นทางการในตาราง Audit Log */
 function formatAuditChanges(changes) {
   if (!changes || typeof changes !== 'object') return '<span style="color:#bbb">—</span>';
 
   const fieldTh = k => AUDIT_FIELD_TH[k] || k;
-  const esc = v => String(v ?? '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const esc = v => String(auditFormatValue(v) ?? '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // กรณีลบข้อมูล: { deleted: {...แถวเดิมทั้งแถว} }
   if (changes.deleted && typeof changes.deleted === 'object') {
@@ -203,9 +239,10 @@ function formatAuditChanges(changes) {
     return `<details><summary style="cursor:pointer;color:#dc2626;">ข้อมูลที่ถูกลบ</summary>${items}</details>`;
   }
 
-  // กรณี import: { total_rows, valid_rows, error_rows, ... }
+  // กรณี import: { total_rows, valid_rows, error_rows, file_name, ... }
   if ('valid_rows' in changes || 'error_rows' in changes) {
-    return `<div>สำเร็จ ${esc(changes.valid_rows)} แถว / ผิดพลาด ${esc(changes.error_rows)} แถว</div>`;
+    const fileLine = changes.file_name ? `<div>ไฟล์: <strong>${esc(changes.file_name)}</strong></div>` : '';
+    return `${fileLine}<div>สำเร็จ ${esc(changes.valid_rows)} แถว / ผิดพลาด ${esc(changes.error_rows)} แถว</div>`;
   }
 
   // กรณีแก้ไข: { field: { old, new }, ... }
