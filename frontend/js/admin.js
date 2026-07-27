@@ -478,7 +478,9 @@ async function handleAdminBulkDelete() {
     return;
   }
 
-  await writeAuditLog(`ลบรายการยื่นแบบ ${selectedIds.length} รายการ`, 'submissions', 'bulk', { ids: selectedIds });
+  // [FIX] backend /admin/submissions DELETE บันทึก audit log แบบละเอียด
+  // (ทีละรายการ พร้อมชื่อบริษัท/ปี) ให้อยู่แล้ว — เดิมโค้ดนี้ยิง audit log
+  // ซ้ำอีกรอบแบบข้อมูลรวมๆ ("bulk") ทำให้เห็นรายการซ้ำในหน้าประวัติ
   showToast(`ลบเรียบร้อยแล้ว ✓ (${selectedIds.length} รายการ)`);
   await loadSubmissions();
 }
@@ -627,7 +629,7 @@ async function saveLicense() {
     return;
   }
 
-  await writeAuditLog(id ? `แก้ไขใบอนุญาต ${payload.license_no}` : `เพิ่มใบอนุญาต ${payload.license_no}`, 'licensee_master', id || 'new', payload);
+  // [FIX] backend POST/PUT /admin/licensees บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
   showToast(id ? 'แก้ไขสำเร็จ' : 'เพิ่มสำเร็จ');
   closeLicenseModal();
   await loadLicenses();
@@ -641,7 +643,7 @@ async function deleteLicense(id, no) {
     alert('ลบผิดพลาด: ' + (e.message || ''));
     return;
   }
-  await writeAuditLog(`ลบใบอนุญาต ${no}`, 'licensee_master', id, {});
+  // [FIX] backend DELETE /admin/licensees/<id> บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
   showToast('ลบสำเร็จ');
   await loadLicenses();
 }
