@@ -457,17 +457,18 @@ def create_submission():
             # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
             # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่น
             # ด้วย (เดิมไม่เก็บเลย ทำให้หน้าดูรายละเอียดไม่มีข้อมูลนี้)
-            for lic in licenses_data:
+            for sort_order, lic in enumerate(licenses_data):
                 license_id = new_uuid()
                 cur.execute("""
                     INSERT INTO licenses (
-                        id, submission_id, license_no,
+                        id, submission_id, sort_order, license_no,
                         licensee_type, license_status, station, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     license_id,
                     submission_id,
+                    sort_order,
                     lic.get("license_no", ""),
                     lic.get("license_type"),
                     lic.get("license_status"),
@@ -585,15 +586,15 @@ def update_submission(submission_id):
             cur.execute("DELETE FROM licenses WHERE submission_id = %s", (submission_id,))
             cur.execute("DELETE FROM other_incomes WHERE submission_id = %s", (submission_id,))
 
-            for lic in licenses_data:
+            for sort_order, lic in enumerate(licenses_data):
                 license_id = new_uuid()
                 cur.execute("""
                     INSERT INTO licenses (
-                        id, submission_id, license_no,
+                        id, submission_id, sort_order, license_no,
                         licensee_type, license_status, station, start_date, end_date,
                         fee_amount, deduction_amount
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (license_id, submission_id, lic.get("license_no", ""),
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (license_id, submission_id, sort_order, lic.get("license_no", ""),
                       lic.get("license_type"), lic.get("license_status"), lic.get("station"),
                       lic.get("license_start"), lic.get("license_end"),
                       float(lic.get("income", 0)), float(lic.get("deduction", 0))))
@@ -694,7 +695,7 @@ def get_submission(submission_id):
             cur.execute("""
                 SELECT * FROM licenses
                 WHERE  submission_id = %s
-                ORDER  BY created_at
+                ORDER  BY sort_order, created_at
             """, (submission_id,))
             licenses = cur.fetchall()
 
