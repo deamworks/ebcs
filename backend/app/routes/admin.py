@@ -390,6 +390,12 @@ def get_submission_detail(submission_id):
             )
             receipt = cur.fetchone()
 
+    # [FIX] เดิม actual_status คำนวณแค่ paid/ราย status ดิบ ไม่เคยเช็คว่าเอกสาร
+    # บังคับ 3 อย่างครบไหม ทำให้ใบที่แนบไม่ครบขึ้น "รอชำระเงิน" ผิด ไม่ตรงกับ
+    # หน้ารายการ (GET /admin/submissions) ที่คำนวณ pending_attach ถูกอยู่แล้ว
+    if submission["actual_status"] == "pending_payment" and len(attachments) < 3:
+        submission["actual_status"] = "pending_attach"
+
     # แปลงวันที่
     for key in ["period_start", "period_end", "due_date",
                 "submitted_at", "created_at", "updated_at"]:

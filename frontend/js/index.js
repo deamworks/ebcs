@@ -209,7 +209,7 @@ async function viewExistingSubmission() {
     // [FIX] detail.status คือสถานะจริง (คำนวณจากว่ามีใบเสร็จหรือยัง) ต่างจาก
     // detail.submission.status ซึ่งเป็นค่า raw ในคอลัมน์ — ถ้าไม่ส่ง status
     // นี้เข้าไป แบนเนอร์จะค้างโชว์ "รอชำระเงิน" แม้แอดมินบันทึกรับชำระแล้ว
-    const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+    const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
     if (typeof renderReadOnlySubmission === 'function') {
       renderReadOnlySubmission(detail, {
         downloadBase: '/operator',

@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+  const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const actualStatus = detail.submission?.actual_status || detail.submission?.status;
 
   renderReadOnlySubmission(detail, {
