@@ -113,10 +113,14 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // ถ้าเคยยื่นปีนี้ไปแล้ว ไม่ให้กรอกฟอร์มซ้ำ — พาไปหน้าดูสถานะ (โหมดดูอย่างเดียว) แทน
+    // แจ้งเตือนถ้าเคยยื่นปีนี้ไปแล้ว
     if (info.existing_submission) {
-      window.location.href = `/pages/status.html?year=${encodeURIComponent(info.fiscal_year || '')}`;
-      return;
+      const s = info.existing_submission;
+      const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+      if (msgEl) {
+        msgEl.textContent = `⚠️ มีใบยื่นปีนี้อยู่แล้ว (สถานะ: ${statusTh[s.status] || s.status})`;
+        msgEl.style.color = '#d97706';
+      }
     }
 
     // fill ปีก่อน เพื่อให้ validation ผ่าน
