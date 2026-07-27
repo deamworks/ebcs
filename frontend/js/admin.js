@@ -446,15 +446,15 @@ function renderTable() {
 
   // การ์ดสถิติ
   const totalEl   = document.getElementById('sub-st-total');
+  const attachEl  = document.getElementById('sub-st-attach');
   const pendingEl = document.getElementById('sub-st-pending');
   const paidEl    = document.getElementById('sub-st-paid');
-  const draftEl   = document.getElementById('sub-st-draft');
   if (totalEl) {
     const all = activeSubmissionYear === null ? allSubmissions : allSubmissions.filter(s => s.fiscal_year === activeSubmissionYear);
     totalEl.textContent   = all.length.toLocaleString();
+    attachEl.textContent  = all.filter(s => s.status === 'pending_attach').length.toLocaleString();
     pendingEl.textContent = all.filter(s => s.status === 'pending_payment').length.toLocaleString();
     paidEl.textContent    = all.filter(s => s.status === 'paid').length.toLocaleString();
-    draftEl.textContent   = all.filter(s => s.status === 'draft').length.toLocaleString();
   }
 
   if (!rows.length) {
