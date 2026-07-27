@@ -69,9 +69,8 @@ async function startOperatorAccountImport() {
   formData.append('mode', 'commit');
 
   try {
+    // [FIX] backend /admin/import/operator-accounts บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
     const data = await api.upload('/admin/import/operator-accounts', formData);
-    await writeAuditLog('นำเข้าบัญชีผู้ประกอบการ', 'operator_accounts', 'import',
-      { inserted: data.inserted, updated: data.updated });
     if (logEl) logEl.innerHTML = `<div style="color:#16a34a;">${data.message}</div>`;
     showToast(data.message);
     await loadOperatorAccounts();
@@ -136,7 +135,7 @@ async function deleteOperatorAccount(id, taxId) {
     alert('ลบผิดพลาด: ' + (e.message || ''));
     return;
   }
-  await writeAuditLog(`ลบบัญชีผู้ประกอบการ ${taxId}`, 'operator_accounts', id, {});
+  // [FIX] backend DELETE /admin/operator-accounts/<id> บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
   showToast('ลบสำเร็จ');
   await loadOperatorAccounts();
 }

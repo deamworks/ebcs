@@ -115,8 +115,8 @@ async function saveTaxpayer() {
 
   if (btn) btn.disabled = true;
   try {
-    const data = await api.post('/admin/taxpayers', payload);
-    await writeAuditLog(`เพิ่มผู้ประกอบการ ${name}`, 'taxpayer_master', data.id, payload);
+    // [FIX] backend POST /admin/taxpayers บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
+    await api.post('/admin/taxpayers', payload);
     showToast('เพิ่มผู้ประกอบการสำเร็จ');
     closeTaxpayerModal();
     await loadTaxpayers();
@@ -196,9 +196,8 @@ async function startLicenseeImport() {
   formData.append('mode', 'commit');
 
   try {
+    // [FIX] backend /admin/import/licensees บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
     const data = await api.upload('/admin/import/licensees', formData);
-    await writeAuditLog('นำเข้าข้อมูลใบอนุญาต', 'licensee_master', 'import',
-      { inserted: data.inserted, updated: data.updated });
     if (logEl) logEl.innerHTML = `<div style="color:#16a34a;">${data.message}</div>`;
     showToast(data.message);
     await loadLicenses();
@@ -289,9 +288,8 @@ async function startTaxpayerImport() {
   formData.append('mode', 'commit');
 
   try {
+    // [FIX] backend /admin/import/taxpayers บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
     const data = await api.upload('/admin/import/taxpayers', formData);
-    await writeAuditLog('นำเข้าข้อมูลผู้ประกอบการ', 'taxpayer_master', 'import',
-      { inserted: data.inserted, updated: data.updated });
     if (logEl) logEl.innerHTML = `<div style="color:#16a34a;">${data.message}</div>`;
     showToast(data.message);
     await loadTaxpayers();
@@ -680,8 +678,8 @@ async function saveFullDetailChanges() {
   };
 
   try {
+    // [FIX] backend PUT /admin/submissions/<id> บันทึก audit log แบบ diff ให้แล้ว (ไม่ต้องยิงซ้ำ)
     await api.put(`/admin/submissions/${activeSubmissionId}`, payload);
-    await writeAuditLog('แก้ไขใบยื่นแบบ (หน้าดูข้อมูล)', 'submissions', activeSubmissionId, payload);
     showToast('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว ✓');
     closeFullDetailModal();
     await loadSubmissions();
