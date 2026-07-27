@@ -322,7 +322,7 @@ function loadExportPage() {
 function resetExportFilters() {
   const reportSel = document.getElementById('exp-report-type');
   if (reportSel) reportSel.value = '';
-  ['exp-year-from', 'exp-year-to'].forEach(id => {
+  ['exp-year-from', 'exp-year-to', 'exp-pay-from', 'exp-pay-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.querySelectorAll('#page-export input[type="checkbox"]').forEach(cb => { cb.checked = false; });
