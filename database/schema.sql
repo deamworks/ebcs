@@ -125,9 +125,10 @@ CREATE TABLE licensee_master (
 -- (เลขผู้เสียภาษี + อีเมล) แยกต่างหากจาก taxpayer_master.email — ถ้า tax_id
 -- มีแถวอยู่ในตารางนี้ ระบบ login จะใช้อีเมลนี้แทนอีเมลใน taxpayer_master เสมอ
 CREATE TABLE operator_accounts (
-  id         CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
-  tax_id     VARCHAR(13)  NOT NULL,
-  email      VARCHAR(255) NOT NULL,
+  id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
+  tax_id        VARCHAR(13)  NOT NULL,
+  operator_name VARCHAR(255) NOT NULL DEFAULT '',
+  email         VARCHAR(255) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   -- tax_id ห้ามซ้ำ: 1 เลขผู้เสียภาษี ผูกได้แค่ 1 อีเมล
@@ -234,6 +235,8 @@ CREATE TABLE licenses (
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
+  start_date    DATE          NULL,
+  end_date      DATE          NULL,
 
   -- fee_amount: รายได้รวมของใบอนุญาตนี้
   fee_amount    DECIMAL(18,2) DEFAULT 0,
