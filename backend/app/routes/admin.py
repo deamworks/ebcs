@@ -1618,9 +1618,11 @@ def import_operator_accounts_route():
 @require_admin
 def export_taxpayers():
     """รายงานข้อมูลผู้ประกอบการ"""
-    year = request.args.get("year", type=int)
+    year      = request.args.get("year", type=int)
+    year_from = request.args.get("year_from", type=int)
+    year_to   = request.args.get("year_to", type=int)
     with get_db() as db:
-        output = export_taxpayer_report(db, year=year)
+        output = export_taxpayer_report(db, year=year, year_from=year_from, year_to=year_to)
     year_label = str(year) if year else "ทั้งหมด"
     return send_excel_file(output, f"รายงานข้อมูลผู้ประกอบการ_{year_label}.xlsx")
 
@@ -1630,10 +1632,12 @@ def export_taxpayers():
 @require_admin
 def export_licensees_report():
     """รายงานข้อมูลใบอนุญาต"""
-    year   = request.args.get("year", type=int)
-    status = request.args.get("status")
+    year      = request.args.get("year", type=int)
+    year_from = request.args.get("year_from", type=int)
+    year_to   = request.args.get("year_to", type=int)
+    status    = request.args.get("status")
     with get_db() as db:
-        output = export_licensee_report(db, year=year, status=status)
+        output = export_licensee_report(db, year=year, year_from=year_from, year_to=year_to, status=status)
     year_label = str(year) if year else "ทั้งหมด"
     return send_excel_file(output, f"รายงานข้อมูลใบอนุญาต_{year_label}.xlsx")
 
@@ -1643,9 +1647,13 @@ def export_licensees_report():
 @require_admin
 def export_payments():
     """รายงานชำระเงินกองทุน"""
-    year = request.args.get("year", type=int)
+    year      = request.args.get("year", type=int)
+    year_from = request.args.get("year_from", type=int)
+    year_to   = request.args.get("year_to", type=int)
+    statuses  = request.args.getlist("status")
     with get_db() as db:
-        output = export_payment_report(db, year=year)
+        output = export_payment_report(db, year=year, year_from=year_from, year_to=year_to,
+                                        statuses=statuses or None)
     year_label = str(year) if year else "ทั้งหมด"
     return send_excel_file(output, f"รายงานชำระเงินกองทุน_{year_label}.xlsx")
 
