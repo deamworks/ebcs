@@ -374,21 +374,6 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # กันยื่นซ้ำ: ถ้ามีใบยื่นปีนี้อยู่แล้ว (ไม่ว่าสถานะใด) ห้ามสร้างใหม่
-    # ต้องให้เจ้าหน้าที่ลบใบยื่นเก่าออกก่อนถึงจะยื่นใหม่ได้
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute(
-                "SELECT id FROM submissions WHERE tax_id = %s AND fiscal_year = %s LIMIT 1",
-                (tax_id, fiscal_year)
-            )
-            if cur.fetchone():
-                return jsonify({
-                    "success": False,
-                    "error": {"code": "ALREADY_SUBMITTED",
-                              "message": "มีใบยื่นแบบปีนี้อยู่แล้วในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อลบใบยื่นเดิมก่อนยื่นใหม่"}
-                }), 409
-
     # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
         float(lic.get("income", 0))
