@@ -384,13 +384,14 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     มาดึงจาก licenses (snapshot ใบอนุญาตของแต่ละใบยื่นแบบจริง) join submissions
     แทน ให้เห็นเฉพาะใบอนุญาตที่มีการยื่นแบบเข้ามาจริง ไม่ใช่ทะเบียนทั้งหมด
 
-    คอลัมน์การเงิน (รายได้จากใบอนุญาต / ค่าลดหย่อน / เงินนำส่งเข้ากองทุน
-    / ภาษีมูลค่าเพิ่ม / เงินเพิ่ม / จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ) ยังคำนวณ
-    แยกต่อใบอนุญาตไม่ได้ (ยอดเหล่านี้คำนวณรวมทั้งใบยื่นแบบ ไม่ได้แยกเก็บต่อ
-    ใบอนุญาต) จึงปล่อยว่างไว้เพื่อให้โครงสร้างคอลัมน์ตรงกับต้นฉบับ — "รหัสอ้างอิง"
-    มาจาก submissions.ref_no โดยตรง, "สถานะ" (แนบเอกสาร) derive จาก submission_id
-    เดียวกันตรงๆ, "ประเภท"/"รอบ" ยังไม่มีแนวคิดแยกในระบบ จึงใช้ค่า "ปกติ" คงที่
-    เหมือนรายงานชำระเงินกองทุน
+    คอลัมน์การเงิน: "รายได้จากใบอนุญาต"/"ค่าลดหย่อน" มาจาก licenses.fee_amount/
+    deduction_amount ของใบอนุญาตนั้นตรงๆ ส่วน "เงินนำส่งเข้ากองทุน"/"ภาษีมูลค่าเพิ่ม"/
+    "เงินเพิ่ม"/"จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ" คำนวณรวมไว้แค่ระดับใบยื่นแบบ
+    (ไม่ได้แยกเก็บต่อใบอนุญาต) จึงแบ่งสัดส่วนตามรายได้ของใบอนุญาตนั้นเทียบกับ
+    รายได้รวมทั้งใบยื่นแบบ (fee_amount / total_income) คูณกับยอดรวมที่คำนวณไว้แล้ว
+    ตอนยื่นแบบ — "รหัสอ้างอิง" มาจาก submissions.ref_no โดยตรง, "สถานะ" (แนบเอกสาร)
+    derive จาก submission_id เดียวกันตรงๆ, "ประเภท"/"รอบ" ยังไม่มีแนวคิดแยกในระบบ
+    จึงใช้ค่า "ปกติ" คงที่เหมือนรายงานชำระเงินกองทุน
 
     - year_from/year_to: กรองช่วงปีบัญชี (ใช้แทน year เดี่ยวถ้าส่งมา)
     """
@@ -426,7 +427,10 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
                 l.license_no, s.tax_id, s.operator_name AS company_name,
                 l.licensee_type AS license_type, l.license_status,
                 l.start_date AS license_start, l.end_date AS license_end,
-                s.fiscal_year, s.ref_no, s.id AS submission_id
+                l.fee_amount, l.deduction_amount,
+                s.fiscal_year, s.ref_no, s.id AS submission_id,
+                s.total_income, s.fund_amount, s.vat_amount,
+                s.extra_amount, s.net_amount
             FROM licenses l
             JOIN submissions s ON s.id = l.submission_id
             {where}
@@ -531,6 +535,19 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     for i, row in enumerate(rows, start=1):
         r = i + 3
         sub_status = submission_status_map.get(row["submission_id"])
+
+        # [FIX] แบ่งสัดส่วนยอดรวมระดับใบยื่นแบบ (fund/vat/extra/net) ตามสัดส่วน
+        # รายได้ของใบอนุญาตนี้ (fee_amount) เทียบกับรายได้รวมทั้งใบยื่นแบบ —
+        # รายได้/ค่าลดหย่อนเป็นของใบอนุญาตนี้ตรงๆ อยู่แล้ว ไม่ต้องแบ่งสัดส่วน
+        fee_amount    = float(row.get("fee_amount") or 0)
+        deduction_amt = float(row.get("deduction_amount") or 0)
+        total_income  = float(row.get("total_income") or 0)
+        share = (fee_amount / total_income) if total_income > 0 else 0
+        fund_alloc  = round(float(row.get("fund_amount") or 0) * share, 2)
+        vat_alloc   = round(float(row.get("vat_amount") or 0) * share, 2)
+        extra_alloc = round(float(row.get("extra_amount") or 0) * share, 2)
+        net_alloc   = round(float(row.get("net_amount") or 0) * share, 2)
+
         data = [
             i,
             row["fiscal_year"] or "",
@@ -548,7 +565,7 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
             status_labels.get(
                 row["license_status"], row["license_status"]
             ),
-            "", "", "", "", "", "",  # คอลัมน์การเงิน - ยังไม่มีใน schema
+            fee_amount, deduction_amt, fund_alloc, vat_alloc, extra_alloc, net_alloc,
         ]
         num_cols = {2, 9, 15, 16, 17, 18, 19, 20}
         for c, val in enumerate(data, start=1):
