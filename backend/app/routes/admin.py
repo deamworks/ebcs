@@ -529,6 +529,14 @@ def delete_submissions():
 
     with get_db() as db:
         with db.cursor() as cur:
+            # ดึงข้อมูลก่อนลบ (ชื่อบริษัท/ปีบัญชี) เพื่อบันทึก audit log ให้ละเอียด
+            placeholders = ",".join(["%s"] * len(ids))
+            cur.execute(
+                f"SELECT * FROM submissions WHERE id IN ({placeholders})",
+                ids
+            )
+            old_by_id = {row["id"]: row for row in cur.fetchall()}
+
             # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
             for sid in ids:
                 cur.execute(
@@ -536,14 +544,21 @@ def delete_submissions():
                     (sid,)
                 )
 
-        # Audit Log
-        save_audit_log(
-            db, admin_email,
-            f"ลบใบยื่นแบบ {len(ids)} รายการ",
-            "submissions",
-            None,
-            {"deleted_ids": ids}
-        )
+        # Audit Log — บันทึกทีละรายการ ระบุปีบัญชีและชื่อบริษัทที่ถูกลบ
+        for sid in ids:
+            old = old_by_id.get(sid)
+            operator_name = old.get("operator_name") if old else None
+            fiscal_year   = old.get("fiscal_year") if old else None
+            label = f"ลบแบบยื่นปี {fiscal_year} ของบริษัท {operator_name}" if old \
+                else "ลบแบบยื่นแบบ (ไม่พบข้อมูลเดิม)"
+            save_audit_log(
+                db, admin_email,
+                label,
+                "submissions",
+                sid,
+                {"deleted": dict(old)} if old else None,
+                record_label=operator_name
+            )
         db.commit()
 
     return jsonify({
@@ -595,10 +610,12 @@ def delete_attachment(attachment_id):
 
     with get_db() as db:
         with db.cursor() as cur:
-            cur.execute(
-                "SELECT storage_path, file_name FROM document_attachments WHERE id = %s",
-                (attachment_id,)
-            )
+            cur.execute("""
+                SELECT da.storage_path, da.file_name, s.operator_name
+                FROM   document_attachments da
+                JOIN   submissions s ON s.id = da.submission_id
+                WHERE  da.id = %s
+            """, (attachment_id,))
             att = cur.fetchone()
 
             if not att:
@@ -610,10 +627,11 @@ def delete_attachment(attachment_id):
             cur.execute("DELETE FROM document_attachments WHERE id = %s", (attachment_id,))
 
         save_audit_log(
-            db, admin_email, f"ลบไฟล์แนบ {att['file_name']}",
+            db, admin_email,
+            f"ลบไฟล์แนบ {att['file_name']} ของบริษัท {att.get('operator_name')}",
             "document_attachments", attachment_id,
             {"file_name": att.get("file_name"), "storage_path": att.get("storage_path")},
-            record_label=att.get("file_name")
+            record_label=att.get("operator_name")
         )
         db.commit()
 
@@ -829,8 +847,10 @@ def delete_taxpayer(taxpayer_id):
                 (taxpayer_id,)
             )
 
+        label = (f"ลบข้อมูลผู้ประกอบการปี {old.get('fiscal_year')} ของบริษัท {old.get('operator_name')}"
+                 if old else "ลบข้อมูลผู้ประกอบการ (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบผู้ประกอบการ",
+            db, admin_email, label,
             "taxpayer_master", taxpayer_id,
             {"deleted": dict(old)} if old else None,
             record_label=old.get("operator_name") if old else None
@@ -1042,8 +1062,10 @@ def delete_licensee(licensee_id):
                 (licensee_id,)
             )
 
+        label = (f"ลบใบอนุญาตเลขที่ {old.get('license_no')} ของบริษัท {old.get('company_name')}"
+                 if old else "ลบใบอนุญาต (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบใบอนุญาต",
+            db, admin_email, label,
             "licensee_master", licensee_id,
             {"deleted": dict(old)} if old else None,
             record_label=(old.get("company_name") or old.get("license_no")) if old else None
@@ -1174,8 +1196,10 @@ def delete_operator_account(account_id):
                 (account_id,)
             )
 
+        label = (f"ลบบัญชีผู้ประกอบการ {old.get('email')} ของบริษัท {old.get('operator_name') or old.get('tax_id')}"
+                 if old else "ลบบัญชีผู้ประกอบการ (ไม่พบข้อมูลเดิม)")
         save_audit_log(
-            db, admin_email, "ลบบัญชีผู้ประกอบการ",
+            db, admin_email, label,
             "operator_accounts", account_id,
             {"deleted": dict(old)} if old else None,
             record_label=f"{old['tax_id']} ({old['email']})" if old else None
