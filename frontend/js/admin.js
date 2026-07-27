@@ -799,6 +799,23 @@ async function deleteLicense(id, no) {
     }));
   }
 
+  /** ลบผู้ประกอบการ (ทุกปีบัญชีของ tax_id นี้) ออกจาก taxpayer_master จริง */
+  async function deleteTaxpayerCompany(taxId, operatorName) {
+    if (!confirm(`ลบผู้ประกอบการ "${operatorName || taxId}" ?\nจะลบข้อมูลผู้ประกอบการทุกปีบัญชีของเลขผู้เสียภาษีนี้ ไม่สามารถกู้คืนได้`)) return;
+
+    const ids = (allTaxpayers || []).filter(t => t.tax_id === taxId).map(t => t.id);
+    try {
+      for (const id of ids) {
+        await api.delete(`/admin/taxpayers/${id}`);
+      }
+    } catch (e) {
+      showToast('ลบผิดพลาด: ' + (e.message || ''));
+      return;
+    }
+    showToast('ลบผู้ประกอบการสำเร็จ');
+    await loadTaxpayers();
+  }
+
   /** รอบบัญชี: 01/01–31/12 (ปีปฏิทินเต็มปี) = "ปกติ" นอกนั้นทั้งหมด = "อื่นๆ" */
   function getPeriodRoundLabel(periodStart, periodEnd) {
     if (!periodStart || !periodEnd) return '—';
@@ -856,7 +873,10 @@ async function deleteLicense(id, no) {
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.period_start ? `${fmtBE(r.period_start)} – ${fmtBE(r.period_end)}` : '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${fmtBE(r.due_date)}</td>
           <td style="text-align:center;font-weight:600;color:#2e86ab;font-size:12.5px">${r.licenseCount}</td>
-          <td style="text-align:center"><button class="adm-btn adm-btn-sm" onclick="openTaxpayerDetail('${r.tax_id}')">ดูใบอนุญาต</button></td>
+          <td style="text-align:center">
+            <button class="adm-btn adm-btn-sm" onclick="openTaxpayerDetail('${r.tax_id}')">ดูใบอนุญาต</button>
+            <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteTaxpayerCompany('${r.tax_id}', '${(r.operator_name || '').replace(/'/g, "\\'")}')">ลบ</button>
+          </td>
         </tr>`).join('')
       : '<tr><td colspan="8" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
   }
