@@ -342,11 +342,9 @@ def create_submission():
     licenses_data    = data.get("licenses", [])
     other_incomes    = data.get("other_incomes", [])
     deduction_amount = float(data.get("deduction_amount", 0))
-    # [FIX] "รายได้รวมตามงบการเงิน" ที่ผู้ประกอบการกรอกเอง Step 1 — เดิมไม่เคย
-    # ส่งมาบันทึกเลย เก็บไว้แค่ localStorage draft ทำให้หน้าดูอย่างเดียวโชว์ 0.00 เสมอ
     total_income_financial = float(data.get("total_income_financial", 0))
 
-    # [FIX] รับ auditor เป็น flat fields (ตรงกับที่ Frontend ส่งมา)
+    # auditor เป็น flat fields (ตรงกับที่ Frontend ส่งมา)
     auditor_name    = data.get("auditor_name", "")
     auditor_license = data.get("auditor_license", "")
     auditor_office  = data.get("auditor_office", "")
@@ -376,9 +374,7 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # [FIX] กันยื่นซ้ำ: ถ้ามีใบยื่นปีนี้อยู่แล้วและยืนยันแล้ว (ไม่ใช่ draft)
-    # ห้ามสร้างใหม่ — ต้องรอแอดมินลบใบเดิมก่อนเท่านั้น ถ้ายังเป็น draft เก่า
-    # (เช่น ค้างจากครั้งก่อนที่ยืนยันไม่สำเร็จ) ให้ลบทิ้งแล้วสร้างใหม่แทนได้
+    # [FIX] กันยื่นซ้ำ: มีใบยื่นปีนี้ที่ยืนยันแล้วห้ามสร้างใหม่ (draft เก่าลบแล้วสร้างใหม่ได้)
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -730,9 +726,7 @@ def get_submission(submission_id):
             cur.execute("SELECT id FROM receipt WHERE submission_id = %s LIMIT 1", (submission_id,))
             receipt = cur.fetchone()
 
-    # [FIX] เดิมเช็คแค่ paid/pending_payment ไม่เคยเช็คว่าเอกสารบังคับ 3 อย่าง
-    # ครบไหมเลย ทำให้ใบที่ยื่นแบบแล้วแต่แนบไม่ครบขึ้น "รอชำระเงิน" ผิดๆ
-    # ทั้งที่หน้ารายการของแอดมินคำนวณ pending_attach ถูกอยู่แล้ว — ให้ตรงกัน
+    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับ pending_attach ของหน้าแอดมิน
     actual_status = submission["status"]
     if receipt and actual_status == "pending_payment":
         actual_status = "paid"

@@ -449,10 +449,7 @@ async function exportFromApi(selectedRows) {
 
 
 // ════════════════════ Full Submission Detail Modal ════════════════════
-// [Scope note] แสดงข้อมูล Step 1-3 (รายได้/รายได้อื่น/ค่าลดหย่อน) แบบอ่านอย่างเดียว
-// ตามที่ผู้ประกอบการยื่นไว้จริง — แก้ไขได้เฉพาะ Step 4-5 (ข้อมูลผู้สอบบัญชี +
-// ยอดเงินกองทุน) ซึ่งตรงกับฟิลด์ที่ PUT /api/admin/submissions/<id> รองรับจริง
-// Step 6 แสดงไฟล์แนบที่มีอยู่ (ดู/ลบได้) — ระบบยังไม่รองรับอัปโหลดผ่านหน้าแอดมิน
+// Step 1-3 อ่านอย่างเดียว, แก้ไขได้เฉพาะ Step 4-5 (ตรงกับฟิลด์ที่ PUT รองรับ), Step 6 ดู/ลบไฟล์แนบ
 
 let _fdSubmission = null;
 
@@ -730,9 +727,7 @@ function closeReceiptModal() {
 
 
 // ════════════════════ Income/Deduct edit modal stubs ════════════════════
-// #fdIncomeModal / #fdDeductModal มีอยู่ใน admin.html แต่ไม่มีปุ่มเปิดใช้งาน
-// จริง (Panel 1/3 เป็นแบบอ่านอย่างเดียวตามที่ตกลงไว้ — ดู scope note ด้านบน)
-// ใส่ stub ไว้กันปุ่มปิด/บันทึกในโมดัล error ถ้ามีการเปิดใช้ในอนาคต
+// stub กันปุ่มปิด/บันทึก error — โมดัลนี้ยังไม่มีปุ่มเปิดใช้งานจริง (Panel 1/3 อ่านอย่างเดียว)
 
 function cancelFdIncomeModal() { document.getElementById('fdIncomeModal')?.classList.remove('open'); }
 function saveFdIncomeModal()   { cancelFdIncomeModal(); }

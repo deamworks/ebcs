@@ -42,10 +42,7 @@ def generate_otp(length=6):
 
 
 def mask_email(email):
-    """
-    ซ่อนอีเมลบางส่วน
-    เช่น somchai@nbtc.go.th → so***@nbtc.go.th
-    """
+    """ซ่อนอีเมลบางส่วน เช่น somchai@nbtc.go.th → so***@nbtc.go.th"""
     if not email or "@" not in email:
         return email
     local, domain = email.split("@", 1)
@@ -55,10 +52,7 @@ def mask_email(email):
 
 
 def check_rate_limit(tax_id):
-    """
-    ตรวจ rate limit: ขอ OTP ได้ไม่เกิน 3 ครั้ง/นาที
-    คืน True = ผ่าน, False = เกินจำนวน
-    """
+    """ตรวจ rate limit ขอ OTP: True = ผ่าน, False = เกินจำนวน/นาที"""
     rate_key = f"rate:{tax_id}"
     count    = redis_client.get(rate_key)
 
@@ -76,10 +70,7 @@ def check_rate_limit(tax_id):
 
 
 def send_email(email, otp, operator_name=""):
-    """
-    ส่ง OTP ทาง Email (Exchange กสทช.)
-    MAIL_SERVER=mock → พิมพ์ลง log แทน
-    """
+    """ส่ง OTP ทาง Email (MAIL_SERVER=mock → พิมพ์ลง log แทนการส่งจริง)"""
     if Config.MAIL_SERVER == "mock":
         print(f"[OTP EMAIL] {email} → {otp}", flush=True)
         return True
@@ -142,26 +133,7 @@ def send_email(email, otp, operator_name=""):
 
 @auth_bp.route("/check-taxpayer", methods=["POST"])
 def check_taxpayer():
-    """
-    ตรวจสอบเลขภาษีว่ามีในระบบไหม
-    และคืน channel ที่รับ OTP ได้
-
-    Request:
-        POST /api/auth/check-taxpayer
-        { "tax_id": "0123456789012" }
-
-    Response:
-        {
-            "success": true,
-            "data": {
-                "operator_name": "บริษัท ABC จำกัด",
-                "channels": [
-                    {"type": "sms",   "display": "081-xxx-5678"},
-                    {"type": "email", "display": "ab***@nbtc.go.th"}
-                ]
-            }
-        }
-    """
+    """ตรวจสอบเลขภาษีว่ามีในระบบไหม และคืน channel ที่รับ OTP ได้"""
     data = request.get_json()
     if not data:
         return jsonify({
@@ -195,8 +167,7 @@ def check_taxpayer():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # ตรวจ operator_accounts (แอดมิน import แยกต่างหาก) — ถ้ามีแถวของ
-            # tax_id นี้ ใช้อีเมลจากตารางนี้แทนอีเมลใน taxpayer_master เสมอ
+            # operator_accounts (import แยก) มีสิทธิ์เหนือ taxpayer_master เสมอ
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -250,25 +221,7 @@ def check_taxpayer():
 
 @auth_bp.route("/request-otp", methods=["POST"])
 def request_otp():
-    """
-    ส่ง OTP ทาง SMS หรือ Email ตามที่เลือก
-
-    Request:
-        POST /api/auth/request-otp
-        {
-            "tax_id":  "0123456789012",
-            "channel": "sms"   หรือ  "email"
-        }
-
-    Response:
-        {
-            "success": true,
-            "data": {
-                "message":    "ส่งรหัส OTP ไปยังเบอร์ 081-xxx-5678 แล้ว",
-                "expires_in": 300
-            }
-        }
-    """
+    """ส่ง OTP ทาง SMS หรือ Email ตามที่เลือก"""
     data = request.get_json()
     if not data:
         return jsonify({
@@ -320,8 +273,7 @@ def request_otp():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # ตรวจ operator_accounts เหมือน check-taxpayer — อีเมลจากตารางนี้
-            # มีสิทธิ์เหนือกว่าอีเมลใน taxpayer_master เสมอ
+            # เหมือน check-taxpayer: operator_accounts มีสิทธิ์เหนือกว่าเสมอ
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -382,33 +334,7 @@ def request_otp():
 
 @auth_bp.route("/verify-otp", methods=["POST"])
 def verify_otp():
-    """
-    ตรวจสอบ OTP และออก JWT Token
-
-    Request:
-        POST /api/auth/verify-otp
-        {
-            "tax_id": "0123456789012",
-            "otp":    "123456"
-        }
-
-    Response:
-        {
-            "success": true,
-            "data": {
-                "token": "eyJ...",
-                "operator": {
-                    "tax_id":        "0123456789012",
-                    "operator_name": "บริษัท ABC จำกัด",
-                    "ref_no":        "BK6800001",
-                    "fiscal_year":   2568,
-                    "period_start":  "01/01/2568",
-                    "period_end":    "31/12/2568",
-                    "due_date":      "31/05/2569"
-                }
-            }
-        }
-    """
+    """ตรวจสอบ OTP และออก JWT Token"""
     data = request.get_json()
     if not data:
         return jsonify({
@@ -542,16 +468,7 @@ def verify_otp():
 
 @auth_bp.route("/admin/login", methods=["POST"])
 def admin_login():
-    """
-    Login เจ้าหน้าที่ กสทช.
-
-    Request:
-        POST /api/auth/admin/login
-        { "email": "admin@nbtc.go.th", "password": "..." }
-
-    Response:
-        { "token": "eyJ...", "admin": { "email": "...", "full_name": "..." } }
-    """
+    """Login เจ้าหน้าที่ กสทช."""
     data = request.get_json()
     if not data:
         return jsonify({
@@ -580,8 +497,7 @@ def admin_login():
             """, (email,))
             admin = cur.fetchone()
 
-    # ตอบ error เหมือนกันทั้งกรณี email/password ผิด
-    # ป้องกันการ probe ว่า email ไหนมีในระบบ
+    # error ข้อความเดียวกันเสมอ ป้องกัน probe ว่า email ไหนมีในระบบ
     if not admin or not admin["is_active"]:
         return jsonify({
             "success": False,

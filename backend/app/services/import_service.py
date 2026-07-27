@@ -309,11 +309,7 @@ def import_taxpayers(db, rows):
 # 18  เงินเพิ่ม                  → surcharge
 # 19  จำนวนเงินรายปีนำส่งสุทธิ  → net_amount
 
-# licensee_master.license_status คือ MySQL ENUM('active','ended','cancelled','revoked')
-# ไฟล์ Excel ที่ import (โดยเฉพาะไฟล์ที่ export ออกไปแล้วเอากลับมา) จะมีคอลัมน์นี้
-# เป็นภาษาไทย ไม่ใช่ค่า ENUM ตรงๆ — ต้อง map ก่อน insert ไม่งั้น MySQL จะ error
-# "Data truncated for column 'license_status'" และทำให้ import ทั้งไฟล์ล้มเหลว
-# (รวมป้ายภาษาไทยทุกแบบที่ใช้อยู่จริงในระบบ: export_service.py, operator.py, admin.js)
+# ไฟล์ Excel มักมี license_status เป็นภาษาไทย ต้อง map เป็น ENUM ก่อน insert ไม่งั้น MySQL error
 _LICENSE_STATUS_MAP = {
     "active": "active", "ended": "ended", "cancelled": "cancelled", "revoked": "revoked",
     "ปกติ": "active", "ได้รับอนุญาต": "active",
@@ -356,11 +352,7 @@ def _parse_licensee_row(row, excel_row_num):
     if not license_no:
         errs.append("เลขที่ใบอนุญาตว่าง")
 
-    # fiscal_year — เก็บเป็น พ.ศ. (BE) ตรงกับ taxpayer_master.fiscal_year
-    # (เดิมแปลงเป็น ค.ศ. ก่อนเก็บ ทำให้ licensee_master.fiscal_year ไม่ตรงกับ
-    # taxpayer_master.fiscal_year — เวลาผู้ประกอบการเปิดหน้า index จะดึง
-    # licenses ด้วยปี พ.ศ. จาก taxpayer_master แต่ licensee_master เก็บ ค.ศ.
-    # ทำให้ WHERE fiscal_year=%s ไม่ match เลย แสดงใบอนุญาต 0 รายการ)
+    # [FIX] fiscal_year เก็บเป็น พ.ศ. ให้ตรงกับ taxpayer_master.fiscal_year เสมอ
     try:
         fiscal_year_be = int(str(row[1]).split(".")[0].strip()) if len(row) > 1 and row[1] else None
     except (TypeError, ValueError):
