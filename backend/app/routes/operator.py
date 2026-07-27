@@ -728,9 +728,14 @@ def get_submission(submission_id):
             cur.execute("SELECT id FROM receipt WHERE submission_id = %s LIMIT 1", (submission_id,))
             receipt = cur.fetchone()
 
+    # [FIX] เดิมเช็คแค่ paid/pending_payment ไม่เคยเช็คว่าเอกสารบังคับ 3 อย่าง
+    # ครบไหมเลย ทำให้ใบที่ยื่นแบบแล้วแต่แนบไม่ครบขึ้น "รอชำระเงิน" ผิดๆ
+    # ทั้งที่หน้ารายการของแอดมินคำนวณ pending_attach ถูกอยู่แล้ว — ให้ตรงกัน
     actual_status = submission["status"]
     if receipt and actual_status == "pending_payment":
         actual_status = "paid"
+    elif actual_status == "pending_payment" and len(attachments) < 3:
+        actual_status = "pending_attach"
 
     for key in ["period_start", "period_end", "due_date", "submitted_at", "created_at"]:
         if submission.get(key):
