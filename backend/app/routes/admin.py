@@ -1189,6 +1189,65 @@ def create_operator_account():
     }), 201
 
 
+@admin_bp.route("/operator-accounts/<account_id>", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_operator_account(account_id):
+    """แก้ไขอีเมลรับ OTP ของบัญชีผู้ประกอบการ"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    email = str(data.get("email", "")).strip()
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_EMAIL",
+                      "message": "รูปแบบอีเมลไม่ถูกต้อง"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM operator_accounts WHERE id = %s",
+                (account_id,)
+            )
+            old = cur.fetchone()
+
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบบัญชีผู้ประกอบการ"}
+                }), 404
+
+            try:
+                cur.execute(
+                    "UPDATE operator_accounts SET email = %s WHERE id = %s",
+                    (email, account_id)
+                )
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE", "message": "อีเมลนี้ถูกใช้กับบัญชีอื่นแล้ว"}
+                    }), 400
+                raise
+
+        if old["email"] != email:
+            save_audit_log(
+                db, admin_email,
+                f"แก้ไขอีเมลบัญชีผู้ประกอบการของบริษัท {old.get('operator_name') or old.get('tax_id')}",
+                "operator_accounts", account_id,
+                {"email": {"old": old["email"], "new": email}},
+                record_label=f"{old['tax_id']} ({email})"
+            )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
+    }), 200
+
+
 @admin_bp.route("/operator-accounts/<account_id>", methods=["DELETE"])
 @jwt_required()
 @require_admin
