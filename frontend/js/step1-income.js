@@ -62,12 +62,16 @@ function validateFinancialVsLicense() {
 
 /** ปุ่มถัดไปของ Step 1 ไป Step 2 */
 function handleNextStep1() {
-  const finEl = document.getElementById('total-income-financial');
-  const finVal = (finEl?.value || '').trim();
-  if (!finVal || pv(finVal) <= 0) {
-    if (typeof showToast === 'function') showToast('กรุณากรอกราคารวมตามงบการเงินก่อนไปขั้นตอนถัดไป');
-    if (finEl) finEl.focus();
-    return;
+  // [FIX] โหมดดูอย่างเดียว (view-submission.js) ต้องข้าม step ได้เสมอ ไม่บังคับกรอก
+  const isReadOnly = document.body.classList.contains('vs-readonly');
+  if (!isReadOnly) {
+    const finEl = document.getElementById('total-income-financial');
+    const finVal = (finEl?.value || '').trim();
+    if (!finVal || pv(finVal) <= 0) {
+      if (typeof showToast === 'function') showToast('กรุณากรอกราคารวมตามงบการเงินก่อนไปขั้นตอนถัดไป');
+      if (finEl) finEl.focus();
+      return;
+    }
   }
   if (typeof goToStep === 'function') goToStep(2);
 }
