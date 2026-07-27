@@ -121,10 +121,44 @@ function renderOperatorAccountsTable() {
       <td style="text-align:center;">${r.email}</td>
       <td style="text-align:center;">${fmtDateDMY(r.created_at)}</td>
       <td style="text-align:center;">
+        <button class="adm-btn adm-btn-sm" onclick="openOperatorAccountModal('${r.id}','${r.tax_id}','${(r.email || '').replace(/'/g, "\\'")}')">แก้ไข</button>
         <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteOperatorAccount('${r.id}','${r.tax_id}')">ลบ</button>
       </td>
     </tr>`).join('')
     : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+}
+
+// ── แก้ไขอีเมล ────────────────────────────────────────────
+
+function openOperatorAccountModal(id, taxId, email) {
+  document.getElementById('oa-ml-id').value    = id;
+  document.getElementById('oa-ml-taxid').value = taxId;
+  document.getElementById('oa-ml-email').value = email;
+  document.getElementById('oa-modal').style.display = 'flex';
+}
+
+function closeOperatorAccountModal() {
+  document.getElementById('oa-modal').style.display = 'none';
+}
+
+async function saveOperatorAccountEmail() {
+  const id    = document.getElementById('oa-ml-id').value;
+  const email = document.getElementById('oa-ml-email').value.trim();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('กรุณากรอกอีเมลให้ถูกต้อง');
+    return;
+  }
+
+  try {
+    await api.put(`/admin/operator-accounts/${id}`, { email });
+  } catch (e) {
+    alert('บันทึกผิดพลาด: ' + (e.message || ''));
+    return;
+  }
+  showToast('แก้ไขอีเมลสำเร็จ');
+  closeOperatorAccountModal();
+  await loadOperatorAccounts();
 }
 
 async function deleteOperatorAccount(id, taxId) {
