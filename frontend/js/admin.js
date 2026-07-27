@@ -919,7 +919,7 @@ async function deleteLicense(id, no) {
         <td style="text-align:center"><span class="lic-type-badge">${l.licensee_type || '—'}</span></td>
         <td style="text-align:center;font-size:12.5px">${fmtBE(l.start_date)}</td>
         <td style="text-align:center;font-size:12.5px">${fmtBE(l.end_date)}</td>
-        <td>${statusBadge(l.license_status)}</td>
+        <td style="text-align:center">${statusBadge(l.license_status)}</td>
         <td style="text-align:center;white-space:nowrap;">
           <button class="adm-btn adm-btn-sm" onclick="openEditLicenseModal('${l.id}')">แก้ไข</button>
           <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteLicense('${l.id}','${l.license_no}')">ลบ</button>
