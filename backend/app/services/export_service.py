@@ -228,7 +228,7 @@ TAXPAYER_HEADER_COLORS = (
 )
 
 
-def export_taxpayer_report(db, year=None, report_date=None):
+def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_date=None):
     """
     รายงานข้อมูลผู้ประกอบการ - ตรงตามรูปแบบไฟล์ราชการ (กสทช.):
     "รายงานข้อมูลผู้ประกอบการที่นำส่งเงินรายปีเข้ากองทุน..."
@@ -238,11 +238,19 @@ def export_taxpayer_report(db, year=None, report_date=None):
      / วันครบกำหนดชำระ) ส่วนคอลัมน์ที่เหลือเป็นคอลัมน์ติดตามการแจ้งเตือน
      ทางไปรษณีย์ตามแบบฟอร์มต้นฉบับ ซึ่งยังไม่มีข้อมูลใน schema ปัจจุบัน
      จึงปล่อยว่างไว้เพื่อให้โครงสร้างไฟล์ตรงกับต้นฉบับ
+
+    - year_from/year_to: กรองช่วงปีบัญชี (ใช้แทน year เดี่ยวถ้าส่งมา)
     """
     conditions = []
     params     = []
 
-    if year:
+    if year_from:
+        conditions.append("fiscal_year >= %s")
+        params.append(year_from)
+    if year_to:
+        conditions.append("fiscal_year <= %s")
+        params.append(year_to)
+    if not year_from and not year_to and year:
         conditions.append("fiscal_year = %s")
         params.append(year)
 
@@ -357,7 +365,7 @@ def export_taxpayer_report(db, year=None, report_date=None):
 # รายงาน 2: ข้อมูลใบอนุญาต
 # ════════════════════════════════════════════════════════
 
-def export_licensee_report(db, year=None, status=None, report_date=None):
+def export_licensee_report(db, year=None, year_from=None, year_to=None, status=None, report_date=None):
     """
     รายงานข้อมูลใบอนุญาต - ตรงตามรูปแบบไฟล์ราชการ (กสทช.):
     "ผลการจัดเก็บเงินรายปีเข้ากองทุนวิจัยและพัฒนา..."
@@ -366,11 +374,19 @@ def export_licensee_report(db, year=None, status=None, report_date=None):
     / ภาษีมูลค่าเพิ่ม / เงินเพิ่ม / จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ)
     และคอลัมน์ ประเภท/รอบ/สถานะ (งวดนำส่ง) ยังไม่มีใน licensee_master
     schema ปัจจุบัน จึงปล่อยว่างไว้เพื่อให้โครงสร้างคอลัมน์ตรงกับต้นฉบับ
+
+    - year_from/year_to: กรองช่วงปีบัญชี (ใช้แทน year เดี่ยวถ้าส่งมา)
     """
     conditions = []
     params     = []
 
-    if year:
+    if year_from:
+        conditions.append("fiscal_year >= %s")
+        params.append(year_from)
+    if year_to:
+        conditions.append("fiscal_year <= %s")
+        params.append(year_to)
+    if not year_from and not year_to and year:
         conditions.append("fiscal_year = %s")
         params.append(year)
 
@@ -552,16 +568,27 @@ _COL_WIDTHS = {
 }
 
 
-def export_payment_report(db, year=None, report_date=None):
+def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=None, report_date=None):
     """
     Export รายงานชำระเงินกองทุน 67 คอลัมน์
     ตรงกับไฟล์ต้นฉบับ กสทช. ทุกสี / merge / width / height
+
+    - year: ค่าเดียว (compat เดิม) — ใช้ได้ถ้าไม่ส่ง year_from/year_to
+    - year_from/year_to: กรองช่วงปีบัญชี ใช้ค่าใดค่าหนึ่งหรือทั้งคู่ก็ได้
+    - statuses: list ของ raw status ('draft'/'pending_attach'/'pending_payment'/'paid')
+      กรองหลัง derive actual_status แล้ว (ดู pending_attach ด้านล่าง)
     """
     from openpyxl.utils import get_column_letter
 
     # ── Query ──────────────────────────────────────────────
     conditions, params = ["1=1"], []
-    if year:
+    if year_from:
+        conditions.append("s.fiscal_year >= %s")
+        params.append(year_from)
+    if year_to:
+        conditions.append("s.fiscal_year <= %s")
+        params.append(year_to)
+    if not year_from and not year_to and year:
         conditions.append("s.fiscal_year = %s")
         params.append(year)
     where = "WHERE " + " AND ".join(conditions)
@@ -569,7 +596,7 @@ def export_payment_report(db, year=None, report_date=None):
     with db.cursor() as cur:
         cur.execute(f"""
             SELECT
-                s.tax_id, s.operator_name, s.ref_no,
+                s.id, s.tax_id, s.operator_name, s.ref_no,
                 s.fiscal_year, s.period_start, s.period_end,
                 s.due_date, s.status,
                 s.total_income, s.deduction_amount,
@@ -579,7 +606,9 @@ def export_payment_report(db, year=None, report_date=None):
                 r.receipt_no, r.received_at, r.amount AS receipt_amount,
                 inv.invoice_no, inv.issued_at, inv.amount AS invoice_amount,
                 (SELECT COUNT(*) FROM licensee_master lm
-                 WHERE lm.tax_id = s.tax_id) AS license_count
+                 WHERE lm.tax_id = s.tax_id) AS license_count,
+                (SELECT COUNT(*) FROM document_attachments da
+                 WHERE da.submission_id = s.id) AS attachment_count
             FROM submissions s
             LEFT JOIN receipt r   ON r.submission_id = s.id
             LEFT JOIN invoice inv ON inv.submission_id = s.id
@@ -588,6 +617,16 @@ def export_payment_report(db, year=None, report_date=None):
             ORDER BY s.fiscal_year DESC, s.operator_name
         """, params)
         rows = cur.fetchall()
+
+    # [FIX] เดิม actual_status คำนวณแค่ paid/status ดิบ ไม่เคยเช็คเอกสารแนบ
+    # บังคับ 3 อย่างครบไหม ทำให้รายงาน export ไม่ตรงกับสถานะ "รอแนบ" ที่แสดง
+    # ในหน้ารายการแอดมิน (GET /admin/submissions) ให้คำนวณเหมือนกัน
+    for row in rows:
+        if row["actual_status"] == "pending_payment" and (row.get("attachment_count") or 0) < 3:
+            row["actual_status"] = "pending_attach"
+
+    if statuses:
+        rows = [r for r in rows if r["actual_status"] in statuses]
 
     # ── Workbook ────────────────────────────────────────────
     wb = openpyxl.Workbook()
@@ -769,6 +808,7 @@ def export_payment_report(db, year=None, report_date=None):
     # ── row 9+: ข้อมูล ─────────────────────────────────────
     status_map = {
         "draft":           "ร่าง",
+        "pending_attach":  "รอแนบ",
         "pending_payment": "รอชำระเงิน",
         "paid":            "ชำระแล้ว",
     }

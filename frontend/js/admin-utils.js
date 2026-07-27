@@ -365,13 +365,14 @@ async function handleExportSubmit() {
   };
   const path = endpoints[reportType];
 
-  // backend รองรับ year เดี่ยว (ไม่รองรับช่วงปี) — ใช้ปีล่าสุดที่กรอกไว้
+  // [FIX] เดิม backend รองรับ year เดี่ยว ใช้แค่ "ถึง" ทิ้งค่า "จาก" ไปเฉยๆ —
+  // ตอนนี้ส่งเป็นช่วงปีจริง (year_from/year_to) ให้ backend กรองแบบ BETWEEN
   const yearFrom = document.getElementById('exp-year-from')?.value.trim();
   const yearTo   = document.getElementById('exp-year-to')?.value.trim();
-  const year = yearTo || yearFrom || '';
 
   const params = new URLSearchParams();
-  if (year) params.set('year', year);
+  if (yearFrom) params.set('year_from', yearFrom);
+  if (yearTo)   params.set('year_to', yearTo);
 
   if (reportType === '1') {
     const licStatusMap = {
@@ -386,9 +387,23 @@ async function handleExportSubmit() {
     }
   }
 
+  if (reportType === '3') {
+    // [FIX] สถานะการชำระเงินไม่เคยถูกส่งไปกรองเลย — เชื่อมกับสถานะจริงที่ระบบ
+    // มี (draft/pending_attach/pending_payment/paid) ส่วนตัวเลือกอื่น (รอบันทึก,
+    // สอบทานแล้ว, เห็นชอบแล้ว, END) ยังไม่มีสถานะแบบนั้นในระบบจริง เลือกแล้วจะไม่มีข้อมูลตรงกัน
+    const payStatusMap = {
+      'ร่าง': 'draft', 'รอแนบ': 'pending_attach',
+      'รอชำระเงิน': 'pending_payment', 'ชำระเงินแล้ว': 'paid',
+    };
+    const statuses = [...document.querySelectorAll('.exp-cb-paystatus:checked')].map(el => el.value);
+    statuses.forEach(s => { if (payStatusMap[s]) params.append('status', payStatusMap[s]); });
+  }
+
   try {
     await _fdDownloadReport(path, params);
-    await writeAuditLog('ส่งออกข้อมูล', 'export', String(reportType), { year: year || null });
+    await writeAuditLog('ส่งออกข้อมูล', 'export', String(reportType), {
+      year_from: yearFrom || null, year_to: yearTo || null,
+    });
     showToast('ส่งออกข้อมูลสำเร็จ');
   } catch (e) {
     showToast('ส่งออกไม่สำเร็จ: ' + (e.message || ''));
