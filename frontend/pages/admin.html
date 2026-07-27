@@ -494,6 +494,12 @@
 
       <!-- ══ PAGE: operator-accounts (บัญชีผู้ประกอบการ — อีเมลรับ OTP) ══ -->
       <div class="adm-page" id="page-operator-accounts">
+        <div class="adm-search-bar">
+          <div class="adm-search-input-wrap">
+            <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="oa-search" placeholder="ค้นหา Tax ID / ชื่อผู้ประกอบการ" oninput="renderOperatorAccountsTable()">
+          </div>
+        </div>
         <!-- table toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
           <span id="oa-count" style="font-size:12px;color:#888;"></span>
