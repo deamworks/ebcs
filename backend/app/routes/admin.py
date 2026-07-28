@@ -1508,6 +1508,98 @@ def delete_admin(admin_id):
 
 
 # ════════════════════════════════════════════════════════
+# 5.4d โปรไฟล์ผู้ดูแลระบบ (ทุก role เข้าถึงได้ — ดูข้อมูลตัวเอง/เปลี่ยนรหัสผ่าน)
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/profile", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_admin_profile():
+    """ข้อมูลโปรไฟล์ของผู้ดูแลระบบที่ login อยู่"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT email, full_name, role, created_at FROM admin_users WHERE email = %s",
+                (admin_email,)
+            )
+            admin = cur.fetchone()
+
+    if not admin:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ดูแลระบบ"}
+        }), 404
+
+    admin["created_at"] = date_to_str(admin["created_at"])
+
+    return jsonify({
+        "success": True,
+        "data": {"profile": admin}
+    }), 200
+
+
+@admin_bp.route("/change-password", methods=["PUT"])
+@jwt_required()
+@require_admin
+def change_admin_password():
+    """เปลี่ยนรหัสผ่านของตัวเอง — ต้องยืนยันรหัสผ่านเดิมก่อนเสมอ"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    current_password = str(data.get("current_password", ""))
+    new_password     = str(data.get("new_password", ""))
+
+    if not current_password or not new_password:
+        return jsonify({
+            "success": False,
+            "error": {"code": "MISSING_FIELDS", "message": "กรุณากรอกรหัสผ่านเดิมและรหัสผ่านใหม่"}
+        }), 400
+
+    if len(new_password) < 8:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_PASSWORD", "message": "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute(
+                "SELECT id, password_hash FROM admin_users WHERE email = %s",
+                (admin_email,)
+            )
+            admin = cur.fetchone()
+
+        if not admin or not bcrypt.checkpw(
+            current_password.encode("utf-8"), admin["password_hash"].encode("utf-8")
+        ):
+            return jsonify({
+                "success": False,
+                "error": {"code": "INVALID_CURRENT_PASSWORD", "message": "รหัสผ่านเดิมไม่ถูกต้อง"}
+            }), 400
+
+        new_hash = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+        with db.cursor() as cur:
+            cur.execute(
+                "UPDATE admin_users SET password_hash = %s WHERE id = %s",
+                (new_hash, admin["id"])
+            )
+
+        save_audit_log(
+            db, admin_email, "เปลี่ยนรหัสผ่านของตัวเอง",
+            "admin_users", admin["id"], None,
+            record_label=admin_email
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "เปลี่ยนรหัสผ่านสำเร็จ"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
 # 5.5 บันทึกรับเงิน (เปลี่ยน status → paid)
 # ════════════════════════════════════════════════════════
 

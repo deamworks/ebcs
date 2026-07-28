@@ -121,6 +121,19 @@
           </div>
         </div>
       </div>
+
+      <div class="sb-group" data-group="profile">
+        <div class="sb-section" onclick="toggleSbGroup(this)">
+          บัญชีของฉัน
+          <svg class="sb-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="sb-group-items">
+          <div class="sb-item" data-page="profile" onclick="navigateFromSidebar('profile')">
+            <i class="fa-solid fa-id-badge"></i>
+            โปรไฟล์
+          </div>
+        </div>
+      </div>
     </div>
     <div class="sb-footer">
       <div class="sb-logout" onclick="handleLogout()">
@@ -161,7 +174,7 @@
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="filterSearch" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อบริษัท / รหัสอ้างอิง" oninput="renderTable()" onkeydown="if(event.key==='Enter') renderTable()">
+            <input id="filterSearch" autocomplete="off" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อบริษัท / รหัสอ้างอิง" oninput="renderTable()" onkeydown="if(event.key==='Enter') renderTable()">
             <button class="adm-search-inline-filter-btn" id="filter-trigger-submissions-filter-card" onclick="toggleAdmFilter('submissions-filter-card')" title="ตัวกรองข้อมูล">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
             </button>
@@ -275,7 +288,7 @@
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="lic-search" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อบริษัท / เลขที่ใบอนุญาต" oninput="renderLicenseTable()" onkeydown="if(event.key==='Enter') renderLicenseTable()">
+            <input id="lic-search" autocomplete="off" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อบริษัท / เลขที่ใบอนุญาต" oninput="renderLicenseTable()" onkeydown="if(event.key==='Enter') renderLicenseTable()">
             <button class="adm-search-inline-filter-btn" id="filter-trigger-licenses-filter-card" onclick="toggleAdmFilter('licenses-filter-card')" title="ตัวกรองข้อมูล">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
             </button>
@@ -355,7 +368,7 @@
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="tp-search" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อผู้ประกอบการ" oninput="renderTaxpayerTable()" onkeydown="if(event.key==='Enter') renderTaxpayerTable()">
+            <input id="tp-search" autocomplete="off" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อผู้ประกอบการ" oninput="renderTaxpayerTable()" onkeydown="if(event.key==='Enter') renderTaxpayerTable()">
             <button class="adm-search-inline-filter-btn" id="filter-trigger-taxpayers-filter-card" onclick="toggleAdmFilter('taxpayers-filter-card')" title="ตัวกรองข้อมูล">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
             </button>
@@ -511,7 +524,7 @@
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="oa-search" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อผู้ประกอบการ" oninput="renderOperatorAccountsTable()">
+            <input id="oa-search" autocomplete="off" placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อผู้ประกอบการ" oninput="renderOperatorAccountsTable()">
           </div>
         </div>
         <!-- table toolbar -->
@@ -757,7 +770,7 @@
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="audit-search" placeholder="อีเมล / การดำเนินการ / ตารางข้อมูล" oninput="loadAuditLogs()" onkeydown="if(event.key==='Enter') loadAuditLogs()">
+            <input id="audit-search" autocomplete="off" placeholder="อีเมล / การดำเนินการ / ตารางข้อมูล" oninput="loadAuditLogs()" onkeydown="if(event.key==='Enter') loadAuditLogs()">
             <button class="adm-search-inline-filter-btn" id="filter-trigger-audit-filter-card" onclick="toggleAdmFilter('audit-filter-card')" title="ตัวกรองข้อมูล">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
             </button>
@@ -852,6 +865,52 @@
           <div class="adm-modal-ft">
             <button class="adm-btn" onclick="closeAdminModal()">ยกเลิก</button>
             <button class="adm-btn adm-btn-primary" onclick="saveNewAdmin()">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE: โปรไฟล์ (ทุก role) ══ -->
+      <div class="adm-page" id="page-profile">
+        <div class="adm-card" style="max-width:520px;">
+          <div class="adm-card-hd"><span class="adm-card-title">ข้อมูลบัญชี</span></div>
+          <div style="padding:20px;">
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>อีเมล (username)</label>
+                <input class="adm-form-input" id="profile-email" disabled>
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>ชื่อ</label>
+                <input class="adm-form-input" id="profile-name" disabled>
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>Role</label>
+                <input class="adm-form-input" id="profile-role" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="adm-card" style="max-width:520px;margin-top:16px;">
+          <div class="adm-card-hd"><span class="adm-card-title">เปลี่ยนรหัสผ่าน</span></div>
+          <div style="padding:20px;">
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>รหัสผ่านเดิม</label>
+                <input class="adm-form-input" id="profile-current-password" type="password" autocomplete="off">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>รหัสผ่านใหม่</label>
+                <input class="adm-form-input" id="profile-new-password" type="password" autocomplete="off" placeholder="อย่างน้อย 8 ตัวอักษร">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>ยืนยันรหัสผ่านใหม่</label>
+                <input class="adm-form-input" id="profile-confirm-password" type="password" autocomplete="off">
+              </div>
+            </div>
+            <div style="margin-top:14px;">
+              <button class="adm-btn adm-btn-primary" onclick="saveNewPassword()">เปลี่ยนรหัสผ่าน</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1125,6 +1184,7 @@
   <script src="../js/admin-utils.js"></script>
   <script src="../js/admin-operator-accounts.js"></script>
   <script src="../js/admin-manage-admins.js"></script>
+  <script src="../js/admin-profile.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html>
