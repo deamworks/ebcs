@@ -1362,7 +1362,7 @@ def create_admin():
     if role not in ("super_admin", "admin"):
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_ROLE", "message": "role ต้องเป็น super_admin หรือ admin"}
+            "error": {"code": "INVALID_ROLE", "message": "สิทธิการเข้าถึงระบบต้องเป็น super_admin หรือ admin"}
         }), 400
 
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
@@ -1403,7 +1403,7 @@ def create_admin():
 @require_admin
 @require_super_admin
 def update_admin_role(admin_id):
-    """เปลี่ยน role ของผู้ดูแลระบบ (super_admin/admin)"""
+    """เปลี่ยนสิทธิการเข้าถึงระบบของผู้ดูแลระบบ (super_admin/admin)"""
     admin_email = get_jwt_identity()
     data        = request.get_json() or {}
 
@@ -1411,7 +1411,7 @@ def update_admin_role(admin_id):
     if role not in ("super_admin", "admin"):
         return jsonify({
             "success": False,
-            "error": {"code": "INVALID_ROLE", "message": "role ต้องเป็น super_admin หรือ admin"}
+            "error": {"code": "INVALID_ROLE", "message": "สิทธิการเข้าถึงระบบต้องเป็น super_admin หรือ admin"}
         }), 400
 
     with get_db() as db:
@@ -1443,7 +1443,7 @@ def update_admin_role(admin_id):
 
         if old["role"] != role:
             save_audit_log(
-                db, admin_email, f"เปลี่ยน role ผู้ดูแลระบบ {old['email']}",
+                db, admin_email, f"เปลี่ยนสิทธิการเข้าถึงระบบผู้ดูแลระบบ {old['email']}",
                 "admin_users", admin_id,
                 {"role": {"old": old["role"], "new": role}},
                 record_label=old["email"]
