@@ -28,8 +28,8 @@ function renderAdminsTable() {
       <td style="text-align:center;font-size:12.5px;">${a.email}</td>
       <td style="text-align:center;">
         <select class="adm-form-input" style="font-size:12px;padding:4px 6px;" onchange="changeAdminRole('${a.id}', this.value)" ${a.email === myEmail ? 'disabled' : ''}>
-          <option value="admin" ${a.role === 'admin' ? 'selected' : ''}>admin</option>
-          <option value="super_admin" ${a.role === 'super_admin' ? 'selected' : ''}>super_admin</option>
+          <option value="admin" ${a.role === 'admin' ? 'selected' : ''}>admin (ผู้ดูแลระบบ)</option>
+          <option value="super_admin" ${a.role === 'super_admin' ? 'selected' : ''}>super_admin (ผู้ดูแลระบบสูงสุด)</option>
         </select>
       </td>
       <td style="text-align:center;">${fmtDateDMY(a.created_at)}</td>
