@@ -16,6 +16,7 @@ from datetime import datetime, date
 from functools import wraps
 
 from ..db import get_db
+from ..services.integration_service import send_to_datacenter, send_to_sap
 
 operator_bp = Blueprint("operator", __name__)
 
@@ -652,6 +653,20 @@ def submit_submission(submission_id):
                 SET    status = 'pending_payment', submitted_at = NOW()
                 WHERE  id = %s
             """, (submission_id,))
+
+            # ส่งข้อมูลไป Data Center (gen QR/Barcode) และ SAP/ZAT (ตั้งหนี้รอรับชำระ)
+            # ปัจจุบันเป็น mock ทั้งคู่ (ดู integration_service.py) — ไม่ block การยื่นแบบถ้าพัง
+            try:
+                dc_result = send_to_datacenter(cur, submission)
+                sap_result = send_to_sap(cur, submission)
+                cur.execute("""
+                    UPDATE submissions
+                    SET    datacenter_ref = %s, sap_doc_no = %s, sap_status = 'mock_sent'
+                    WHERE  id = %s
+                """, (dc_result["datacenter_ref"], sap_result["sap_doc_no"], submission_id))
+            except Exception as e:
+                current_app.logger.warning(f"[submit_submission] integration mock failed: {e}")
+
         db.commit()
 
     return jsonify({
