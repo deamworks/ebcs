@@ -885,23 +885,26 @@ function printDepositSlip() {
 
   const logoHtml = `<img src="${customLogoDataUrl || _nbtcSealLogoDataUrl}" width="64" height="74" alt="logo" style="display:block;object-fit:contain;flex-shrink:0;"/>`;
 
+  // ใส่ไฟล์โลโก้จริงที่ ../images/banks/<file>.png (โปร่งใส แนะนำสูง ~32px) แล้วจะขึ้นแทนอัตโนมัติ
+  // ถ้ายังไม่มีไฟล์ จะซ่อนรูปที่พังไปเงียบๆ เหลือแค่ชื่อธนาคาร
   const bankGrid = [
-    { n: 'ธ.กสิกรไทย',           a: 'K',    c: '#00a950' },
-    { n: 'ธ.ทีเอ็มบีธนชาติ',       a: 'ttb',  c: '#1279be' },
-    { n: 'ธ.ซีไอเอ็มบีไทย',        a: 'C',    c: '#7e2426' },
-    { n: 'ธ.ไอซีบีซี(ไทย)',        a: 'I',    c: '#c8161d' },
-    { n: 'ธ.เกียรตินาคิน',         a: 'K',    c: '#000000' },
-    { n: 'ธ.ไทยพาณิชย์',          a: 'SCB',  c: '#4e2a84' },
-    { n: 'ธ.ออมสิน',              a: 'GSB',  c: '#ec1c79' },
-    { n: 'ธ.ยูโอบี',               a: 'UOB',  c: '#0b3979' },
-    { n: 'ธ.ซิตี้แบงก์ เอ็น.เอ.',    a: 'citi', c: '#003b70' },
-    { n: 'ธ.กรุงไทย',             a: 'KTB',  c: '#1ba5e1' },
-    { n: 'ธ.กรุงเทพ',             a: 'BBL',  c: '#1e4598' },
-    { n: 'ธ.มิซูโฮ',               a: 'MHCB', c: '#003a70' },
-    { n: 'ธ.กรุงศรีอยุธยา',        a: 'BAY',  c: '#fec43b' },
-    { n: 'ธ.ทิสโก้',               a: 'T',    c: '#00838f' },
+    { n: 'ธ.กสิกรไทย',           file: 'kbank.png' },
+    { n: 'ธ.ทีเอ็มบีธนชาติ',       file: 'ttb.png' },
+    { n: 'ธ.ซีไอเอ็มบีไทย',        file: 'cimb.png' },
+    { n: 'ธ.ไอซีบีซี(ไทย)',        file: 'icbc.png' },
+    { n: 'ธ.เกียรตินาคิน',         file: 'kkp.png' },
+    { n: 'ธ.ไทยพาณิชย์',          file: 'scb.png' },
+    { n: 'ธ.ออมสิน',              file: 'gsb.png' },
+    { n: 'ธ.ยูโอบี',               file: 'uob.png' },
+    { n: 'ธ.ซิตี้แบงก์ เอ็น.เอ.',    file: 'citi.png' },
+    { n: 'ธ.กรุงไทย',             file: 'ktb.png' },
+    { n: 'ธ.กรุงเทพ',             file: 'bbl.png' },
+    { n: 'ธ.มิซูโฮ',               file: 'mizuho.png' },
+    { n: 'ธ.กรุงศรีอยุธยา',        file: 'bay.png' },
+    { n: 'ธ.ทิสโก้',               file: 'tisco.png' },
   ];
-  const bankBadge = (b) => `<span class="ds-bank-icon" style="background:${b.c};">${b.a}</span> ${b.n}`;
+  const bankBadge = (b) =>
+    `<img src="../images/banks/${b.file}" alt="${b.n}" class="ds-bank-icon" onerror="this.style.display='none'"/> ${b.n}`;
 
   const css = `
     .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
@@ -935,7 +938,7 @@ function printDepositSlip() {
     .ds-bank-grid { flex:1; border:1px solid #ccc; border-radius:6px; padding:8px 10px; }
     .ds-bank-grid table { width:100%; border-collapse:collapse; }
     .ds-bank-grid td { font-size:10px; padding:4px 8px; white-space:nowrap; }
-    .ds-bank-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#fff; font-size:7px; font-weight:700; margin-right:4px; vertical-align:middle; }
+    .ds-bank-icon { width:16px; height:16px; object-fit:contain; margin-right:4px; vertical-align:middle; }
     .ds-qr-box { flex-shrink:0; width:80px; text-align:center; }
     .ds-qr-box img { width:100%; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
     .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 96px); margin-left:auto; margin-right:auto; }
