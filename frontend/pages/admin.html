@@ -80,6 +80,10 @@
             <i class="fa-solid fa-user-plus"></i>
             นำเข้าบัญชีผู้ประกอบการ
           </div>
+          <div class="sb-item" data-page="import-batches" onclick="navigateFromSidebar('import-batches')">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            ประวัติการนำเข้าข้อมูล
+          </div>
         </div>
       </div>
 
@@ -518,6 +522,31 @@
               </div>
               <div class="import-log" id="oa-import-log"></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAGE: import-batches (ประวัติการนำเข้าข้อมูล + rollback) ══ -->
+      <div class="adm-page" id="page-import-batches">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+          <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, loadImportBatches)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            รีเฟรช
+          </button>
+        </div>
+        <div class="adm-card">
+          <div style="overflow-x:auto;">
+            <table class="adm-table">
+              <thead><tr>
+                <th style="text-align:center">วันที่นำเข้า</th>
+                <th style="text-align:center">ประเภท</th>
+                <th style="text-align:center">จำนวนรายการ</th>
+                <th style="text-align:center">นำเข้าโดย</th>
+                <th style="text-align:center">สถานะ</th>
+                <th style="text-align:center">จัดการ</th>
+              </tr></thead>
+              <tbody id="import-batches-tbody"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1215,6 +1244,7 @@
   <script src="../js/admin-operator-accounts.js"></script>
   <script src="../js/admin-manage-admins.js"></script>
   <script src="../js/admin-profile.js"></script>
+  <script src="../js/admin-import-batches.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html>

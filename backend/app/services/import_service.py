@@ -233,18 +233,22 @@ def import_taxpayers(db, rows):
     Upsert taxpayer_master  unique: (tax_id, fiscal_year)
     - INSERT: generate ref_no อัตโนมัติ (NBTC-{ปีพ.ศ.}-{เลข 4 หลัก})
     - UPDATE: ไม่แตะ ref_no ที่มีอยู่แล้ว
-    คืน: {"inserted": n, "updated": n}
+    คืน: {"inserted": n, "updated": n, "snapshot": [...]}
+    snapshot เก็บค่าก่อนนำเข้าของแต่ละแถว (old=None ถ้าเป็นแถวใหม่) สำหรับ rollback
     """
     inserted = updated = 0
+    snapshot = []
     cur = db.cursor()
     for row in rows:
         cur.execute(
-            "SELECT id, ref_no FROM taxpayer_master WHERE tax_id=%s AND fiscal_year=%s",
+            "SELECT * FROM taxpayer_master WHERE tax_id=%s AND fiscal_year=%s",
             (row["tax_id"], row["fiscal_year"])
         )
         existing = cur.fetchone()
+        key = {"tax_id": row["tax_id"], "fiscal_year": row["fiscal_year"]}
 
         if existing:
+            snapshot.append({"table": "taxpayer_master", "key": key, "old": existing})
             cur.execute("""
                 UPDATE taxpayer_master SET
                     operator_name = %s,
@@ -262,6 +266,7 @@ def import_taxpayers(db, rows):
             ))
             updated += 1
         else:
+            snapshot.append({"table": "taxpayer_master", "key": key, "old": None})
             # fiscal_year ใน row เป็น CE → แปลงเป็น BE สำหรับ ref_no
             fiscal_year_ce = row["fiscal_year"]
             fiscal_year_be = fiscal_year_ce + 543 if fiscal_year_ce < 2400 else fiscal_year_ce
@@ -281,7 +286,7 @@ def import_taxpayers(db, rows):
             inserted += 1
     db.commit()
     cur.close()
-    return {"inserted": inserted, "updated": updated}
+    return {"inserted": inserted, "updated": updated, "snapshot": snapshot}
 
 
 # ════════════════════════════════════════════════════════
@@ -413,13 +418,18 @@ def parse_licensee_excel(file_stream):
 def import_licensees(db, rows):
     """
     Upsert licensee_master  unique: license_no
-    คืน: {"inserted": n, "updated": n}
+    คืน: {"inserted": n, "updated": n, "snapshot": [...]}
+    snapshot เก็บค่าก่อนนำเข้าของแต่ละแถว (old=None ถ้าเป็นแถวใหม่) สำหรับ rollback
     """
     inserted = updated = 0
+    snapshot = []
     cur = db.cursor()
     for row in rows:
-        cur.execute("SELECT id FROM licensee_master WHERE license_no=%s", (row["license_no"],))
-        if cur.fetchone():
+        cur.execute("SELECT * FROM licensee_master WHERE license_no=%s", (row["license_no"],))
+        existing = cur.fetchone()
+        key = {"license_no": row["license_no"]}
+        if existing:
+            snapshot.append({"table": "licensee_master", "key": key, "old": existing})
             cur.execute("""
                 UPDATE licensee_master SET
                     tax_id=%s, fiscal_year=%s, ref_code=%s,
@@ -443,6 +453,7 @@ def import_licensees(db, rows):
             ))
             updated += 1
         else:
+            snapshot.append({"table": "licensee_master", "key": key, "old": None})
             cur.execute("""
                 INSERT INTO licensee_master (
                     tax_id, fiscal_year, ref_code, sub_type, round_type,
@@ -467,7 +478,7 @@ def import_licensees(db, rows):
             inserted += 1
     db.commit()
     cur.close()
-    return {"inserted": inserted, "updated": updated}
+    return {"inserted": inserted, "updated": updated, "snapshot": snapshot}
 
 
 # ════════════════════════════════════════════════════════
@@ -686,19 +697,25 @@ def import_operator_accounts(db, rows):
     Upsert operator_accounts  unique: tax_id
     - มีอยู่แล้ว → UPDATE operator_name, email
     - ยังไม่มี   → INSERT
-    คืน: {"inserted": n, "updated": n}
+    คืน: {"inserted": n, "updated": n, "snapshot": [...]}
+    snapshot เก็บค่าก่อนนำเข้าของแต่ละแถว (old=None ถ้าเป็นแถวใหม่) สำหรับ rollback
     """
     inserted = updated = 0
+    snapshot = []
     cur = db.cursor()
     for row in rows:
-        cur.execute("SELECT id FROM operator_accounts WHERE tax_id=%s", (row["tax_id"],))
-        if cur.fetchone():
+        cur.execute("SELECT * FROM operator_accounts WHERE tax_id=%s", (row["tax_id"],))
+        existing = cur.fetchone()
+        key = {"tax_id": row["tax_id"]}
+        if existing:
+            snapshot.append({"table": "operator_accounts", "key": key, "old": existing})
             cur.execute(
                 "UPDATE operator_accounts SET operator_name=%s, email=%s WHERE tax_id=%s",
                 (row["operator_name"], row["email"], row["tax_id"])
             )
             updated += 1
         else:
+            snapshot.append({"table": "operator_accounts", "key": key, "old": None})
             cur.execute(
                 "INSERT INTO operator_accounts (tax_id, operator_name, email) VALUES (%s, %s, %s)",
                 (row["tax_id"], row["operator_name"], row["email"])
@@ -706,7 +723,7 @@ def import_operator_accounts(db, rows):
             inserted += 1
     db.commit()
     cur.close()
-    return {"inserted": inserted, "updated": updated}
+    return {"inserted": inserted, "updated": updated, "snapshot": snapshot}
 
 
 def import_contacts(db, rows):

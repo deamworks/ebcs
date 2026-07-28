@@ -746,6 +746,7 @@ async function deleteLicense(id, no) {
     'taxpayer-detail': { title: 'รายละเอียดผู้ประกอบการ', sub: 'ใบอนุญาตทั้งหมดของบริษัทนี้' },
     'import-licensee': { title: 'นำเข้าข้อมูลใบอนุญาต', sub: 'นำเข้าข้อมูลใบอนุญาตจากไฟล์ Excel' },
     'import-taxpayer': { title: 'นำเข้าข้อมูลผู้ประกอบการ', sub: 'นำเข้าข้อมูลผู้ประกอบการจากไฟล์ Excel' },
+    'import-batches':  { title: 'ประวัติการนำเข้าข้อมูล', sub: 'ดูประวัติและย้อนกลับ (rollback) การนำเข้าข้อมูล' },
     export:             { title: 'ส่งออกข้อมูล',           sub: 'ส่งออกรายการยื่นแบบเป็นไฟล์ Excel' },
     audit:             { title: 'บันทึกการแก้ไขข้อมูล',   sub: 'ประวัติการแก้ไขข้อมูลทั้งหมดในระบบ' },
     admins:            { title: 'จัดการผู้ดูแลระบบ',      sub: 'เพิ่ม/แก้ไขสิทธิการเข้าถึงระบบ/ลบบัญชีผู้ดูแลระบบ' },
@@ -836,6 +837,7 @@ async function deleteLicense(id, no) {
     if (page === 'export')      loadExportPage();
     if (page === 'admins' && typeof loadAdmins === 'function') loadAdmins();
     if (page === 'profile' && typeof loadAdminProfile === 'function') loadAdminProfile();
+    if (page === 'import-batches' && typeof loadImportBatches === 'function') loadImportBatches();
   }
 
   // ── ปิด sidebar อัตโนมัติ หลังกดเลือกเมนูจากแถบด้านข้างเสร็จแล้ว
