@@ -80,6 +80,17 @@ function enterDashboard(email, fullName) {
   if (!document.getElementById('page-' + lastPage)) lastPage = 'submissions';
 
   setTimeout(() => showPage(lastPage), 50);
+
+  // เบราว์เซอร์บาง engine เพิกเฉย autocomplete="off" กับช่องค้นหา แล้ว autofill
+  // ค่าที่เคยเซฟไว้กลับมาเองหลังโหลดหน้า — เคลียร์ค่าซ้ำหลัง render เพื่อกันไว้
+  const clearSearchInputs = () => {
+    ['filterSearch', 'lic-search', 'tp-search', 'oa-search', 'audit-search'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  };
+  clearSearchInputs();
+  setTimeout(clearSearchInputs, 300);
 }
 
 function handleLogout() { auth.logoutAdmin(); }
