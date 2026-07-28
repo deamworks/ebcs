@@ -197,7 +197,7 @@ const AUDIT_FIELD_TH = {
   operator_name:          'ชื่อผู้ประกอบการ',
   tax_id:                 'เลขประจำตัวผู้เสียภาษี',
   email:                  'อีเมล',
-  role:                   'Role',
+  role:                   'สิทธิการเข้าถึงระบบ',
   total_income:           'รายได้รวม',
   total_income_financial: 'รายได้รวมตามงบการเงิน',
   deduction_amount:       'เงินลดหย่อน',

@@ -82,11 +82,11 @@ async function changeAdminRole(id, role) {
   try {
     await api.put(`/admin/admins/${id}/role`, { role });
   } catch (e) {
-    alert('แก้ไข role ผิดพลาด: ' + (e.message || ''));
+    alert('แก้ไขสิทธิการเข้าถึงระบบผิดพลาด: ' + (e.message || ''));
     await loadAdmins();
     return;
   }
-  showToast('แก้ไข role สำเร็จ');
+  showToast('แก้ไขสิทธิการเข้าถึงระบบสำเร็จ');
   await loadAdmins();
 }
 
