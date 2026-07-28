@@ -62,9 +62,19 @@ async function handleLogin() {
 
 function enterDashboard(email, fullName) {
   currentAdminEmail = email;
+  const nameEl  = document.getElementById('adminNameDisplay');
   const emailEl = document.getElementById('adminEmailDisplay');
-  if (emailEl) { emailEl.textContent = fullName || email; emailEl.title = email; }
+  if (nameEl)  nameEl.textContent  = fullName || '';
+  if (emailEl) { emailEl.textContent = email; emailEl.title = email; }
   if (typeof initDatepickers === 'function') initDatepickers();
+
+  // [FIX] fullName ที่ได้ตอน login ถูกฝังไว้ใน JWT claim ตั้งแต่ตอนออก token —
+  // ถ้าชื่อถูกแก้ไขทีหลังโดยไม่ได้ login ใหม่ ชื่อในแถบด้านล่างจะค้างเป็นค่าเก่า
+  // ดึงโปรไฟล์จริงจาก backend มา sync อีกครั้งหลัง refresh/เข้าระบบทุกครั้ง
+  api.get('/admin/profile').then(data => {
+    const p = data.profile || {};
+    if (nameEl && p.full_name) nameEl.textContent = p.full_name;
+  }).catch(() => {});
 
   // แท็บ "จัดการผู้ดูแลระบบ" แสดงเฉพาะ super_admin
   const isSuperAdmin = auth.getAdminRole() === 'super_admin';

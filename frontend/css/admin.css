@@ -837,11 +837,16 @@
     .sb-logout svg { flex-shrink: 0; }
     .sb-logout-text { min-width: 0; flex: 1; }
     .sb-logout-label { font-size: 12px; font-weight: 500; }
+    .sb-logout-name {
+      font-size: 11px; color: rgba(255,255,255,.6); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .sb-logout-email {
-      font-size: 10.5px; color: rgba(255,255,255,.4); margin-top: 2px;
+      font-size: 10.5px; color: rgba(255,255,255,.4); margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .sb-logout:hover { color: #fff; }
+    .sb-logout:hover .sb-logout-name  { color: rgba(255,255,255,.85); }
     .sb-logout:hover .sb-logout-email { color: rgba(255,255,255,.7); }
 
     /* ── Main Content ────────────────────────────────────────── */
