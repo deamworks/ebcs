@@ -907,7 +907,7 @@ function printDepositSlip() {
     `<img src="../images/banks/${b.file}" alt="${b.n}" class="ds-bank-icon" onerror="this.style.display='none'"/> ${b.n}`;
 
   const css = `
-    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:400; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .ds-page { padding:14mm 12mm; }
     .ds-title-bar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
     .ds-title-box { border:2px solid #000; padding:6px 12px; font-weight:700; font-size:12.5px; }
@@ -984,8 +984,8 @@ function printDepositSlip() {
         <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;">
           <div>
             เพื่อเข้าบัญชี กองทุนบริการกิจการกระจายเสียงกิจการโทรทัศน์อย่างทั่วถึง<br>
-            <div class="ds-account-line"><span class="ds-box"></span> บมจ.ธนาคารกสิกรไทย COMP CODE : 32313</div>
-            <div class="ds-account-line"><span class="ds-box"></span> บมจ.ธนาคารไทยพาณิชย์ เลขที่บัญชี 025-3-03036-7 (Bill Payment)</div>
+            <div class="ds-account-line"><span class="ds-box"></span> <img src="../images/banks/kbank.png" alt="" class="ds-bank-icon" onerror="this.style.display='none'"/> บมจ.ธนาคารกสิกรไทย COMP CODE : 32313</div>
+            <div class="ds-account-line"><span class="ds-box"></span> <img src="../images/banks/scb.png" alt="" class="ds-bank-icon" onerror="this.style.display='none'"/> บมจ.ธนาคารไทยพาณิชย์ เลขที่บัญชี 025-3-03036-7 (Bill Payment)</div>
           </div>
           <div class="ds-deadline">
             สามารถชำระเงินได้ ภายในวันที่ ${dueDateText} เวลา 23.00 น.<br>
