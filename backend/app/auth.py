@@ -491,7 +491,7 @@ def admin_login():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT id, email, password_hash, full_name, is_active
+                SELECT id, email, password_hash, full_name, is_active, role
                 FROM   admin_users
                 WHERE  email = %s
                 LIMIT 1
@@ -529,8 +529,9 @@ def admin_login():
     token = create_access_token(
         identity=admin["email"],
         additional_claims={
-            "role":      "admin",
-            "full_name": admin["full_name"]
+            "role":       "admin",
+            "admin_role": admin["role"],
+            "full_name":  admin["full_name"]
         },
         expires_delta=timedelta(hours=8)
     )
@@ -541,7 +542,8 @@ def admin_login():
             "token": token,
             "admin": {
                 "email":     admin["email"],
-                "full_name": admin["full_name"]
+                "full_name": admin["full_name"],
+                "role":      admin["role"]
             }
         }
     }), 200

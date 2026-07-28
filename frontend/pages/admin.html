@@ -108,6 +108,19 @@
           </div>
         </div>
       </div>
+
+      <div class="sb-group" data-group="admins" id="sbGroupAdmins" style="display:none;">
+        <div class="sb-section" onclick="toggleSbGroup(this)">
+          ผู้ดูแลระบบ
+          <svg class="sb-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="sb-group-items">
+          <div class="sb-item" data-page="admins" onclick="navigateFromSidebar('admins')">
+            <i class="fa-solid fa-user-shield"></i>
+            จัดการผู้ดูแลระบบ
+          </div>
+        </div>
+      </div>
     </div>
     <div class="sb-footer">
       <div class="sb-logout" onclick="handleLogout()">
@@ -785,6 +798,64 @@
         </div>
       </div>
 
+      <!-- ══ PAGE: จัดการผู้ดูแลระบบ (super_admin เท่านั้น) ══ -->
+      <div class="adm-page" id="page-admins">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+          <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="openAdminModal()">+ เพิ่มผู้ดูแลระบบ</button>
+        </div>
+        <div class="adm-card">
+          <div style="overflow-x:auto;">
+            <table class="adm-table">
+              <thead><tr>
+                <th style="text-align:center">อีเมล</th>
+                <th style="text-align:center">ชื่อ</th>
+                <th style="text-align:center">Role</th>
+                <th style="text-align:center">วันที่สร้าง</th>
+                <th style="text-align:center">จัดการ</th>
+              </tr></thead>
+              <tbody id="admins-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Admin Add Modal ══ -->
+      <div class="adm-modal-overlay" id="admin-modal">
+        <div class="adm-modal-box">
+          <div class="adm-modal-hd">
+            <span>เพิ่มผู้ดูแลระบบ</span>
+            <button class="adm-modal-close" onclick="closeAdminModal()">×</button>
+          </div>
+          <div class="adm-modal-body">
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>อีเมล</label>
+                <input class="adm-form-input" id="admin-ml-email" type="email" placeholder="เช่น staff@nbtc.go.th">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>ชื่อ</label>
+                <input class="adm-form-input" id="admin-ml-name" placeholder="ชื่อ-นามสกุล">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>รหัสผ่าน</label>
+                <input class="adm-form-input" id="admin-ml-password" type="password" placeholder="อย่างน้อย 8 ตัวอักษร">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>Role</label>
+                <select class="adm-form-input" id="admin-ml-role">
+                  <option value="admin">admin</option>
+                  <option value="super_admin">super_admin</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="adm-modal-ft">
+            <button class="adm-btn" onclick="closeAdminModal()">ยกเลิก</button>
+            <button class="adm-btn adm-btn-primary" onclick="saveNewAdmin()">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /main-content -->
   </div><!-- /admin-main -->
 </div><!-- /admin-shell -->
@@ -1053,6 +1124,7 @@
   <script src="../js/auth.js"></script>
   <script src="../js/admin-utils.js"></script>
   <script src="../js/admin-operator-accounts.js"></script>
+  <script src="../js/admin-manage-admins.js"></script>
   <script src="../js/admin.js"></script>
 </body>
 </html>

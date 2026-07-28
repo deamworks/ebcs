@@ -153,6 +153,9 @@ CREATE TABLE admin_users (
 
   full_name     VARCHAR(255) NULL,
 
+  -- role: super_admin (จัดการบัญชีแอดมินอื่นได้ด้วย) หรือ admin (เข้าถึงได้ทุกอย่างยกเว้นแท็บจัดการผู้ดูแลระบบ)
+  role          ENUM('super_admin','admin') NOT NULL DEFAULT 'admin',
+
   -- is_active: ปิดบัญชีโดยไม่ลบ
   -- เวลาเจ้าหน้าที่ลาออก set เป็น FALSE แทนลบ
   -- เพราะ audit_logs ยังอ้างอิง email นี้อยู่
@@ -415,9 +418,10 @@ CREATE TABLE ref_no_counters (
 -- รหัสผ่านจริงคือ: ChangeMe123!
 -- hash นี้สร้างด้วย bcrypt rounds=12
 -- เปลี่ยนรหัสทันทีหลัง login ครั้งแรกบน production
-INSERT INTO admin_users (email, password_hash, full_name) VALUES
+INSERT INTO admin_users (email, password_hash, full_name, role) VALUES
 (
   'putita.chaleeprom12@gmail.com',
   '$2b$12$nGg0SOXe2NJwBaaPhk7souwTkssH/.lZfbkaf3zQEOZ5ehE5UdUs6',
-  'ผู้ดูแลระบบ'
+  'ผู้ดูแลระบบ',
+  'super_admin'
 );
