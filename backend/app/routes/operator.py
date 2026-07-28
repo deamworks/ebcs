@@ -230,7 +230,6 @@ def get_licenses():
     [FIX] Response: { success, data: { licenses: [...], total: n } }
     """
     tax_id = get_jwt_identity()
-    year   = request.args.get("year", type=int)
 
     status_labels = {
         "active":    "ได้รับอนุญาต",
@@ -239,30 +238,22 @@ def get_licenses():
         "revoked":   "เพิกถอนใบอนุญาต",
     }
 
+    # [FIX] licensee_master.fiscal_year บันทึกแค่ "ปีของไฟล์ import ล่าสุดที่แก้แถวนี้"
+    # ไม่ใช่ "ใบอนุญาตนี้ใช้ได้เฉพาะปีนี้" — กรองด้วยเงื่อนไขนี้ทำให้ใบอนุญาตที่มีจริง
+    # หายไปจากหน้ากรอกรายได้ (ไม่ตรงกับที่แอดมินเห็นในหน้ารายละเอียดผู้ประกอบการ)
+    # ใบอนุญาตของบริษัทนี้ทั้งหมดต้องแสดงเสมอ ไม่กรองตามปีบัญชีที่กำลังยื่น
     with get_db() as db:
         with db.cursor() as cur:
-            if year:
-                cur.execute("""
-                    SELECT id, license_no,
-                           licensee_type AS license_type,
-                           license_status,
-                           start_date AS license_start,
-                           end_date   AS license_end
-                    FROM   licensee_master
-                    WHERE  tax_id = %s AND fiscal_year = %s
-                    ORDER  BY license_status, license_no
-                """, (tax_id, year))
-            else:
-                cur.execute("""
-                    SELECT id, license_no,
-                           licensee_type AS license_type,
-                           license_status,
-                           start_date AS license_start,
-                           end_date   AS license_end
-                    FROM   licensee_master
-                    WHERE  tax_id = %s
-                    ORDER  BY license_status, license_no
-                """, (tax_id,))
+            cur.execute("""
+                SELECT id, license_no,
+                       licensee_type AS license_type,
+                       license_status,
+                       start_date AS license_start,
+                       end_date   AS license_end
+                FROM   licensee_master
+                WHERE  tax_id = %s
+                ORDER  BY license_status, license_no
+            """, (tax_id,))
             licenses = cur.fetchall()
 
     result = []
