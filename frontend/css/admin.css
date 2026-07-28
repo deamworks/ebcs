@@ -829,25 +829,34 @@
     }
     .sb-sub:hover { color: rgba(255,255,255,.8); }
     .sb-sub.active { color: #fff; font-weight: 500; }
-    .sb-footer { padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.1); }
-    .sb-logout {
-      display: flex; align-items: center; gap: 8px; padding: 8px 0;
-      color: rgba(255,255,255,.5); cursor: pointer;
+    .sb-footer { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.1); }
+    .sb-profile-card {
+      display: flex; align-items: center; gap: 10px;
+      background: #fff; border-radius: 12px; padding: 8px 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
     }
-    .sb-logout svg { flex-shrink: 0; }
-    .sb-logout-text { min-width: 0; flex: 1; }
-    .sb-logout-label { font-size: 12px; font-weight: 500; }
-    .sb-logout-name {
-      font-size: 11px; color: rgba(255,255,255,.6); margin-top: 2px;
+    .sb-avatar {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #2e86ab, #5A8BFA);
+      color: #fff; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      text-transform: uppercase;
+    }
+    .sb-profile-text { min-width: 0; flex: 1; }
+    .sb-profile-name {
+      font-size: 12.5px; font-weight: 600; color: #222;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .sb-logout-email {
-      font-size: 10.5px; color: rgba(255,255,255,.4); margin-top: 1px;
+    .sb-profile-email {
+      font-size: 10.5px; color: #8a8f9c; margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .sb-logout:hover { color: #fff; }
-    .sb-logout:hover .sb-logout-name  { color: rgba(255,255,255,.85); }
-    .sb-logout:hover .sb-logout-email { color: rgba(255,255,255,.7); }
+    .sb-logout-btn {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+      border: none; background: transparent; color: #c0392b; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sb-logout-btn:hover { background: #fdecec; }
 
     /* ── Main Content ────────────────────────────────────────── */
     .admin-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f7fa; }

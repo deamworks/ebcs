@@ -62,9 +62,14 @@ async function handleLogin() {
 
 function enterDashboard(email, fullName) {
   currentAdminEmail = email;
-  const nameEl  = document.getElementById('adminNameDisplay');
-  const emailEl = document.getElementById('adminEmailDisplay');
-  if (nameEl)  nameEl.textContent  = fullName || '';
+  const nameEl   = document.getElementById('adminNameDisplay');
+  const emailEl  = document.getElementById('adminEmailDisplay');
+  const avatarEl = document.getElementById('adminAvatar');
+  const setDisplay = (name) => {
+    if (nameEl)  nameEl.textContent  = name || email;
+    if (avatarEl) avatarEl.textContent = (name || email || '?').trim().charAt(0);
+  };
+  setDisplay(fullName);
   if (emailEl) { emailEl.textContent = email; emailEl.title = email; }
   if (typeof initDatepickers === 'function') initDatepickers();
 
@@ -73,7 +78,7 @@ function enterDashboard(email, fullName) {
   // ดึงโปรไฟล์จริงจาก backend มา sync อีกครั้งหลัง refresh/เข้าระบบทุกครั้ง
   api.get('/admin/profile').then(data => {
     const p = data.profile || {};
-    if (nameEl && p.full_name) nameEl.textContent = p.full_name;
+    if (p.full_name) setDisplay(p.full_name);
   }).catch(() => {});
 
   // แท็บ "จัดการผู้ดูแลระบบ" แสดงเฉพาะ super_admin
