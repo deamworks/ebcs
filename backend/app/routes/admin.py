@@ -137,6 +137,7 @@ TABLE_NAME_TH = {
     "receipt":              "ใบเสร็จรับเงิน",
     "export":               "ส่งออกข้อมูล",
     "admin_users":          "ผู้ดูแลระบบ",
+    "import_batches":       "ประวัติการนำเข้าข้อมูล",
 }
 
 
@@ -178,6 +179,21 @@ def save_audit_log(db, admin_email, action, table_name,
             record_label,
             json.dumps(changes, ensure_ascii=False, default=str) if changes else None,
             now_bangkok()
+        ))
+
+
+def create_import_batch(db, import_type, imported_by, result):
+    """บันทึก batch การนำเข้าข้อมูล พร้อม snapshot ค่าก่อนนำเข้า สำหรับ rollback ทีหลัง"""
+    with db.cursor() as cur:
+        cur.execute("""
+            INSERT INTO import_batches
+                (import_type, imported_by, row_count, status, snapshot)
+            VALUES (%s, %s, %s, 'active', %s)
+        """, (
+            import_type,
+            imported_by,
+            result["inserted"] + result["updated"],
+            json.dumps(result["snapshot"], ensure_ascii=False, default=str),
         ))
 
 
@@ -1910,8 +1926,10 @@ def import_taxpayers_route():
         save_audit_log(
             db, admin_email,
             f"นำเข้าข้อมูลผู้ประกอบการจากไฟล์ {file.filename}",
-            "taxpayer_master", None, {**result, "file_name": file.filename}
+            "taxpayer_master", None,
+            {"inserted": result["inserted"], "updated": result["updated"], "file_name": file.filename}
         )
+        create_import_batch(db, "taxpayer", admin_email, result)
         db.commit()
 
     return jsonify({
@@ -1976,8 +1994,10 @@ def import_licensees_route():
         save_audit_log(
             db, admin_email,
             f"นำเข้าข้อมูลใบอนุญาตจากไฟล์ {file.filename}",
-            "licensee_master", None, {**result, "file_name": file.filename}
+            "licensee_master", None,
+            {"inserted": result["inserted"], "updated": result["updated"], "file_name": file.filename}
         )
+        create_import_batch(db, "license", admin_email, result)
         db.commit()
 
     return jsonify({
@@ -2047,8 +2067,10 @@ def import_operator_accounts_route():
         save_audit_log(
             db, admin_email,
             f"นำเข้าบัญชีผู้ประกอบการจากไฟล์ {file.filename}",
-            "operator_accounts", None, {**result, "file_name": file.filename}
+            "operator_accounts", None,
+            {"inserted": result["inserted"], "updated": result["updated"], "file_name": file.filename}
         )
+        create_import_batch(db, "operator_account", admin_email, result)
         db.commit()
 
     return jsonify({
@@ -2179,4 +2201,105 @@ def import_contacts_route():
                 f"อัปเดต {result['updated']} แถว"
             )
         }
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# ประวัติการนำเข้าข้อมูล + Rollback
+# ════════════════════════════════════════════════════════
+
+IMPORT_TYPE_TH = {
+    "taxpayer":         "ผู้ประกอบการ",
+    "license":          "ใบอนุญาต",
+    "operator_account": "บัญชีผู้ประกอบการ",
+}
+
+
+@admin_bp.route("/import-batches", methods=["GET"])
+@jwt_required()
+@require_admin
+def get_import_batches():
+    """รายการประวัติการนำเข้าข้อมูลทั้งหมด (ไม่รวม snapshot ดิบ เพื่อลดขนาด response)"""
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT id, import_type, imported_by, imported_at, row_count, status
+                FROM import_batches
+                ORDER BY imported_at DESC
+            """)
+            batches = cur.fetchall()
+
+    for b in batches:
+        b["imported_at"] = date_to_str(b["imported_at"])
+        b["import_type_th"] = IMPORT_TYPE_TH.get(b["import_type"], b["import_type"])
+
+    return jsonify({
+        "success": True,
+        "data": {"batches": batches, "total": len(batches)}
+    }), 200
+
+
+def _restore_snapshot_row(cur, entry):
+    """คืนค่าแถวเดียวกลับไปตาม snapshot: ลบถ้าเป็นแถวใหม่ (old=None) หรืออัปเดตกลับค่าเดิม"""
+    table = entry["table"]
+    key   = entry["key"]
+    old   = entry["old"]
+
+    where_clause = " AND ".join(f"{col} = %s" for col in key)
+    where_params = list(key.values())
+
+    if old is None:
+        cur.execute(f"DELETE FROM {table} WHERE {where_clause}", where_params)
+    else:
+        set_cols = [c for c in old.keys() if c != "id"]
+        set_clause = ", ".join(f"{col} = %s" for col in set_cols)
+        set_params = [old[col] for col in set_cols]
+        cur.execute(f"UPDATE {table} SET {set_clause} WHERE {where_clause}", set_params + where_params)
+
+
+@admin_bp.route("/import-batches/<batch_id>/rollback", methods=["POST"])
+@jwt_required()
+@require_admin
+def rollback_import_batch(batch_id):
+    """ย้อนกลับการนำเข้าข้อมูลทั้ง batch โดยคืนค่าทุกแถวกลับไปตาม snapshot ก่อนนำเข้า"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("SELECT * FROM import_batches WHERE id = %s", (batch_id,))
+            batch = cur.fetchone()
+
+        if not batch:
+            return jsonify({
+                "success": False,
+                "error": {"code": "NOT_FOUND", "message": "ไม่พบประวัติการนำเข้าข้อมูลนี้"}
+            }), 404
+
+        if batch["status"] == "rolled_back":
+            return jsonify({
+                "success": False,
+                "error": {"code": "ALREADY_ROLLED_BACK", "message": "ย้อนกลับการนำเข้าชุดนี้ไปแล้ว"}
+            }), 400
+
+        snapshot = json.loads(batch["snapshot"])
+
+        with db.cursor() as cur:
+            for entry in snapshot:
+                _restore_snapshot_row(cur, entry)
+            cur.execute(
+                "UPDATE import_batches SET status = 'rolled_back' WHERE id = %s",
+                (batch_id,)
+            )
+
+        save_audit_log(
+            db, admin_email,
+            f"ย้อนกลับการนำเข้าข้อมูล{IMPORT_TYPE_TH.get(batch['import_type'], batch['import_type'])} "
+            f"({batch['row_count']} แถว)",
+            "import_batches", batch_id, {"rolled_back_rows": len(snapshot)}
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ย้อนกลับการนำเข้าข้อมูลสำเร็จ"}
     }), 200

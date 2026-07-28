@@ -397,6 +397,31 @@ CREATE TABLE audit_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+-- ตาราง: import_batches
+-- บันทึกทุกครั้งที่นำเข้าข้อมูล (mode=commit) พร้อม snapshot ค่าก่อนนำเข้า
+-- แต่ละแถว เพื่อให้แอดมิน rollback การนำเข้าทั้งชุดได้ในคลิกเดียว
+CREATE TABLE import_batches (
+  id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
+
+  import_type   ENUM('taxpayer','license','operator_account') NOT NULL,
+
+  imported_by   VARCHAR(255)  NOT NULL COMMENT 'อีเมลแอดมินที่นำเข้า',
+  imported_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
+
+  row_count     INT           NOT NULL DEFAULT 0,
+
+  status        ENUM('active','rolled_back') NOT NULL DEFAULT 'active',
+
+  -- snapshot: JSON array ของค่าก่อนนำเข้าแต่ละแถว
+  -- แต่ละ element: {"table": "...", "key": {...}, "old": {...} หรือ null ถ้าเป็นแถวใหม่}
+  snapshot      LONGTEXT      NOT NULL,
+
+  INDEX idx_imb_type (import_type),
+  INDEX idx_imb_status (status)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ตาราง: ref_no_counters
 -- ตัวนับเลขอ้างอิงอัตโนมัติ
 -- ทำไมไม่ใช้ AUTO_INCREMENT: เพราะต้องมี prefix ปี เช่น NBTC-2568-0001
