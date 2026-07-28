@@ -967,6 +967,15 @@
       -webkit-appearance: none;
       appearance: none;
     }
+    /* [FIX] ตรวจจับตอนเบราว์เซอร์ autofill ค่าเข้าช่องค้นหาจริงๆ (ไม่ใช่เดาเวลา) —
+       เทคนิคมาตรฐาน: browser ใส่ pseudo-class :-webkit-autofill ให้ input ที่ถูก
+       autofill เสมอ เราผูก animation ว่างไว้กับ pseudo-class นี้ แล้วดัก event
+       "animationstart" ใน JS เพื่อเคลียร์ค่าทิ้งทันทีที่เกิดขึ้นจริง ไม่ต้องเดา delay */
+    @keyframes admSearchAutofillDetect { from {} to {} }
+    input[data-nofill]:-webkit-autofill {
+      animation-name: admSearchAutofillDetect;
+      animation-duration: 0.001s;
+    }
     .adm-search-btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       flex-shrink: 0; height: 42px; padding: 0 16px; border-radius: 10px;
