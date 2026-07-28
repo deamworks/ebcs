@@ -10,12 +10,12 @@
 import io
 import json
 import os
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import bcrypt
 from flask import Blueprint, jsonify, request, send_file
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, create_access_token
 
 from ..db import get_db
 from ..services.export_service import (
@@ -1537,6 +1537,83 @@ def get_admin_profile():
     return jsonify({
         "success": True,
         "data": {"profile": admin}
+    }), 200
+
+
+@admin_bp.route("/profile", methods=["PUT"])
+@jwt_required()
+@require_admin
+def update_admin_profile():
+    """แก้ไขชื่อ/อีเมลของตัวเอง — เปลี่ยน role ไม่ได้จากตรงนี้ (ต้องเป็น super_admin เท่านั้น ผ่าน /admin/admins)"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    full_name = str(data.get("full_name", "")).strip()
+    new_email = str(data.get("email", "")).strip().lower()
+
+    if not new_email or not EMAIL_RE.match(new_email):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_EMAIL", "message": "รูปแบบอีเมลไม่ถูกต้อง"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("SELECT * FROM admin_users WHERE email = %s", (admin_email,))
+            old = cur.fetchone()
+
+        if not old:
+            return jsonify({
+                "success": False,
+                "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ดูแลระบบ"}
+            }), 404
+
+        with db.cursor() as cur:
+            try:
+                cur.execute(
+                    "UPDATE admin_users SET full_name = %s, email = %s WHERE id = %s",
+                    (full_name, new_email, old["id"])
+                )
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE", "message": "อีเมลนี้ถูกใช้กับบัญชีอื่นแล้ว"}
+                    }), 400
+                raise
+
+        changes = {}
+        if old["full_name"] != full_name:
+            changes["full_name"] = {"old": old["full_name"], "new": full_name}
+        if old["email"] != new_email:
+            changes["email"] = {"old": old["email"], "new": new_email}
+        if changes:
+            save_audit_log(
+                db, admin_email, "แก้ไขข้อมูลโปรไฟล์ของตัวเอง",
+                "admin_users", old["id"], changes,
+                record_label=new_email
+            )
+        db.commit()
+
+    # อีเมลอาจเปลี่ยน (= JWT identity เปลี่ยน) ต้องออก token ใหม่ให้ทันที
+    # ไม่งั้น request ถัดไปจะหา admin ด้วยอีเมลเก่าที่ไม่มีอยู่แล้วไม่เจอ
+    new_token = create_access_token(
+        identity=new_email,
+        additional_claims={
+            "role":       "admin",
+            "admin_role": old["role"],
+            "full_name":  full_name
+        },
+        expires_delta=timedelta(hours=8)
+    )
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "message": "บันทึกสำเร็จ",
+            "token": new_token,
+            "profile": {"email": new_email, "full_name": full_name, "role": old["role"]}
+        }
     }), 200
 
 

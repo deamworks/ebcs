@@ -865,8 +865,8 @@
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>สิทธิการเข้าถึงระบบ</label>
                 <select class="adm-form-input" id="admin-ml-role">
-                  <option value="admin">admin</option>
-                  <option value="super_admin">super_admin</option>
+                  <option value="admin">admin (ผู้ดูแลระบบ)</option>
+                  <option value="super_admin">super_admin (ผู้ดูแลระบบสูงสุด)</option>
                 </select>
               </div>
             </div>
@@ -886,16 +886,19 @@
             <div class="adm-f-grid">
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>อีเมล (username)</label>
-                <input class="adm-form-input" id="profile-email" disabled>
+                <input class="adm-form-input" id="profile-email" type="email">
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>ชื่อ</label>
-                <input class="adm-form-input" id="profile-name" disabled>
+                <input class="adm-form-input" id="profile-name">
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>สิทธิการเข้าถึงระบบ</label>
                 <input class="adm-form-input" id="profile-role" disabled>
               </div>
+            </div>
+            <div style="margin-top:4px;">
+              <button class="adm-btn adm-btn-primary" onclick="saveProfileInfo()">บันทึกข้อมูลบัญชี</button>
             </div>
           </div>
         </div>
