@@ -63,14 +63,15 @@ async function handleLogin() {
 function enterDashboard(email, fullName) {
   currentAdminEmail = email;
   const nameEl   = document.getElementById('adminNameDisplay');
-  const emailEl  = document.getElementById('adminEmailDisplay');
+  const roleEl   = document.getElementById('adminRoleDisplay');
   const avatarEl = document.getElementById('adminAvatar');
+  const adminRole = auth.getAdminRole();
   const setDisplay = (name) => {
     if (nameEl)  nameEl.textContent  = name || email;
     if (avatarEl) avatarEl.textContent = (name || email || '?').trim().charAt(0);
   };
   setDisplay(fullName);
-  if (emailEl) { emailEl.textContent = email; emailEl.title = email; }
+  if (roleEl) roleEl.textContent = (typeof ROLE_TH !== 'undefined' && ROLE_TH[adminRole]) || adminRole || '';
   if (typeof initDatepickers === 'function') initDatepickers();
 
   // [FIX] fullName ที่ได้ตอน login ถูกฝังไว้ใน JWT claim ตั้งแต่ตอนออก token —

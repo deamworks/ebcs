@@ -50,11 +50,9 @@ async function saveProfileInfo() {
   if (typeof currentAdminEmail !== 'undefined') currentAdminEmail = data.profile?.email || email;
 
   const nameEl   = document.getElementById('adminNameDisplay');
-  const emailEl  = document.getElementById('adminEmailDisplay');
   const avatarEl = document.getElementById('adminAvatar');
   const shownName = data.profile?.full_name || full_name;
   if (nameEl)   nameEl.textContent  = shownName || email;
-  if (emailEl)  { emailEl.textContent = data.profile?.email || email; emailEl.title = emailEl.textContent; }
   if (avatarEl) avatarEl.textContent = (shownName || email || '?').trim().charAt(0);
 }
 
