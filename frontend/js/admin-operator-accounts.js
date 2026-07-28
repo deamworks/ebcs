@@ -34,8 +34,7 @@ async function handleOperatorAccountFile(input) {
   }
 
   document.getElementById('oa-import-count').textContent =
-    `พบข้อมูล ${data.total_rows} แถว — ถูกต้อง ${data.valid_rows} แถว, ผิดพลาด ${data.error_rows} แถว` +
-    (data.valid_rows > 5 ? ' (แสดงตัวอย่าง 5 แถวแรก)' : '');
+    `พบข้อมูล ${data.total_rows} แถว — ถูกต้อง ${data.valid_rows} แถว, ผิดพลาด ${data.error_rows} แถว`;
 
   const rows = data.preview_data || [];
   const tbody = document.getElementById('oa-import-preview-body');
