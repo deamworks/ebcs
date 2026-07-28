@@ -851,7 +851,13 @@
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>รหัสผ่าน</label>
-                <input class="adm-form-input" id="admin-ml-password" type="password" placeholder="อย่างน้อย 8 ตัวอักษร">
+                <div class="pwd-field-wrap">
+                  <input class="adm-form-input" id="admin-ml-password" type="password" placeholder="อย่างน้อย 8 ตัวอักษร">
+                  <button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(this)" tabindex="-1" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg class="pwd-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="pwd-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+                </div>
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>สิทธิการเข้าถึงระบบ</label>
@@ -897,15 +903,33 @@
             <div class="adm-f-grid">
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>รหัสผ่านเดิม</label>
-                <input class="adm-form-input" id="profile-current-password" type="password" autocomplete="off">
+                <div class="pwd-field-wrap">
+                  <input class="adm-form-input" id="profile-current-password" type="password" autocomplete="off">
+                  <button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(this)" tabindex="-1" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg class="pwd-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="pwd-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+                </div>
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>รหัสผ่านใหม่</label>
-                <input class="adm-form-input" id="profile-new-password" type="password" autocomplete="off" placeholder="อย่างน้อย 8 ตัวอักษร">
+                <div class="pwd-field-wrap">
+                  <input class="adm-form-input" id="profile-new-password" type="password" autocomplete="off" placeholder="อย่างน้อย 8 ตัวอักษร">
+                  <button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(this)" tabindex="-1" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg class="pwd-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="pwd-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+                </div>
               </div>
               <div class="adm-f-row" style="grid-column:1/-1;">
                 <label>ยืนยันรหัสผ่านใหม่</label>
-                <input class="adm-form-input" id="profile-confirm-password" type="password" autocomplete="off">
+                <div class="pwd-field-wrap">
+                  <input class="adm-form-input" id="profile-confirm-password" type="password" autocomplete="off">
+                  <button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(this)" tabindex="-1" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg class="pwd-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="pwd-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+                </div>
               </div>
             </div>
             <div style="margin-top:14px;">

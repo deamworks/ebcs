@@ -41,13 +41,19 @@
 
       <div class="field-group">
         <label for="loginPassword">รหัสผ่าน</label>
-        <input
-          type="password"
-          id="loginPassword"
-          placeholder="••••••••"
-          autocomplete="current-password"
-          onkeydown="if(event.key==='Enter') handleLogin()"
-        >
+        <div class="pwd-field-wrap">
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            onkeydown="if(event.key==='Enter') handleLogin()"
+          >
+          <button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(this)" tabindex="-1" aria-label="แสดง/ซ่อนรหัสผ่าน">
+            <svg class="pwd-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="pwd-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
       </div>
 
       <button class="btn-login" id="loginBtn" onclick="handleLogin()">

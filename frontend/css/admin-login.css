@@ -112,6 +112,20 @@ body {
       box-shadow: 0 0 0 3px rgba(90,139,250,0.15);
     }
 
+    /* ── ปุ่มแสดง/ซ่อนรหัสผ่าน ─────────────────────────── */
+    .pwd-field-wrap { position: relative; }
+    .pwd-field-wrap input { padding-right: 38px; }
+    .pwd-toggle-btn {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      width: 26px; height: 26px; border: none; background: none; cursor: pointer;
+      color: #9aa1b0; display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+    }
+    .pwd-toggle-btn:hover { background: rgba(0,0,0,0.05); color: #666; }
+    .pwd-toggle-btn .pwd-icon-hide { display: none; }
+    .pwd-toggle-btn.showing .pwd-icon-show { display: none; }
+    .pwd-toggle-btn.showing .pwd-icon-hide { display: block; }
+
     .btn-login {
       width: 100%;
       padding: 11px;
