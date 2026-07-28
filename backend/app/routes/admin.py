@@ -75,6 +75,20 @@ def date_to_str(d):
     return str(d)
 
 
+def _stringify_row_dates(rows, date_fields):
+    """
+    [FIX] Flask/Werkzeug serialize date/datetime object เป็น HTTP-date format
+    (เช่น "Wed, 01 Jan 2025 00:00:00 GMT") ไม่ใช่ ISO string — ฝั่ง frontend
+    (fdISOToThai) คาดหวัง "YYYY-MM-DD" ทำให้วันที่ในตาราง preview การนำเข้า
+    ไม่ขึ้นเลย ต้องแปลงเป็น string ก่อนส่งกลับเสมอ
+    """
+    for row in rows:
+        for field in date_fields:
+            if field in row:
+                row[field] = date_to_str(row[field])
+    return rows
+
+
 def require_admin(f):
     """
     Decorator ตรวจสอบว่าเป็น token ของ admin
@@ -1900,6 +1914,7 @@ def import_taxpayers_route():
     rows, errors = parse_taxpayer_excel(file.stream)
 
     if mode == "preview":
+        _stringify_row_dates(rows, ["period_start", "period_end", "due_date"])
         return jsonify({
             "success": True,
             "data": {
@@ -1969,6 +1984,7 @@ def import_licensees_route():
     rows, errors = parse_licensee_excel(file.stream)
 
     if mode == "preview":
+        _stringify_row_dates(rows, ["license_start", "license_end"])
         return jsonify({
             "success": True,
             "data": {
