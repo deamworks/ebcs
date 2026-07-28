@@ -943,8 +943,8 @@ function printDepositSlip() {
   ];
 
   const css = `
-    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; }
-    .ds-page { padding:8mm 7mm; }
+    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+    .ds-page { padding:14mm 12mm; }
     .ds-title-bar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
     .ds-title-box { border:2px solid #000; padding:6px 12px; font-weight:700; font-size:12.5px; }
     .ds-title-right { text-align:right; font-size:10.5px; }
@@ -978,7 +978,7 @@ function printDepositSlip() {
     .ds-qr-box img { width:100%; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
     .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 96px); margin-left:auto; margin-right:auto; }
     .ds-barcode-wrap img { width:auto; max-width:100%; height:42px; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
-    .ds-ref-mono { font-family:'Sarabun',Arial,sans-serif; font-size:10px; margin-top:6px; word-break:break-all; color:#555; }
+    .ds-ref-mono { font-family:'Sarabun',Arial,sans-serif; font-size:10px; font-weight:700; margin-top:6px; word-break:break-all; color:#555; }
   `;
 
   const html = `
@@ -1088,6 +1088,6 @@ function printDepositSlip() {
     </div>`;
 
   const filename = `ใบนำฝากชำระเงิน_${(appState.licensee || 'กสทช').replace(/\s+/g, '_')}`;
-  _openPrintWindow(html, filename, 'A5 portrait');
+  _openPrintWindow(html, filename, 'A4 portrait');
   showToast('กำลังเปิดหน้าต่างพิมพ์ใบนำฝากชำระเงิน');
 }
