@@ -167,6 +167,49 @@ async function saveOperatorAccountEmail() {
   await loadOperatorAccounts();
 }
 
+// ── เพิ่มบัญชีผู้ประกอบการทีละรายการ ────────────────────────
+
+function openAddOperatorAccountModal() {
+  document.getElementById('oa-add-taxid').value = '';
+  document.getElementById('oa-add-name').value  = '';
+  document.getElementById('oa-add-email').value = '';
+  document.getElementById('oa-add-modal').style.display = 'flex';
+}
+
+function closeAddOperatorAccountModal() {
+  document.getElementById('oa-add-modal').style.display = 'none';
+}
+
+async function saveNewOperatorAccount() {
+  const tax_id        = document.getElementById('oa-add-taxid').value.trim().replace(/-/g, '');
+  const operator_name = document.getElementById('oa-add-name').value.trim();
+  const email         = document.getElementById('oa-add-email').value.trim();
+
+  if (!tax_id || !/^\d{13}$/.test(tax_id)) {
+    alert('กรุณากรอกเลขประจำตัวผู้เสียภาษีให้ถูกต้อง 13 หลัก');
+    return;
+  }
+  if (!operator_name) {
+    alert('กรุณากรอกชื่อผู้ประกอบการ');
+    return;
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('กรุณากรอกอีเมลให้ถูกต้อง');
+    return;
+  }
+
+  try {
+    // backend POST /admin/operator-accounts บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
+    await api.post('/admin/operator-accounts', { tax_id, operator_name, email });
+  } catch (e) {
+    alert('เพิ่มบัญชีผิดพลาด: ' + (e.message || ''));
+    return;
+  }
+  showToast('เพิ่มบัญชีผู้ประกอบการสำเร็จ');
+  closeAddOperatorAccountModal();
+  await loadOperatorAccounts();
+}
+
 async function deleteOperatorAccount(id, taxId) {
   if (!confirm(`ลบบัญชีผู้ประกอบการของเลขผู้เสียภาษี ${taxId} ?\nไม่สามารถกู้คืนได้`)) return;
   try {
