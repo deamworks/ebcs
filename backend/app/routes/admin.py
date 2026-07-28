@@ -2052,26 +2052,25 @@ def import_operator_accounts_route():
             }
         }), 200
 
-    if errors:
-        return jsonify({
-            "success": False,
-            "error": {
-                "code":    "VALIDATION_ERROR",
-                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
-                "errors":  errors[:20]
-            }
-        }), 400
-
+    # [FIX] เดิมถ้ามี error แม้แค่แถวเดียว จะ block ไม่ import อะไรเลยทั้งไฟล์
+    # เปลี่ยนเป็น import เฉพาะแถวที่อ่าน tax_id ได้ (คีย์หลัก) แล้วรายงานจำนวนแถว
+    # ที่ข้ามไปด้วย ชื่อ/อีเมลอ่านไม่ได้ไม่ block แล้ว (ดู _parse_operator_account_row)
     with get_db() as db:
-        result = import_operator_accounts(db, rows)
+        result = import_operator_accounts(db, rows) if rows else {"inserted": 0, "updated": 0, "snapshot": []}
         save_audit_log(
             db, admin_email,
             f"นำเข้าบัญชีผู้ประกอบการจากไฟล์ {file.filename}",
             "operator_accounts", None,
-            {"inserted": result["inserted"], "updated": result["updated"], "file_name": file.filename}
+            {"inserted": result["inserted"], "updated": result["updated"],
+             "skipped": len(errors), "file_name": file.filename}
         )
-        create_import_batch(db, "operator_account", admin_email, result)
+        if rows:
+            create_import_batch(db, "operator_account", admin_email, result)
         db.commit()
+
+    message = f"Import สำเร็จ: เพิ่มใหม่ {result['inserted']} แถว, อัปเดต {result['updated']} แถว"
+    if errors:
+        message += f" (ข้าม {len(errors)} แถวที่เลขผู้เสียภาษีอ่านไม่ได้/ซ้ำ)"
 
     return jsonify({
         "success": True,
@@ -2079,11 +2078,9 @@ def import_operator_accounts_route():
             "mode":     "commit",
             "inserted": result["inserted"],
             "updated":  result["updated"],
-            "message":  (
-                f"Import สำเร็จ: "
-                f"เพิ่มใหม่ {result['inserted']} แถว, "
-                f"อัปเดต {result['updated']} แถว"
-            )
+            "skipped":  len(errors),
+            "errors":   errors[:20],
+            "message":  message
         }
     }), 200
 
