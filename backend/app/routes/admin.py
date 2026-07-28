@@ -13,6 +13,7 @@ import os
 from datetime import datetime, date, timezone
 from zoneinfo import ZoneInfo
 
+import bcrypt
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
@@ -101,6 +102,29 @@ def require_admin(f):
     return decorated
 
 
+def require_super_admin(f):
+    """
+    Decorator ตรวจสอบว่าเป็น admin_role = super_admin เท่านั้น
+    ใช้กับ endpoint จัดการบัญชีแอดมิน (แท็บ "จัดการผู้ดูแลระบบ")
+    วางต่อจาก @require_admin เสมอ
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        claims = get_jwt()
+        if claims.get("admin_role") != "super_admin":
+            return jsonify({
+                "success": False,
+                "error": {
+                    "code": "FORBIDDEN",
+                    "message": "เฉพาะผู้ดูแลระบบระดับสูงสุดเท่านั้น"
+                }
+            }), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
 BANGKOK_TZ = ZoneInfo("Asia/Bangkok")
 
 TABLE_NAME_TH = {
@@ -112,6 +136,7 @@ TABLE_NAME_TH = {
     "contact_master":       "ที่อยู่ผู้ประกอบการ",
     "receipt":              "ใบเสร็จรับเงิน",
     "export":               "ส่งออกข้อมูล",
+    "admin_users":          "ผู้ดูแลระบบ",
 }
 
 
@@ -1270,6 +1295,209 @@ def delete_operator_account(account_id):
             "operator_accounts", account_id,
             {"deleted": dict(old)} if old else None,
             record_label=f"{old['tax_id']} ({old['email']})" if old else None
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "ลบสำเร็จ"}
+    }), 200
+
+
+# ════════════════════════════════════════════════════════
+# 5.4c จัดการบัญชีผู้ดูแลระบบ (admin_users) — super_admin เท่านั้น
+# ════════════════════════════════════════════════════════
+
+@admin_bp.route("/admins", methods=["GET"])
+@jwt_required()
+@require_admin
+@require_super_admin
+def get_admins():
+    """ดูรายชื่อผู้ดูแลระบบทั้งหมด"""
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT id, email, full_name, role, is_active, created_at, last_login_at
+                FROM admin_users
+                ORDER BY created_at DESC
+            """)
+            admins = cur.fetchall()
+
+    for a in admins:
+        a["created_at"]    = date_to_str(a["created_at"])
+        a["last_login_at"] = date_to_str(a["last_login_at"])
+
+    return jsonify({
+        "success": True,
+        "data": {"admins": admins, "total": len(admins)}
+    }), 200
+
+
+@admin_bp.route("/admins", methods=["POST"])
+@jwt_required()
+@require_admin
+@require_super_admin
+def create_admin():
+    """เพิ่มบัญชีผู้ดูแลระบบใหม่"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    email     = str(data.get("email", "")).strip().lower()
+    password  = str(data.get("password", ""))
+    full_name = str(data.get("full_name", "")).strip()
+    role      = str(data.get("role", "admin")).strip()
+
+    if not email or not EMAIL_RE.match(email):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_EMAIL", "message": "รูปแบบอีเมลไม่ถูกต้อง"}
+        }), 400
+
+    if not password or len(password) < 8:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_PASSWORD", "message": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"}
+        }), 400
+
+    if role not in ("super_admin", "admin"):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_ROLE", "message": "role ต้องเป็น super_admin หรือ admin"}
+        }), 400
+
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            try:
+                cur.execute(
+                    "INSERT INTO admin_users (email, password_hash, full_name, role) VALUES (%s, %s, %s, %s)",
+                    (email, password_hash, full_name, role)
+                )
+                cur.execute("SELECT id FROM admin_users WHERE email = %s", (email,))
+                new_id = cur.fetchone()["id"]
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "DUPLICATE", "message": "อีเมลนี้มีบัญชีผู้ดูแลระบบอยู่แล้ว"}
+                    }), 400
+                raise
+
+        save_audit_log(
+            db, admin_email, f"เพิ่มบัญชีผู้ดูแลระบบ {email} ({role})",
+            "admin_users", new_id,
+            {"email": email, "full_name": full_name, "role": role},
+            record_label=email
+        )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"id": new_id}
+    }), 201
+
+
+@admin_bp.route("/admins/<admin_id>/role", methods=["PUT"])
+@jwt_required()
+@require_admin
+@require_super_admin
+def update_admin_role(admin_id):
+    """เปลี่ยน role ของผู้ดูแลระบบ (super_admin/admin)"""
+    admin_email = get_jwt_identity()
+    data        = request.get_json() or {}
+
+    role = str(data.get("role", "")).strip()
+    if role not in ("super_admin", "admin"):
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_ROLE", "message": "role ต้องเป็น super_admin หรือ admin"}
+        }), 400
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("SELECT * FROM admin_users WHERE id = %s", (admin_id,))
+            old = cur.fetchone()
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบบัญชีผู้ดูแลระบบ"}
+                }), 404
+
+            # กันไม่ให้ระบบเหลือ super_admin 0 คน
+            if old["role"] == "super_admin" and role != "super_admin":
+                cur.execute(
+                    "SELECT COUNT(*) AS c FROM admin_users WHERE role = 'super_admin'"
+                )
+                if cur.fetchone()["c"] <= 1:
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "LAST_SUPER_ADMIN",
+                                  "message": "ต้องมีผู้ดูแลระบบระดับสูงสุดอย่างน้อย 1 คนเสมอ"}
+                    }), 400
+
+            cur.execute(
+                "UPDATE admin_users SET role = %s WHERE id = %s",
+                (role, admin_id)
+            )
+
+        if old["role"] != role:
+            save_audit_log(
+                db, admin_email, f"เปลี่ยน role ผู้ดูแลระบบ {old['email']}",
+                "admin_users", admin_id,
+                {"role": {"old": old["role"], "new": role}},
+                record_label=old["email"]
+            )
+        db.commit()
+
+    return jsonify({
+        "success": True,
+        "data": {"message": "แก้ไขสำเร็จ"}
+    }), 200
+
+
+@admin_bp.route("/admins/<admin_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin
+@require_super_admin
+def delete_admin(admin_id):
+    """ลบบัญชีผู้ดูแลระบบ"""
+    admin_email = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("SELECT * FROM admin_users WHERE id = %s", (admin_id,))
+            old = cur.fetchone()
+            if not old:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบบัญชีผู้ดูแลระบบ"}
+                }), 404
+
+            if old["email"] == admin_email:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "CANNOT_DELETE_SELF", "message": "ไม่สามารถลบบัญชีของตัวเองได้"}
+                }), 400
+
+            if old["role"] == "super_admin":
+                cur.execute(
+                    "SELECT COUNT(*) AS c FROM admin_users WHERE role = 'super_admin'"
+                )
+                if cur.fetchone()["c"] <= 1:
+                    return jsonify({
+                        "success": False,
+                        "error": {"code": "LAST_SUPER_ADMIN",
+                                  "message": "ต้องมีผู้ดูแลระบบระดับสูงสุดอย่างน้อย 1 คนเสมอ"}
+                    }), 400
+
+            cur.execute("DELETE FROM admin_users WHERE id = %s", (admin_id,))
+
+        save_audit_log(
+            db, admin_email, f"ลบบัญชีผู้ดูแลระบบ {old['email']}",
+            "admin_users", admin_id,
+            {"deleted": {"email": old["email"], "role": old["role"]}},
+            record_label=old["email"]
         )
         db.commit()
 

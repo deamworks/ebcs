@@ -67,6 +67,11 @@ function enterDashboard(email, fullName) {
   const emailEl = document.getElementById('adminEmailDisplay');
   if (emailEl) { emailEl.textContent = fullName || email; emailEl.title = email; }
   if (typeof initDatepickers === 'function') initDatepickers();
+
+  // แท็บ "จัดการผู้ดูแลระบบ" แสดงเฉพาะ super_admin
+  const adminsGroup = document.getElementById('sbGroupAdmins');
+  if (adminsGroup) adminsGroup.style.display = (auth.getAdminRole() === 'super_admin') ? '' : 'none';
+
   setTimeout(() => showPage('submissions'), 50);
 }
 
@@ -169,6 +174,7 @@ const AUDIT_FIELD_TH = {
   operator_name:          'ชื่อผู้ประกอบการ',
   tax_id:                 'เลขประจำตัวผู้เสียภาษี',
   email:                  'อีเมล',
+  role:                   'Role',
   total_income:           'รายได้รวม',
   total_income_financial: 'รายได้รวมตามงบการเงิน',
   deduction_amount:       'เงินลดหย่อน',
@@ -703,6 +709,7 @@ async function deleteLicense(id, no) {
     'import-taxpayer': { title: 'นำเข้าข้อมูลผู้ประกอบการ', sub: 'นำเข้าข้อมูลผู้ประกอบการจากไฟล์ Excel' },
     export:             { title: 'ส่งออกข้อมูล',           sub: 'ส่งออกรายการยื่นแบบเป็นไฟล์ Excel' },
     audit:             { title: 'บันทึกการแก้ไขข้อมูล',   sub: 'ประวัติการแก้ไขข้อมูลทั้งหมดในระบบ' },
+    admins:            { title: 'จัดการผู้ดูแลระบบ',      sub: 'เพิ่ม/แก้ไข role/ลบบัญชีผู้ดูแลระบบ' },
   };
 
   // ── Sidebar: เปิด/ปิดกลุ่มเมนู ──────────────────────────────
@@ -741,6 +748,7 @@ async function deleteLicense(id, no) {
     if (page === 'taxpayers')   { loadTaxpayers(); loadLicenses(); loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'audit')       loadAuditLogs();
     if (page === 'export')      loadExportPage();
+    if (page === 'admins' && typeof loadAdmins === 'function') loadAdmins();
   }
 
   // ── ปิด sidebar อัตโนมัติ หลังกดเลือกเมนูจากแถบด้านข้างเสร็จแล้ว

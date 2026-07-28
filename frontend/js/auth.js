@@ -70,6 +70,17 @@ const auth = (() => {
     [KEY_ADMIN, KEY_ADMIN_EMAIL].forEach(k => localStorage.removeItem(k));
   }
 
+  // admin_role: 'super_admin' หรือ 'admin' — อ่านจาก claim ใน JWT โดยตรง (ไม่ต้องเก็บแยก)
+  function getAdminRole() {
+    const token = getAdminToken();
+    if (!token) return '';
+    try {
+      return JSON.parse(atob(token.split('.')[1])).admin_role || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // ── Clear All ──────────────────────────────────────────
   function clearAll() {
     clearOperator();
@@ -134,6 +145,7 @@ const auth = (() => {
     saveAdmin,
     getAdminToken,
     getAdminEmail,
+    getAdminRole,
     clearAdmin,
     logoutAdmin,
     requireAdmin,
