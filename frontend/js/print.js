@@ -886,10 +886,22 @@ function printDepositSlip() {
   const logoHtml = `<img src="${customLogoDataUrl || _nbtcSealLogoDataUrl}" width="64" height="74" alt="logo" style="display:block;object-fit:contain;flex-shrink:0;"/>`;
 
   const bankGrid = [
-    'ธ.กสิกรไทย', 'ธ.ทีเอ็มบีธนชาติ', 'ธ.ซีไอเอ็มบีไทย', 'ธ.ไอซีบีซี(ไทย)', 'ธ.เกียรตินาคิน',
-    'ธ.ไทยพาณิชย์', 'ธ.ออมสิน', 'ธ.ยูโอบี', 'ธ.ซิตี้แบงก์ เอ็น.เอ.', 'ธ.กรุงไทย',
-    'ธ.กรุงเทพ', 'ธ.มิซูโฮ', 'ธ.กรุงศรีอยุธยา', 'ธ.ทิสโก้',
+    { n: 'ธ.กสิกรไทย',           a: 'K',    c: '#00a950' },
+    { n: 'ธ.ทีเอ็มบีธนชาติ',       a: 'ttb',  c: '#1279be' },
+    { n: 'ธ.ซีไอเอ็มบีไทย',        a: 'C',    c: '#7e2426' },
+    { n: 'ธ.ไอซีบีซี(ไทย)',        a: 'I',    c: '#c8161d' },
+    { n: 'ธ.เกียรตินาคิน',         a: 'K',    c: '#000000' },
+    { n: 'ธ.ไทยพาณิชย์',          a: 'SCB',  c: '#4e2a84' },
+    { n: 'ธ.ออมสิน',              a: 'GSB',  c: '#ec1c79' },
+    { n: 'ธ.ยูโอบี',               a: 'UOB',  c: '#0b3979' },
+    { n: 'ธ.ซิตี้แบงก์ เอ็น.เอ.',    a: 'citi', c: '#003b70' },
+    { n: 'ธ.กรุงไทย',             a: 'KTB',  c: '#1ba5e1' },
+    { n: 'ธ.กรุงเทพ',             a: 'BBL',  c: '#1e4598' },
+    { n: 'ธ.มิซูโฮ',               a: 'MHCB', c: '#003a70' },
+    { n: 'ธ.กรุงศรีอยุธยา',        a: 'BAY',  c: '#fec43b' },
+    { n: 'ธ.ทิสโก้',               a: 'T',    c: '#00838f' },
   ];
+  const bankBadge = (b) => `<span class="ds-bank-icon" style="background:${b.c};">${b.a}</span> ${b.n}`;
 
   const css = `
     .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
@@ -923,6 +935,7 @@ function printDepositSlip() {
     .ds-bank-grid { flex:1; border:1px solid #ccc; border-radius:6px; padding:8px 10px; }
     .ds-bank-grid table { width:100%; border-collapse:collapse; }
     .ds-bank-grid td { font-size:10px; padding:4px 8px; white-space:nowrap; }
+    .ds-bank-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#fff; font-size:7px; font-weight:700; margin-right:4px; vertical-align:middle; }
     .ds-qr-box { flex-shrink:0; width:80px; text-align:center; }
     .ds-qr-box img { width:100%; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
     .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 96px); margin-left:auto; margin-right:auto; }
@@ -1018,9 +1031,9 @@ function printDepositSlip() {
         <div class="ds-bank-grid-wrap">
           <div class="ds-bank-grid">
             <table>
-              <tr>${bankGrid.slice(0, 5).map(b => `<td>${b}</td>`).join('')}</tr>
-              <tr>${bankGrid.slice(5, 10).map(b => `<td>${b}</td>`).join('')}</tr>
-              <tr>${bankGrid.slice(10, 14).map(b => `<td>${b}</td>`).join('')}</tr>
+              <tr>${bankGrid.slice(0, 5).map(b => `<td>${bankBadge(b)}</td>`).join('')}</tr>
+              <tr>${bankGrid.slice(5, 10).map(b => `<td>${bankBadge(b)}</td>`).join('')}</tr>
+              <tr>${bankGrid.slice(10, 14).map(b => `<td>${bankBadge(b)}</td>`).join('')}</tr>
             </table>
           </div>
           <div class="ds-qr-box">
