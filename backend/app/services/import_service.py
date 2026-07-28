@@ -636,17 +636,15 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, nam
     elif tax_id in seen_tax_ids:
         errs.append(f"เลขผู้เสียภาษี '{tax_id}' ซ้ำในไฟล์")
 
+    # ชื่อผู้ประกอบการ: อ่านค่าไม่ได้/ว่าง ก็ไม่ block การนำเข้า — เว้นว่างไว้ แอดมินแก้ทีหลังได้
     operator_name = str(row[name_col]).strip() if len(row) > name_col and row[name_col] is not None else ""
-    if not operator_name:
-        errs.append("ชื่อผู้ประกอบการว่าง")
 
-    email_raw = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
+    # อีเมล: อ่านค่าไม่ได้/ว่าง หรือรูปแบบไม่ถูกต้อง (เช่น เป็นเบอร์โทร) ก็ไม่ block เช่นกัน — เว้นว่างไว้
     # [FIX] บางไฟล์ใส่หลายอีเมลคั่นด้วย , หรือ ; ในช่องเดียว (เช่น admin@x.co.th, admin2@x.co.th)
     # แต่ระบบส่ง OTP ไปอีเมลเดียวต่อ 1 บัญชีเสมอ — ใช้แค่อีเมลแรกที่เจอ
-    email = re.split(r"[,;]", email_raw)[0].strip() if email_raw else ""
-    # เว้นว่างได้ (แอดมินมาเพิ่มอีเมลทีหลังผ่านหน้าแก้ไขได้) แต่ถ้ากรอกมาต้องเป็นรูปแบบที่ถูกต้อง
-    if email and not EMAIL_RE.match(email):
-        errs.append(f"email '{email_raw}' รูปแบบไม่ถูกต้อง")
+    email_raw = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
+    email_candidate = re.split(r"[,;]", email_raw)[0].strip() if email_raw else ""
+    email = email_candidate if EMAIL_RE.match(email_candidate) else ""
 
     if errs:
         return None, {"row": excel_row_num, "message": ", ".join(errs)}
