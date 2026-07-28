@@ -132,6 +132,14 @@ async function saveTaxpayer() {
 
 let _licenseeImportFile = null;
 
+/** แปลงสถานะใบอนุญาต (เก็บเป็น key ภาษาอังกฤษ) เป็นข้อความภาษาไทยสำหรับตารางตัวอย่างนำเข้า */
+const LICENSEE_IMPORT_STATUS_TH = {
+  active:    'ปกติ',
+  cancelled: 'ยกเลิก',
+  revoked:   'เพิกถอน',
+  ended:     'สิ้นสุด',
+};
+
 async function handleLicenseeFile(input) {
   const file = input.files?.[0] || null;
   _licenseeImportFile = file;
@@ -170,7 +178,7 @@ async function handleLicenseeFile(input) {
         <td>${r.license_type || ''}</td>
         <td>${fdISOToThai(r.license_start)}</td>
         <td>${fdISOToThai(r.license_end)}</td>
-        <td>${r.license_status || ''}</td>
+        <td>${LICENSEE_IMPORT_STATUS_TH[r.license_status] || r.license_status || ''}</td>
         <td style="text-align:center;color:#16a34a;">✓</td>
       </tr>`).join('')
     : `<tr><td colspan="9" style="text-align:center;color:#aaa;padding:12px;">ไม่มีแถวที่ถูกต้อง</td></tr>`;
