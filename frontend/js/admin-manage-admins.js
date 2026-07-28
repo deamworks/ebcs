@@ -43,7 +43,10 @@ function renderAdminsTable() {
 function openAdminModal() {
   document.getElementById('admin-ml-email').value    = '';
   document.getElementById('admin-ml-name').value     = '';
-  document.getElementById('admin-ml-password').value = '';
+  const pwdEl = document.getElementById('admin-ml-password');
+  pwdEl.value = '';
+  pwdEl.type  = 'password';
+  pwdEl.closest('.pwd-field-wrap')?.querySelector('.pwd-toggle-btn')?.classList.remove('showing');
   document.getElementById('admin-ml-role').value      = 'admin';
   document.getElementById('admin-modal').style.display = 'flex';
 }

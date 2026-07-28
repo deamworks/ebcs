@@ -12,6 +12,16 @@
 //   auth.logoutAdmin();       ← logout เจ้าหน้าที่
 // ════════════════════════════════════════════════════
 
+// ── ปุ่มแสดง/ซ่อนรหัสผ่าน ใช้ร่วมกันทุกช่องกรอกรหัสผ่านในระบบ ──
+// ต้องอยู่ใน .pwd-field-wrap เดียวกับ <input> ที่จะสลับ type
+function togglePwdVisibility(btn) {
+  const input = btn.closest('.pwd-field-wrap')?.querySelector('input');
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.classList.toggle('showing', show);
+}
+
 const auth = (() => {
 
   // ── Keys ────────────────────────────────────────────
