@@ -82,15 +82,20 @@ function enterDashboard(email, fullName) {
     if (p.full_name) setDisplay(p.full_name);
   }).catch(() => {});
 
-  // แท็บ "จัดการผู้ดูแลระบบ" แสดงเฉพาะ super_admin
+  // แท็บ "จัดการผู้ดูแลระบบ" และ "นำเข้าข้อมูล" แสดงเฉพาะ super_admin
   const isSuperAdmin = auth.getAdminRole() === 'super_admin';
   const adminsGroup = document.getElementById('sbGroupAdmins');
   if (adminsGroup) adminsGroup.style.display = isSuperAdmin ? '' : 'none';
+  const importGroup = document.getElementById('sbGroupImport');
+  if (importGroup) importGroup.style.display = isSuperAdmin ? '' : 'none';
+
+  const IMPORT_PAGES = ['import-taxpayer', 'import-licensee', 'import-operator-accounts', 'import-batches'];
 
   // กลับไปหน้าเดิมที่เปิดล่าสุด ถ้า refresh browser (ไม่ใช่กลับไปรายการยื่นแบบเสมอ)
   let lastPage = 'submissions';
   try { lastPage = sessionStorage.getItem('ebcs_admin_last_page') || 'submissions'; } catch (e) {}
   if (lastPage === 'admins' && !isSuperAdmin) lastPage = 'submissions';
+  if (IMPORT_PAGES.includes(lastPage) && !isSuperAdmin) lastPage = 'submissions';
   if (!document.getElementById('page-' + lastPage)) lastPage = 'submissions';
 
   if (typeof restoreSidebarGroupsState === 'function') restoreSidebarGroupsState(lastPage);

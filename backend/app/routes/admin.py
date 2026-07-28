@@ -1878,6 +1878,7 @@ def get_audit_logs():
 @admin_bp.route("/import/taxpayers", methods=["POST"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def import_taxpayers_route():
     """
     Import Excel ผู้ประกอบการ
@@ -1950,6 +1951,7 @@ def import_taxpayers_route():
 @admin_bp.route("/import/licensees", methods=["POST"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def import_licensees_route():
     """Import Excel ใบอนุญาต"""
     admin_email = get_jwt_identity()
@@ -2018,6 +2020,7 @@ def import_licensees_route():
 @admin_bp.route("/import/operator-accounts", methods=["POST"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def import_operator_accounts_route():
     """
     Import Excel บัญชีผู้ประกอบการ
@@ -2133,6 +2136,7 @@ def export_payments():
 @admin_bp.route("/import/contacts", methods=["POST"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def import_contacts_route():
     """
     Import Excel ที่อยู่ผู้ประกอบการ
@@ -2215,6 +2219,7 @@ IMPORT_TYPE_TH = {
 @admin_bp.route("/import-batches", methods=["GET"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def get_import_batches():
     """รายการประวัติการนำเข้าข้อมูลทั้งหมด (ไม่รวม snapshot ดิบ เพื่อลดขนาด response)"""
     with get_db() as db:
@@ -2257,6 +2262,7 @@ def _restore_snapshot_row(cur, entry):
 @admin_bp.route("/import-batches/<batch_id>/rollback", methods=["POST"])
 @jwt_required()
 @require_admin
+@require_super_admin
 def rollback_import_batch(batch_id):
     """ย้อนกลับการนำเข้าข้อมูลทั้ง batch โดยคืนค่าทุกแถวกลับไปตาม snapshot ก่อนนำเข้า"""
     admin_email = get_jwt_identity()
