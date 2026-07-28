@@ -117,6 +117,9 @@ CREATE TABLE submissions (
   due_date      DATE NULL,
 
   status ENUM('draft','pending_payment','paid') DEFAULT 'draft' COMMENT 'คำนวณจากการกระทำจริง',
+  datacenter_ref VARCHAR(50) NULL COMMENT 'reference จาก Data Center (mock จนกว่าจะเชื่อมต่อจริง)',
+  sap_doc_no     VARCHAR(50) NULL COMMENT 'เลขที่เอกสารตั้งหนี้ใน SAP/ZAT (mock จนกว่าจะเชื่อมต่อจริง)',
+  sap_status     ENUM('not_sent','mock_sent','confirmed') NOT NULL DEFAULT 'not_sent',
 
   total_income     DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวม',
   total_income_financial DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมตามงบการเงิน (กรอกเอง Step 1)',
@@ -261,6 +264,22 @@ CREATE TABLE audit_logs (
 
   INDEX idx_log_created (created_at DESC),
   INDEX idx_log_table   (table_name)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- log การเชื่อมต่อ Data Center/SAP(ZAT) ต่อใบยื่น — ปัจจุบันเป็น mock ทั้งหมด
+CREATE TABLE integration_log (
+  id               CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  submission_id    CHAR(36) NOT NULL,
+  system           ENUM('datacenter','sap') NOT NULL,
+  action           VARCHAR(50) NOT NULL,
+  status           ENUM('success','failed') NOT NULL DEFAULT 'success',
+  request_payload  JSON NULL,
+  response_payload JSON NULL,
+  created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_il_sub (submission_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
