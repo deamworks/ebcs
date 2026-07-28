@@ -640,9 +640,12 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, nam
     if not operator_name:
         errs.append("ชื่อผู้ประกอบการว่าง")
 
-    email = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
+    email_raw = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
+    # [FIX] บางไฟล์ใส่หลายอีเมลคั่นด้วย , หรือ ; ในช่องเดียว (เช่น admin@x.co.th, admin2@x.co.th)
+    # แต่ระบบส่ง OTP ไปอีเมลเดียวต่อ 1 บัญชีเสมอ — ใช้แค่อีเมลแรกที่เจอ
+    email = re.split(r"[,;]", email_raw)[0].strip() if email_raw else ""
     if not email or not EMAIL_RE.match(email):
-        errs.append(f"email '{email}' รูปแบบไม่ถูกต้อง")
+        errs.append(f"email '{email_raw}' รูปแบบไม่ถูกต้อง")
 
     if errs:
         return None, {"row": excel_row_num, "message": ", ".join(errs)}
