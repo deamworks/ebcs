@@ -1906,8 +1906,8 @@ def import_taxpayers_route():
                 "total_rows":   len(rows) + len(errors),
                 "valid_rows":   len(rows),
                 "error_rows":   len(errors),
-                "errors":       errors[:20],
-                "preview_data": rows[:5]
+                "errors":       errors,
+                "preview_data": rows
             }
         }), 200
 
@@ -1917,7 +1917,7 @@ def import_taxpayers_route():
             "error": {
                 "code":    "VALIDATION_ERROR",
                 "message": f"มีข้อผิดพลาด {len(errors)} แถว",
-                "errors":  errors[:20]
+                "errors":  errors
             }
         }), 400
 
@@ -1974,8 +1974,8 @@ def import_licensees_route():
                 "total_rows":   len(rows) + len(errors),
                 "valid_rows":   len(rows),
                 "error_rows":   len(errors),
-                "errors":       errors[:20],
-                "preview_data": rows[:5]
+                "errors":       errors,
+                "preview_data": rows
             }
         }), 200
 
@@ -1985,7 +1985,7 @@ def import_licensees_route():
             "error": {
                 "code":    "VALIDATION_ERROR",
                 "message": f"มีข้อผิดพลาด {len(errors)} แถว",
-                "errors":  errors[:20]
+                "errors":  errors
             }
         }), 400
 
@@ -2047,8 +2047,8 @@ def import_operator_accounts_route():
                 "total_rows":   len(rows) + len(errors),
                 "valid_rows":   len(rows),
                 "error_rows":   len(errors),
-                "errors":       errors[:20],
-                "preview_data": rows[:5]
+                "errors":       errors,
+                "preview_data": rows
             }
         }), 200
 
@@ -2079,7 +2079,7 @@ def import_operator_accounts_route():
             "inserted": result["inserted"],
             "updated":  result["updated"],
             "skipped":  len(errors),
-            "errors":   errors[:20],
+            "errors":   errors,
             "message":  message
         }
     }), 200
@@ -2162,8 +2162,8 @@ def import_contacts_route():
                 "total_rows":   len(rows) + len(errors),
                 "valid_rows":   len(rows),
                 "error_rows":   len(errors),
-                "errors":       errors[:20],
-                "preview_data": rows[:5]
+                "errors":       errors,
+                "preview_data": rows
             }
         }), 200
 
@@ -2173,7 +2173,7 @@ def import_contacts_route():
             "error": {
                 "code":    "VALIDATION_ERROR",
                 "message": f"มีข้อผิดพลาด {len(errors)} แถว",
-                "errors":  errors[:20]
+                "errors":  errors
             }
         }), 400
 
