@@ -562,10 +562,13 @@
         <!-- table toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
           <span id="oa-count" style="font-size:12px;color:#888;"></span>
-          <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, loadOperatorAccounts)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-            รีเฟรช
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, loadOperatorAccounts)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              รีเฟรช
+            </button>
+            <button class="adm-btn adm-btn-sm adm-btn-primary" onclick="openAddOperatorAccountModal()">+ เพิ่มบัญชีผู้ประกอบการ</button>
+          </div>
         </div>
         <div class="adm-card">
           <div style="overflow-x:auto;">
@@ -606,6 +609,36 @@
           <div class="adm-modal-ft">
             <button class="adm-btn" onclick="closeOperatorAccountModal()">ยกเลิก</button>
             <button class="adm-btn adm-btn-primary" onclick="saveOperatorAccountEmail()">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Operator Account Add Modal (เพิ่มบัญชีผู้ประกอบการทีละรายการ) ══ -->
+      <div class="adm-modal-overlay" id="oa-add-modal">
+        <div class="adm-modal-box">
+          <div class="adm-modal-hd">
+            <span>เพิ่มบัญชีผู้ประกอบการ</span>
+            <button class="adm-modal-close" onclick="closeAddOperatorAccountModal()">×</button>
+          </div>
+          <div class="adm-modal-body">
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                <input class="adm-form-input" id="oa-add-taxid" inputmode="numeric" maxlength="13" placeholder="เช่น 0123456789012">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>ชื่อผู้ประกอบการ</label>
+                <input class="adm-form-input" id="oa-add-name" placeholder="ชื่อบริษัท">
+              </div>
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>อีเมล</label>
+                <input class="adm-form-input" id="oa-add-email" type="email" placeholder="เช่น contact@company.co.th">
+              </div>
+            </div>
+          </div>
+          <div class="adm-modal-ft">
+            <button class="adm-btn" onclick="closeAddOperatorAccountModal()">ยกเลิก</button>
+            <button class="adm-btn adm-btn-primary" onclick="saveNewOperatorAccount()">บันทึก</button>
           </div>
         </div>
       </div>
