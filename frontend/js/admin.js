@@ -69,10 +69,17 @@ function enterDashboard(email, fullName) {
   if (typeof initDatepickers === 'function') initDatepickers();
 
   // แท็บ "จัดการผู้ดูแลระบบ" แสดงเฉพาะ super_admin
+  const isSuperAdmin = auth.getAdminRole() === 'super_admin';
   const adminsGroup = document.getElementById('sbGroupAdmins');
-  if (adminsGroup) adminsGroup.style.display = (auth.getAdminRole() === 'super_admin') ? '' : 'none';
+  if (adminsGroup) adminsGroup.style.display = isSuperAdmin ? '' : 'none';
 
-  setTimeout(() => showPage('submissions'), 50);
+  // กลับไปหน้าเดิมที่เปิดล่าสุด ถ้า refresh browser (ไม่ใช่กลับไปรายการยื่นแบบเสมอ)
+  let lastPage = 'submissions';
+  try { lastPage = sessionStorage.getItem('ebcs_admin_last_page') || 'submissions'; } catch (e) {}
+  if (lastPage === 'admins' && !isSuperAdmin) lastPage = 'submissions';
+  if (!document.getElementById('page-' + lastPage)) lastPage = 'submissions';
+
+  setTimeout(() => showPage(lastPage), 50);
 }
 
 function handleLogout() { auth.logoutAdmin(); }
@@ -710,6 +717,7 @@ async function deleteLicense(id, no) {
     export:             { title: 'ส่งออกข้อมูล',           sub: 'ส่งออกรายการยื่นแบบเป็นไฟล์ Excel' },
     audit:             { title: 'บันทึกการแก้ไขข้อมูล',   sub: 'ประวัติการแก้ไขข้อมูลทั้งหมดในระบบ' },
     admins:            { title: 'จัดการผู้ดูแลระบบ',      sub: 'เพิ่ม/แก้ไข role/ลบบัญชีผู้ดูแลระบบ' },
+    profile:           { title: 'โปรไฟล์',                 sub: 'ข้อมูลบัญชีของฉันและเปลี่ยนรหัสผ่าน' },
   };
 
   // ── Sidebar: เปิด/ปิดกลุ่มเมนู ──────────────────────────────
@@ -736,6 +744,12 @@ async function deleteLicense(id, no) {
     document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
     document.getElementById('page-' + page)?.classList.add('active');
     document.querySelector(`.sb-item[data-page="${page}"]`)?.classList.add('active');
+
+    // จำหน้าที่เปิดล่าสุดไว้ เพื่อกลับมาหน้าเดิมถ้า refresh browser
+    // (taxpayer-detail ต้องมี activeTaxpayerTaxId ที่หายไปตอน refresh จึงจำเป็น taxpayers แทน)
+    try {
+      sessionStorage.setItem('ebcs_admin_last_page', page === 'taxpayer-detail' ? 'taxpayers' : page);
+    } catch (e) {}
     const meta = PAGE_META[page] || {};
     document.getElementById('pageTitle').textContent    = meta.title || page;
     document.getElementById('pageSubtitle').textContent = meta.sub   || '';
@@ -749,6 +763,7 @@ async function deleteLicense(id, no) {
     if (page === 'audit')       loadAuditLogs();
     if (page === 'export')      loadExportPage();
     if (page === 'admins' && typeof loadAdmins === 'function') loadAdmins();
+    if (page === 'profile' && typeof loadAdminProfile === 'function') loadAdminProfile();
   }
 
   // ── ปิด sidebar อัตโนมัติ หลังกดเลือกเมนูจากแถบด้านข้างเสร็จแล้ว
