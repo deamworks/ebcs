@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS import_batches (
 
   import_type   ENUM('taxpayer','license','operator_account') NOT NULL,
 
-  imported_by   VARCHAR(255)  NOT NULL COMMENT 'อีเมลแอดมินที่นำเข้า',
+  imported_by   VARCHAR(255)  NOT NULL,
   imported_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
 
   row_count     INT           NOT NULL DEFAULT 0,
