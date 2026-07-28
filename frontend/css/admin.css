@@ -832,8 +832,8 @@
     .sb-footer { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.1); }
     .sb-profile-card {
       display: flex; align-items: center; gap: 10px;
-      background: #fff; border-radius: 12px; padding: 8px 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 8px 10px;
     }
     .sb-avatar {
       flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
@@ -844,19 +844,19 @@
     }
     .sb-profile-text { min-width: 0; flex: 1; }
     .sb-profile-name {
-      font-size: 12.5px; font-weight: 600; color: #222;
+      font-size: 12.5px; font-weight: 600; color: #fff;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .sb-profile-email {
-      font-size: 10.5px; color: #8a8f9c; margin-top: 1px;
+      font-size: 10.5px; color: rgba(255,255,255,.55); margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .sb-logout-btn {
       flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
-      border: none; background: transparent; color: #c0392b; cursor: pointer;
+      border: none; background: transparent; color: rgba(255,255,255,.6); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
-    .sb-logout-btn:hover { background: #fdecec; }
+    .sb-logout-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
 
     /* ── Main Content ────────────────────────────────────────── */
     .admin-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f7fa; }
