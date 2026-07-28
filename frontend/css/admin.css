@@ -945,6 +945,14 @@
     .adm-search-input-wrap input:focus {
       outline: none; border-color: #2e86ab; box-shadow: 0 0 0 3px rgba(46,134,171,0.12);
     }
+    /* input[type=search] เพิ่มปุ่ม native (แว่นขยาย/กากบาทล้าง) มาเอง — เอาออกให้เหมือนเดิม */
+    .adm-search-input-wrap input[type="search"]::-webkit-search-decoration,
+    .adm-search-input-wrap input[type="search"]::-webkit-search-cancel-button,
+    .adm-search-input-wrap input[type="search"]::-webkit-search-results-button,
+    .adm-search-input-wrap input[type="search"]::-webkit-search-results-decoration {
+      -webkit-appearance: none;
+      appearance: none;
+    }
     .adm-search-btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       flex-shrink: 0; height: 42px; padding: 0 16px; border-radius: 10px;

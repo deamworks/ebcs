@@ -62,8 +62,6 @@ async function handleLogin() {
 
 function enterDashboard(email, fullName) {
   currentAdminEmail = email;
-  const shell = document.getElementById('adminShell');
-  if (shell) shell.style.display = 'flex';
   const emailEl = document.getElementById('adminEmailDisplay');
   if (emailEl) { emailEl.textContent = fullName || email; emailEl.title = email; }
   if (typeof initDatepickers === 'function') initDatepickers();
@@ -81,7 +79,12 @@ function enterDashboard(email, fullName) {
 
   if (typeof restoreSidebarGroupsState === 'function') restoreSidebarGroupsState(lastPage);
 
-  setTimeout(() => showPage(lastPage), 50);
+  // [FIX] เดิมเปิด adminShell (display:flex) ก่อน แล้วค่อย showPage(lastPage) หลัง
+  // delay 50ms — ทำให้เห็นหน้า "รายการยื่นแบบ" (active ตาม HTML เริ่มต้น) วาบขึ้นมา
+  // ก่อนสลับไปหน้าที่ถูกต้อง ต้อง showPage ให้เสร็จก่อน แล้วค่อยเปิด shell ให้เห็น
+  showPage(lastPage);
+  const shell = document.getElementById('adminShell');
+  if (shell) shell.style.display = 'flex';
 
   // เบราว์เซอร์บาง engine เพิกเฉย autocomplete="off" กับช่องค้นหา แล้ว autofill
   // ค่าที่เคยเซฟไว้กลับมาเองหลังโหลดหน้า — เคลียร์ค่าซ้ำหลัง render เพื่อกันไว้
