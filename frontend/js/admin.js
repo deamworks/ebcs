@@ -79,6 +79,8 @@ function enterDashboard(email, fullName) {
   if (lastPage === 'admins' && !isSuperAdmin) lastPage = 'submissions';
   if (!document.getElementById('page-' + lastPage)) lastPage = 'submissions';
 
+  if (typeof restoreSidebarGroupsState === 'function') restoreSidebarGroupsState(lastPage);
+
   setTimeout(() => showPage(lastPage), 50);
 
   // เบราว์เซอร์บาง engine เพิกเฉย autocomplete="off" กับช่องค้นหา แล้ว autofill
@@ -731,9 +733,33 @@ async function deleteLicense(id, no) {
     profile:           { title: 'โปรไฟล์',                 sub: 'ข้อมูลบัญชีของฉันและเปลี่ยนรหัสผ่าน' },
   };
 
-  // ── Sidebar: เปิด/ปิดกลุ่มเมนู ──────────────────────────────
+  // ── Sidebar: เปิด/ปิดกลุ่มเมนู (จำสถานะไว้ใน sessionStorage กันหายตอน refresh) ──
   function toggleSbGroup(headerEl) {
-    headerEl.parentElement.classList.toggle('collapsed');
+    const group = headerEl.parentElement;
+    group.classList.toggle('collapsed');
+    try {
+      const state = JSON.parse(sessionStorage.getItem('ebcs_admin_sb_state') || '{}');
+      state[group.dataset.group] = group.classList.contains('collapsed');
+      sessionStorage.setItem('ebcs_admin_sb_state', JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  // เรียกตอน enterDashboard: คืนสถานะเปิด/พับของแต่ละกลุ่มที่จำไว้
+  // ถ้ายังไม่เคยมีสถานะที่จำไว้เลย (ครั้งแรก) ให้เปิดเฉพาะกลุ่มของหน้าที่กำลังแสดงอยู่
+  function restoreSidebarGroupsState(activePage) {
+    let state = {};
+    try { state = JSON.parse(sessionStorage.getItem('ebcs_admin_sb_state') || '{}'); } catch (e) {}
+    const hasSaved = Object.keys(state).length > 0;
+
+    document.querySelectorAll('.sb-group').forEach(g => {
+      const key = g.dataset.group;
+      if (hasSaved && key in state) {
+        g.classList.toggle('collapsed', state[key]);
+      } else if (!hasSaved) {
+        const containsActive = !!g.querySelector(`.sb-item[data-page="${activePage}"]`);
+        g.classList.toggle('collapsed', !containsActive);
+      }
+    });
   }
 
   // ── Sidebar: เปิด/ปิดทั้งแถบเมนู (hamburger) ─────────────────
@@ -764,6 +790,22 @@ async function deleteLicense(id, no) {
     const meta = PAGE_META[page] || {};
     document.getElementById('pageTitle').textContent    = meta.title || page;
     document.getElementById('pageSubtitle').textContent = meta.sub   || '';
+
+    // เคลียร์ช่องค้นหาของหน้านี้ตอนแสดงผลจริง — บางเบราว์เซอร์ autofill ค่าเก่ากลับมา
+    // ตอนที่ input เปลี่ยนจากซ่อนเป็นแสดง (ทำหลัง set 'active' ด้านบนแล้ว)
+    const SEARCH_INPUT_BY_PAGE = {
+      submissions:         'filterSearch',
+      licenses:            'lic-search',
+      taxpayers:           'tp-search',
+      'operator-accounts': 'oa-search',
+      audit:               'audit-search',
+    };
+    const searchId = SEARCH_INPUT_BY_PAGE[page];
+    if (searchId) {
+      const clearIt = () => { const el = document.getElementById(searchId); if (el) el.value = ''; };
+      clearIt();
+      setTimeout(clearIt, 300);
+    }
 
     // โหลดข้อมูลตามหน้า
     if (page === 'submissions') { loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
