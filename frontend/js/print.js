@@ -854,11 +854,12 @@ function _emvcoTlv(id, value) {
  * 53 Currency (764=THB), 54 Amount, 58 Country, 59 Merchant Name, 60 City, 63 CRC
  * หมายเหตุ: AID ที่ใช้เป็นค่ามาตรฐานของ Bill Payment ทั่วไป ควรยืนยัน AID จริงกับธนาคารก่อนใช้งานจริง
  */
-function _buildEmvcoQrPayload({ compCode, ref1, ref2, amount }) {
+function _buildEmvcoQrPayload({ billerId, ref1, ref2, amount }) {
   const aid = 'A000000677010111';
+  // Biller ID (sub-tag 01) ต้องเป็นตัวเลข 15 หลักตามสเปก Thai QR Bill Payment
   const merchantInfo =
     _emvcoTlv('00', aid) +
-    _emvcoTlv('01', compCode) +
+    _emvcoTlv('01', billerId) +
     _emvcoTlv('02', ref1) +
     _emvcoTlv('03', ref2);
 
@@ -866,6 +867,7 @@ function _buildEmvcoQrPayload({ compCode, ref1, ref2, amount }) {
     _emvcoTlv('00', '01') +
     _emvcoTlv('01', '12') +
     _emvcoTlv('30', merchantInfo) +
+    _emvcoTlv('52', '0000') + // Merchant Category Code (บังคับตามสเปก EMVCo)
     _emvcoTlv('53', '764') +
     _emvcoTlv('54', amount.toFixed(2)) +
     _emvcoTlv('58', 'TH') +
@@ -890,9 +892,7 @@ function printDepositSlip() {
   const dueDateText = _depositSlipDueDateText();
 
 
-// COMP CODE ธนาคารกสิกรไทย: 32313 (ยืนยันแล้วกับ กสทช./KBank)
-  const compCode = '32313';
-  // เลขประจำตัวผู้เสียภาษี กสทช. + digit ตรวจสอบ ใช้เป็น prefix ของบาร์โค้ด (ยืนยันแล้ว)
+// เลขประจำตัวผู้เสียภาษี กสทช. + digit ตรวจสอบ ใช้เป็น Biller ID ของ QR และ prefix ของบาร์โค้ด (ยืนยันแล้ว)
   const nbtcOrgId = '099400004944702';
   const fiscalYearDigits = _toArabicDigits(appState.year).replace(/\D/g, '');
   const ref1 = taxId;
@@ -903,7 +903,7 @@ function printDepositSlip() {
   const barcodeContent = `|${nbtcOrgId}${ref1}${ref2}${amountCents}`;
 
   // QR Code: EMVCo TLV (Thai QR Payment) พร้อม CRC16 checksum
-  const qrContent = _buildEmvcoQrPayload({ compCode, ref1, ref2, amount: netAmount });
+  const qrContent = _buildEmvcoQrPayload({ billerId: nbtcOrgId, ref1, ref2, amount: netAmount });
 
   console.log('[printDepositSlip] barcode:', barcodeContent);
   console.log('[printDepositSlip] QR (EMVCo TLV):', qrContent);
