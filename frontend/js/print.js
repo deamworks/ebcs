@@ -827,6 +827,55 @@ function _toArabicDigits(str) {
   return String(str || '').replace(/[๐-๙]/g, (d) => String(thaiDigits.indexOf(d)));
 }
 
+/**
+ * CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF) — ใช้กับ tag 63 ของ EMVCo QR
+ */
+function _crc16Ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let b = 0; b < 8; b++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+/** ห่อค่าเป็น TLV (ID 2 หลัก + ความยาว 2 หลัก + ค่า) ตามสเปก EMVCo */
+function _emvcoTlv(id, value) {
+  return `${id}${String(value.length).padStart(2, '0')}${value}`;
+}
+
+/**
+ * สร้าง QR Payload แบบ Thai QR Payment (EMVCo TLV) สำหรับ Bill Payment
+ * โครงสร้าง: 00 Payload Format, 01 Point of Initiation (12=dynamic มีจำนวนเงิน),
+ * 30 Merchant Account Info (00=AID, 01=Comp Code, 02=Ref1, 03=Ref2),
+ * 53 Currency (764=THB), 54 Amount, 58 Country, 59 Merchant Name, 60 City, 63 CRC
+ * หมายเหตุ: AID ที่ใช้เป็นค่ามาตรฐานของ Bill Payment ทั่วไป ควรยืนยัน AID จริงกับธนาคารก่อนใช้งานจริง
+ */
+function _buildEmvcoQrPayload({ compCode, ref1, ref2, amount }) {
+  const aid = 'A000000677010111';
+  const merchantInfo =
+    _emvcoTlv('00', aid) +
+    _emvcoTlv('01', compCode) +
+    _emvcoTlv('02', ref1) +
+    _emvcoTlv('03', ref2);
+
+  let payload =
+    _emvcoTlv('00', '01') +
+    _emvcoTlv('01', '12') +
+    _emvcoTlv('30', merchantInfo) +
+    _emvcoTlv('53', '764') +
+    _emvcoTlv('54', amount.toFixed(2)) +
+    _emvcoTlv('58', 'TH') +
+    _emvcoTlv('59', 'NBTC') +
+    _emvcoTlv('60', 'BANGKOK');
+
+  payload += '6304'; // tag 63 (CRC) ความยาวคงที่ 4 เสมอ
+  return payload + _crc16Ccitt(payload);
+}
+
 function printDepositSlip() {
   renderStep5AndSummary();
 
@@ -841,14 +890,23 @@ function printDepositSlip() {
   const dueDateText = _depositSlipDueDateText();
 
 
-// COMP CODE ธนาคารกสิกรไทย — ยืนยันกับ กสทช./KBANK ก่อน production
-  const compCode = '32313'; 
+// COMP CODE ธนาคารกสิกรไทย: 32313 (ยืนยันแล้วกับ กสทช./KBank)
+  const compCode = '32313';
+  // เลขประจำตัวผู้เสียภาษี กสทช. + digit ตรวจสอบ ใช้เป็น prefix ของบาร์โค้ด (ยืนยันแล้ว)
+  const nbtcOrgId = '099400004944702';
   const fiscalYearDigits = _toArabicDigits(appState.year).replace(/\D/g, '');
   const ref1 = taxId;
   const ref2 = `${refNo.replace(/\D/g, '')}${fiscalYearDigits}`.slice(0, 20);
   const amountCents = String(Math.round(netAmount * 100)).padStart(10, '0');
-  const barcodeContent = `${compCode}${ref1}${ref2}${amountCents}`;
-  const qrContent = `CompCode:${compCode}|Ref1:${ref1}|Ref2:${ref2}|Amount:${netAmountFmt}`;
+
+  // บาร์โค้ด: |{เลขผู้เสียภาษี กสทช.}{Ref1}{Ref2}{จำนวนเงินหน่วยสตางค์}
+  const barcodeContent = `|${nbtcOrgId}${ref1}${ref2}${amountCents}`;
+
+  // QR Code: EMVCo TLV (Thai QR Payment) พร้อม CRC16 checksum
+  const qrContent = _buildEmvcoQrPayload({ compCode, ref1, ref2, amount: netAmount });
+
+  console.log('[printDepositSlip] barcode:', barcodeContent);
+  console.log('[printDepositSlip] QR (EMVCo TLV):', qrContent);
 
   let qrImgTag = '<div style="font-size:10px;color:#999;">[ไม่พบไลบรารี QR Code]</div>';
   if (typeof qrcode === 'function') {
@@ -885,8 +943,9 @@ function printDepositSlip() {
   ];
 
   const css = `
+    @page { size: A5 portrait; margin: 8mm; }
     .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; }
-    .ds-page { padding:14mm 12mm; }
+    .ds-page { padding:6mm 5mm; }
     .ds-title-bar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
     .ds-title-box { border:2px solid #000; padding:6px 12px; font-weight:700; font-size:12.5px; }
     .ds-title-right { text-align:right; font-size:10.5px; }
@@ -1023,7 +1082,7 @@ function printDepositSlip() {
 
         <div class="ds-barcode-wrap">
           ${barcodeImgTag}
-          <div class="ds-ref-mono">${compCode} ${ref1} ${ref2} ${amountCents}</div>
+          <div class="ds-ref-mono">${nbtcOrgId} ${ref1} ${ref2} ${amountCents}</div>
         </div>
 
       </div>
