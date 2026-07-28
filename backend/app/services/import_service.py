@@ -644,7 +644,8 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, nam
     # [FIX] บางไฟล์ใส่หลายอีเมลคั่นด้วย , หรือ ; ในช่องเดียว (เช่น admin@x.co.th, admin2@x.co.th)
     # แต่ระบบส่ง OTP ไปอีเมลเดียวต่อ 1 บัญชีเสมอ — ใช้แค่อีเมลแรกที่เจอ
     email = re.split(r"[,;]", email_raw)[0].strip() if email_raw else ""
-    if not email or not EMAIL_RE.match(email):
+    # เว้นว่างได้ (แอดมินมาเพิ่มอีเมลทีหลังผ่านหน้าแก้ไขได้) แต่ถ้ากรอกมาต้องเป็นรูปแบบที่ถูกต้อง
+    if email and not EMAIL_RE.match(email):
         errs.append(f"email '{email_raw}' รูปแบบไม่ถูกต้อง")
 
     if errs:
