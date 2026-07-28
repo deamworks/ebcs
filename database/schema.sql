@@ -272,7 +272,7 @@ CREATE TABLE audit_logs (
 CREATE TABLE integration_log (
   id               CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   submission_id    CHAR(36) NOT NULL,
-  system           ENUM('datacenter','sap') NOT NULL,
+  target_system    ENUM('datacenter','sap') NOT NULL,
   action           VARCHAR(50) NOT NULL,
   status           ENUM('success','failed') NOT NULL DEFAULT 'success',
   request_payload  JSON NULL,
