@@ -3,8 +3,8 @@
 // ════════════════════════════════════════════════════
 
 const ROLE_TH = {
-  super_admin: 'super_admin (ผู้ดูแลระบบสูงสุด)',
-  admin:       'admin (ผู้ดูแลระบบ)',
+  super_admin: 'ผู้ดูแลระบบสูงสุด',
+  admin:       'ผู้ดูแลระบบ',
 };
 
 async function loadAdminProfile() {
