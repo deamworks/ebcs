@@ -849,7 +849,7 @@
     }
     .sb-profile-email {
       font-size: 10.5px; color: rgba(255,255,255,.55); margin-top: 1px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      overflow-wrap: break-word; word-break: break-all;
     }
     .sb-logout-btn {
       flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
