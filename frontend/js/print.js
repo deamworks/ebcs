@@ -914,7 +914,7 @@ function printDepositSlip() {
       const qr = qrcode(0, 'M'); // typeNumber 0 = auto-detect ขนาดตามความยาวข้อมูล
       qr.addData(qrContent);
       qr.make();
-      qrImgTag = qr.createImgTag(3, 4);
+      qrImgTag = qr.createImgTag(4, 4);
     } catch (e) {
       console.error('[printDepositSlip] สร้าง QR code ไม่สำเร็จ:', e);
     }
@@ -975,9 +975,9 @@ function printDepositSlip() {
     .ds-bank-grid { flex:1; border:1px solid #ccc; border-radius:6px; padding:8px 10px; }
     .ds-bank-grid table { width:100%; border-collapse:collapse; }
     .ds-bank-grid td { font-size:10px; padding:4px 8px; white-space:nowrap; }
-    .ds-qr-box { flex-shrink:0; width:80px; text-align:center; }
+    .ds-qr-box { flex-shrink:0; width:150px; text-align:center; }
     .ds-qr-box img { width:100%; height:auto; }
-    .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 96px); margin-left:auto; margin-right:auto; }
+    .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 166px); margin-left:auto; margin-right:auto; }
     .ds-barcode-wrap img { width:auto; max-width:100%; height:42px; }
     .ds-ref-mono { font-family:monospace; font-size:10px; letter-spacing:1px; margin-top:6px; word-break:break-all; color:#555; }
   `;
