@@ -1,99 +1,49 @@
 -- ════════════════════════════════════════════════════════
 -- e-BCS Database Schema (MySQL 8.0)
--- ไฟล์นี้รันอัตโนมัติตอน MySQL สร้าง database ครั้งแรก
--- ถ้าอยากรันใหม่: ลบโฟลเดอร์ volumes/db แล้ว docker compose up -d
+-- รันอัตโนมัติตอน MySQL สร้าง database ครั้งแรก (ลบ volumes/db เพื่อรันใหม่)
 -- ════════════════════════════════════════════════════════
 
--- ตั้งค่าภาษาให้รองรับภาษาไทย
 SET NAMES utf8mb4;
 
 -- ════════════════════════════════════════════════════════
--- กลุ่มที่ 1: MASTER TABLES
--- แอดมิน Import ข้อมูลเข้ามาก่อนเปิดระบบ
+-- กลุ่มที่ 1: MASTER TABLES (แอดมิน import ก่อนเปิดระบบ)
 -- ════════════════════════════════════════════════════════
 
--- ตาราง: taxpayer_master
--- เก็บข้อมูลผู้ประกอบการที่มีสิทธิ์ยื่นแบบ
--- 1 บริษัท มีได้หลายแถว (แถวละ 1 ปีบัญชี)
--- เช่น บริษัท ABC มีแถวปี 2567 และ 2568 ได้
+-- ผู้ประกอบการที่มีสิทธิ์ยื่นแบบ — 1 บริษัทมีได้หลายแถว (แถวละ 1 ปีบัญชี)
 CREATE TABLE taxpayer_master (
-  -- id: รหัสเฉพาะของแถว สร้างอัตโนมัติเป็น UUID
-  -- UUID ดีกว่า 1,2,3 เพราะเดาไม่ได้ ปลอดภัยกว่า
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
-
-  -- tax_id: เลขประจำตัวผู้เสียภาษี 13 หลัก
   tax_id        VARCHAR(13)  NOT NULL,
-
-  -- operator_name: ชื่อบริษัท/ผู้ประกอบการ
   operator_name VARCHAR(255) NOT NULL,
-
-  -- phone: เบอร์โทร (เดิมใช้รับ OTP ตอน Login — ปัจจุบันเปลี่ยนไปใช้ email แล้ว
-  -- เก็บไว้เผื่ออ้างอิงข้อมูลเก่า ไม่ได้ใช้ใน flow login ปัจจุบัน)
-  phone         VARCHAR(10)  NULL,
-
-  -- email: อีเมลสำหรับรับ OTP ตอน Login (Phase 6-7)
-  email         VARCHAR(255) NULL,
-
-  -- address: ที่อยู่ที่ติดต่อได้ (Import จากไฟล์ Excel ที่อยู่ผู้ประกอบการ)
+  phone         VARCHAR(10)  NULL COMMENT 'ไม่ใช้ใน flow login ปัจจุบัน (เปลี่ยนไปใช้ email แล้ว)',
+  email         VARCHAR(255) NULL COMMENT 'อีเมลรับ OTP ตอน login',
   address       VARCHAR(500) NULL,
-
-
-  -- fiscal_year: ปีบัญชี (พ.ศ.) เช่น 2568
-  fiscal_year   INT          NOT NULL,
-
-  -- ref_no: เลขอ้างอิง แอดมินกำหนดล่วงหน้า
-  -- ผู้ประกอบการนำไปใช้ชำระเงินที่ธนาคาร
-  ref_no        VARCHAR(50)  NULL,
-
-  -- วันเริ่ม-สิ้นสุดรอบบัญชี
+  fiscal_year   INT          NOT NULL COMMENT 'ปีบัญชี (พ.ศ.)',
+  ref_no        VARCHAR(50)  NULL COMMENT 'เลขอ้างอิงสำหรับชำระเงินที่ธนาคาร',
   period_start  DATE NULL,
   period_end    DATE NULL,
-
-  -- วันครบกำหนดชำระเงิน
   due_date      DATE NULL,
-
-  -- created_at: เวลาสร้างแถว (MySQL ใส่ให้อัตโนมัติ)
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-  -- updated_at: เวลาแก้ไขล่าสุด (MySQL อัปเดตให้อัตโนมัติทุกครั้งที่แก้)
   updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  -- UNIQUE: tax_id + fiscal_year ห้ามซ้ำกัน
-  -- ทำให้ Import ซ้ำ = UPDATE แทน INSERT (Upsert)
   UNIQUE KEY uq_tax_year (tax_id, fiscal_year),
-
-  -- INDEX: สร้างดัชนีที่ phone เพราะตอน Login ค้นด้วยเบอร์ทุกครั้ง
-  -- ถ้าไม่มี index MySQL ต้องวนอ่านทุกแถว (ช้ามากถ้ามี 2000 ราย)
   INDEX idx_txp_phone  (phone),
   INDEX idx_txp_tax_id (tax_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: licensee_master
--- เก็บข้อมูลใบอนุญาตทั้งหมดของ กสทช.
--- เลขใบอนุญาตห้ามซ้ำทั้งระบบ (ใบอนุญาต 1 ใบมีเลขเดียวในโลก)
+-- ใบอนุญาตทั้งหมดของ กสทช. — เลขใบอนุญาตห้ามซ้ำทั้งระบบ
 CREATE TABLE licensee_master (
   id             CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   license_no     VARCHAR(50)  NOT NULL COMMENT 'เลขที่ใบอนุญาต',
   tax_id         VARCHAR(13)  NOT NULL COMMENT 'เจ้าของใบอนุญาต',
   company_name   VARCHAR(255) NOT NULL,
-
-  -- licensee_type: ประเภทใบอนุญาต
-  licensee_type  VARCHAR(100) NULL,
-
-  -- license_status: สถานะใบอนุญาต
-  -- ENUM จำกัดให้ใส่ได้แค่ 4 ค่านี้เท่านั้น
-  -- ใส่ค่าอื่น MySQL จะ error ทันที ป้องกันข้อมูลสกปรก
-  license_status ENUM('active','ended','cancelled','revoked')
-                 DEFAULT 'active',
-
+  licensee_type  VARCHAR(100) NULL COMMENT 'ประเภทใบอนุญาต',
+  license_status ENUM('active','ended','cancelled','revoked') DEFAULT 'active',
   start_date     DATE NULL COMMENT 'วันเริ่มต้นใบอนุญาต',
   end_date       DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
 
-  -- คอลัมน์ต่อไปนี้ใช้โดยการ Import Excel ใบอนุญาตรายปี (services/import_service.py)
-  -- และรายงานผลการจัดเก็บ (services/export_service.py) — เก็บ snapshot
-  -- ทางการเงิน/สถานะงวดนำส่งล่าสุดของใบอนุญาตนี้ไว้ในแถวเดียวกัน
+  -- คอลัมน์ต่อไปนี้ใช้โดย import/export Excel ใบอนุญาตรายปี (snapshot ล่าสุด)
   fiscal_year    INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด',
   ref_code       VARCHAR(50)   NULL COMMENT 'รหัสอ้างอิงจากไฟล์ import',
   sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import)',
@@ -110,20 +60,13 @@ CREATE TABLE licensee_master (
   created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  -- เลขใบอนุญาตห้ามซ้ำเลยทั้งระบบ
   UNIQUE KEY uq_license_no (license_no),
-
-  -- INDEX ที่ tax_id เพราะตอนผู้ประกอบการ Login
-  -- ระบบต้องดึง "ใบอนุญาตทั้งหมดของบริษัทนี้" ด้วย tax_id
   INDEX idx_lic_tax_id (tax_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: operator_accounts
--- เก็บอีเมลสำหรับรับ OTP ของผู้ประกอบการ นำเข้าโดยแอดมินผ่านไฟล์ Excel
--- (เลขผู้เสียภาษี + อีเมล) แยกต่างหากจาก taxpayer_master.email — ถ้า tax_id
--- มีแถวอยู่ในตารางนี้ ระบบ login จะใช้อีเมลนี้แทนอีเมลใน taxpayer_master เสมอ
+-- อีเมลรับ OTP ของผู้ประกอบการ — แยกจาก taxpayer_master.email เสมอมีสิทธิ์เหนือกว่าตอน login
 CREATE TABLE operator_accounts (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   tax_id        VARCHAR(13)  NOT NULL,
@@ -131,36 +74,22 @@ CREATE TABLE operator_accounts (
   email         VARCHAR(255) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-  -- tax_id ห้ามซ้ำ: 1 เลขผู้เสียภาษี ผูกได้แค่ 1 อีเมล
   UNIQUE KEY uq_oa_tax_id (tax_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ════════════════════════════════════════════════════════
--- กลุ่มที่ 2: ADMIN TABLE
--- บัญชีเจ้าหน้าที่ (ระบบ auth เขียนเอง ไม่พึ่งพา third-party auth provider)
+-- กลุ่มที่ 2: ADMIN TABLE (auth เขียนเอง ไม่พึ่ง third-party)
 -- ════════════════════════════════════════════════════════
 
 CREATE TABLE admin_users (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   email         VARCHAR(255) NOT NULL,
-
-  -- password_hash: เก็บแค่ bcrypt hash ห้ามเก็บรหัสจริงเด็ดขาด
-  -- bcrypt hash มีหน้าตาแบบนี้: $2b$12$xxx...
-  -- ย้อนกลับเป็นรหัสจริงไม่ได้ ถ้า DB รั่วรหัสยังปลอดภัย
-  password_hash VARCHAR(255) NOT NULL,
-
+  password_hash VARCHAR(255) NOT NULL COMMENT 'bcrypt hash เท่านั้น ห้ามเก็บรหัสจริง',
   full_name     VARCHAR(255) NULL,
-
-  -- role: super_admin (จัดการบัญชีแอดมินอื่นได้ด้วย) หรือ admin (เข้าถึงได้ทุกอย่างยกเว้นแท็บจัดการผู้ดูแลระบบ)
-  role          ENUM('super_admin','admin') NOT NULL DEFAULT 'admin',
-
-  -- is_active: ปิดบัญชีโดยไม่ลบ
-  -- เวลาเจ้าหน้าที่ลาออก set เป็น FALSE แทนลบ
-  -- เพราะ audit_logs ยังอ้างอิง email นี้อยู่
-  is_active     BOOLEAN  DEFAULT TRUE,
-
+  role          ENUM('super_admin','admin') NOT NULL DEFAULT 'admin' COMMENT 'super_admin จัดการแอดมินอื่นได้ด้วย',
+  is_active     BOOLEAN  DEFAULT TRUE COMMENT 'ปิดบัญชีโดยไม่ลบ (audit_logs ยังอ้างอิง email อยู่)',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME NULL COMMENT 'เวลา login ล่าสุด',
 
@@ -170,34 +99,25 @@ CREATE TABLE admin_users (
 
 
 -- ════════════════════════════════════════════════════════
--- กลุ่มที่ 3: TRANSACTION TABLES
--- เกิดขึ้นตอนผู้ประกอบการยื่นแบบ
+-- กลุ่มที่ 3: TRANSACTION TABLES (เกิดขึ้นตอนผู้ประกอบการยื่นแบบ)
 -- ════════════════════════════════════════════════════════
 
--- ตาราง: submissions (หัวใจของระบบ)
--- เก็บใบยื่นแบบแต่ละฉบับ
--- สถานะมี 3 ค่า และ flow ตามการกระทำจริง:
---   draft           = ยังไม่กดยืนยัน
---   pending_payment = กดยืนยันแล้ว รอชำระเงิน
---   paid            = มีข้อมูลใน receipt แล้ว
+-- ใบยื่นแบบแต่ละฉบับ (หัวใจของระบบ)
+-- สถานะ: draft (ยังไม่ยืนยัน) → pending_payment (ยืนยันแล้ว) → paid (มี receipt แล้ว)
 CREATE TABLE submissions (
   id            CHAR(36)    PRIMARY KEY DEFAULT (UUID()),
   tax_id        VARCHAR(13) NOT NULL,
   ref_no        VARCHAR(50) NULL,
   fiscal_year   INT         NOT NULL,
 
-  -- snapshot: เก็บข้อมูลบริษัท ณ วันยื่น
-  -- ถ้าแอดมินแก้ชื่อบริษัทใน master ทีหลัง
-  -- ใบยื่นเดิมยังแสดงชื่อเดิม ไม่เปลี่ยนตาม
+  -- snapshot ข้อมูลบริษัท ณ วันยื่น (ไม่เปลี่ยนตามถ้า master ถูกแก้ทีหลัง)
   operator_name VARCHAR(255) NULL,
   period_start  DATE NULL,
   period_end    DATE NULL,
   due_date      DATE NULL,
 
-  -- status: คำนวณจากการกระทำจริง ไม่ใช่ dropdown ให้แอดมินเลือก
-  status ENUM('draft','pending_payment','paid') DEFAULT 'draft',
+  status ENUM('draft','pending_payment','paid') DEFAULT 'draft' COMMENT 'คำนวณจากการกระทำจริง',
 
-  -- ยอดเงินต่างๆ (ใช้ DECIMAL ไม่ใช่ FLOAT เพราะต้องการความแม่นยำ)
   total_income     DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวม',
   total_income_financial DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมตามงบการเงิน (กรอกเอง Step 1)',
   deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน Step3',
@@ -212,13 +132,10 @@ CREATE TABLE submissions (
   auditor_office  VARCHAR(255) NULL,
   audited_date    DATE NULL,
 
-  -- submitted_at: เวลาที่กดยืนยัน
-  -- NULL = ยังเป็นร่าง / มีค่า = ยืนยันแล้ว
-  submitted_at  DATETIME NULL,
+  submitted_at  DATETIME NULL COMMENT 'NULL = ร่าง, มีค่า = ยืนยันแล้ว',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  -- INDEX 3 ตัวตรงกับ 3 การกรองที่ใช้บ่อยในหน้า Admin
   INDEX idx_sub_tax_id (tax_id),
   INDEX idx_sub_year   (fiscal_year),
   INDEX idx_sub_status (status)
@@ -226,34 +143,19 @@ CREATE TABLE submissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: licenses
--- ใบอนุญาตในใบยื่นแต่ละฉบับ
--- 1 ใบยื่น มีใบอนุญาตได้หลายใบ (1:N)
+-- ใบอนุญาตในใบยื่นแต่ละฉบับ (1 ใบยื่น : N ใบอนุญาต)
 CREATE TABLE licenses (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
-
-  -- submission_id: ชี้ไปยังใบยื่นแม่
-  -- ON DELETE CASCADE: ถ้าลบใบยื่น → ลบใบอนุญาตของใบนั้นด้วยอัตโนมัติ
-  submission_id CHAR(36)      NOT NULL,
-
-  -- sort_order: ตำแหน่งของแถวใน array licenses ที่ส่งมาตอนยื่นแบบ —
-  -- ใช้แทน ORDER BY created_at เพราะ insert ทุกแถวในคำขอเดียวกัน อาจตรงวินาที
-  -- เดียวกันหมด (created_at ไม่มี precision พอ) ทำให้ลำดับตอนอ่านกลับสลับกันได้
-  sort_order    INT           NOT NULL DEFAULT 0,
-
+  submission_id CHAR(36)      NOT NULL COMMENT 'ลบใบยื่น → ลบใบอนุญาตตามด้วย (CASCADE)',
+  sort_order    INT           NOT NULL DEFAULT 0 COMMENT 'ลำดับแถวตามที่ส่งมาตอนยื่นแบบ',
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
   station       VARCHAR(255)  NULL COMMENT 'สถานี/ช่องรายการ',
   start_date    DATE          NULL,
   end_date      DATE          NULL,
-
-  -- fee_amount: รายได้รวมของใบอนุญาตนี้
-  fee_amount    DECIMAL(18,2) DEFAULT 0,
-
-  -- deduction_amount: ค่าลดหย่อนของใบอนุญาตนี้ (Step 3)
-  deduction_amount DECIMAL(18,2) DEFAULT 0,
-
+  fee_amount    DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมของใบอนุญาตนี้',
+  deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อนของใบอนุญาตนี้ (Step 3)',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
@@ -262,20 +164,15 @@ CREATE TABLE licenses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: license_incomes
--- รายได้ย่อยรายประเภทของแต่ละใบอนุญาต
--- ตัวอย่าง: ใบอนุญาต B1-001 มีรายได้ค่าโฆษณา 100,000 และค่าเช่าเวลา 50,000
+-- รายได้ย่อยรายประเภทของแต่ละใบอนุญาต (เช่น ค่าโฆษณา, ค่าเช่าเวลา)
 CREATE TABLE license_incomes (
   id          CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
-
-  -- license_id: ชี้ไปยังใบอนุญาตแม่
   license_id  CHAR(36)      NOT NULL,
-
   income_type VARCHAR(50)   NULL COMMENT 'รหัสประเภท เช่น ads, rental',
   field_key   VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น f1_1, custom_1',
   label       VARCHAR(255)  NULL COMMENT 'ชื่อแสดงผล เช่น รายได้ค่าโฆษณา',
   amount      DECIMAL(18,2) DEFAULT 0,
-  is_custom   BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง (ไม่ใช่รายการมาตรฐาน)',
+  is_custom   BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง',
 
   FOREIGN KEY (license_id) REFERENCES licenses(id) ON DELETE CASCADE,
   INDEX idx_inc_lic (license_id)
@@ -283,9 +180,7 @@ CREATE TABLE license_incomes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: other_incomes
--- รายได้อื่นที่ไม่นำมาคำนวณเงินกองทุน (Step 2)
--- ผูกกับใบยื่นตรงๆ ไม่ผ่านใบอนุญาต
+-- รายได้อื่นที่ไม่นำมาคำนวณเงินกองทุน (Step 2) — ผูกกับใบยื่นตรงๆ
 CREATE TABLE other_incomes (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)      NOT NULL,
@@ -293,7 +188,7 @@ CREATE TABLE other_incomes (
   field_key     VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น o1, other_custom_1',
   label         VARCHAR(255)  NULL,
   amount        DECIMAL(18,2) DEFAULT 0,
-  is_custom     BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง (ไม่ใช่รายการมาตรฐาน)',
+  is_custom     BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง',
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
   INDEX idx_oth_sub (submission_id)
@@ -301,24 +196,13 @@ CREATE TABLE other_incomes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: document_attachments
--- เก็บ metadata ของไฟล์แนบ (Step 6)
--- ไฟล์จริงอยู่ในโฟลเดอร์ /uploads บน server
--- ห้ามเก็บไฟล์ใน MySQL โดยตรง (ทำให้ DB บวม backup ช้า)
+-- metadata ไฟล์แนบ (Step 6) — ไฟล์จริงเก็บที่ /uploads บน server ไม่ใช่ใน DB
 CREATE TABLE document_attachments (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)     NOT NULL,
-
-  -- doc_type: ประเภทเอกสาร
-  doc_type      VARCHAR(50)  NULL,
-
-  -- file_name: ชื่อไฟล์เดิมของผู้ใช้ (ไว้แสดงผล)
-  file_name     VARCHAR(255) NOT NULL,
-
-  -- storage_path: path จริงบน server (ชื่อไฟล์เปลี่ยนเป็น UUID แล้ว)
-  -- ตัวอย่าง: /uploads/SUB-001/f47ac10b-xxxx.pdf
-  storage_path  VARCHAR(500) NOT NULL,
-
+  doc_type      VARCHAR(50)  NULL COMMENT 'ประเภทเอกสาร',
+  file_name     VARCHAR(255) NOT NULL COMMENT 'ชื่อไฟล์เดิมของผู้ใช้',
+  storage_path  VARCHAR(500) NOT NULL COMMENT 'path จริงบน server (ชื่อไฟล์เปลี่ยนเป็น UUID แล้ว)',
   mime_type     VARCHAR(100) NULL,
   file_size     INT NULL COMMENT 'ขนาดไฟล์ (bytes)',
   uploaded_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -329,8 +213,7 @@ CREATE TABLE document_attachments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: invoice (ใบแจ้งหนี้)
--- 1 ใบยื่น : 1 ใบแจ้งหนี้ (UNIQUE KEY บน submission_id)
+-- ใบแจ้งหนี้ — 1 ใบยื่น : 1 ใบแจ้งหนี้
 CREATE TABLE invoice (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)      NOT NULL,
@@ -340,16 +223,12 @@ CREATE TABLE invoice (
   issued_by     VARCHAR(255)  NULL COMMENT 'email เจ้าหน้าที่ผู้ออกใบแจ้งหนี้',
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
-
-  -- UNIQUE: ใบยื่น 1 ฉบับมีใบแจ้งหนี้ได้แค่ 1 ใบ
   UNIQUE KEY uq_inv_sub (submission_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: receipt (ใบเสร็จรับเงิน)
--- เมื่อมีแถวในตารางนี้ → status ของ submissions เปลี่ยนเป็น paid อัตโนมัติ
--- นี่คือกลไก "สถานะ flow ตามจริง" ที่ประชุมต้องการ
+-- ใบเสร็จรับเงิน — มีแถวในนี้เมื่อไหร่ status ของ submissions เปลี่ยนเป็น paid อัตโนมัติ
 CREATE TABLE receipt (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)      NOT NULL,
@@ -360,9 +239,7 @@ CREATE TABLE receipt (
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
-
-  -- ใบยื่น 1 ฉบับมีใบเสร็จได้แค่ 1 ใบ ป้องกันรับเงินซ้ำ
-  UNIQUE KEY uq_rcp_sub (submission_id)
+  UNIQUE KEY uq_rcp_sub (submission_id) COMMENT 'กันรับเงินซ้ำ'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -371,10 +248,7 @@ CREATE TABLE receipt (
 -- กลุ่มที่ 4: SYSTEM TABLES
 -- ════════════════════════════════════════════════════════
 
--- ตาราง: audit_logs
--- บันทึกทุกการเปลี่ยนแปลงโดยเจ้าหน้าที่
--- จงใจไม่มี FOREIGN KEY เพราะ log ต้องอยู่ถาวร
--- แม้แถวต้นทางจะถูกลบไปแล้วก็ตาม
+-- บันทึกทุกการเปลี่ยนแปลงโดยเจ้าหน้าที่ — ไม่มี FOREIGN KEY เพราะ log ต้องอยู่ถาวร
 CREATE TABLE audit_logs (
   id          CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   admin_email VARCHAR(255) NOT NULL COMMENT 'ใครทำ',
@@ -382,39 +256,24 @@ CREATE TABLE audit_logs (
   table_name  VARCHAR(100) NOT NULL COMMENT 'ตารางไหน',
   record_id   VARCHAR(50)  NULL     COMMENT 'แถวไหน',
   record_label VARCHAR(255) NULL    COMMENT 'ของใคร เช่น ชื่อผู้ประกอบการ/เลขผู้เสียภาษี',
-
-  -- changes: เก็บค่าก่อน/หลังเปลี่ยนแปลง
-  -- ตัวอย่าง: {"phone": {"old": "0812345678", "new": "0898765432"}}
-  -- JSON type ใน MySQL 8 query ได้ด้วย JSON_EXTRACT()
-  changes     JSON NULL,
-
+  changes     JSON NULL COMMENT 'ค่าก่อน/หลัง เช่น {"phone":{"old":"..","new":".."}}',
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-  -- INDEX DESC เพราะหน้า audit log แสดง "ล่าสุดก่อน" เสมอ
   INDEX idx_log_created (created_at DESC),
   INDEX idx_log_table   (table_name)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: import_batches
--- บันทึกทุกครั้งที่นำเข้าข้อมูล (mode=commit) พร้อม snapshot ค่าก่อนนำเข้า
--- แต่ละแถว เพื่อให้แอดมิน rollback การนำเข้าทั้งชุดได้ในคลิกเดียว
+-- บันทึกทุกครั้งที่นำเข้าข้อมูล พร้อม snapshot ค่าก่อนนำเข้า เพื่อ rollback ได้ในคลิกเดียว
 CREATE TABLE import_batches (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
-
   import_type   ENUM('taxpayer','license','operator_account') NOT NULL,
-
   imported_by   VARCHAR(255)  NOT NULL COMMENT 'อีเมลแอดมินที่นำเข้า',
   imported_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
-
   row_count     INT           NOT NULL DEFAULT 0,
-
   status        ENUM('active','rolled_back') NOT NULL DEFAULT 'active',
-
-  -- snapshot: JSON array ของค่าก่อนนำเข้าแต่ละแถว
-  -- แต่ละ element: {"table": "...", "key": {...}, "old": {...} หรือ null ถ้าเป็นแถวใหม่}
-  snapshot      LONGTEXT      NOT NULL,
+  snapshot      LONGTEXT      NOT NULL COMMENT 'JSON array: [{"table","key","old"}] old=null คือแถวใหม่',
 
   INDEX idx_imb_type (import_type),
   INDEX idx_imb_status (status)
@@ -422,10 +281,7 @@ CREATE TABLE import_batches (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ตาราง: ref_no_counters
--- ตัวนับเลขอ้างอิงอัตโนมัติ
--- ทำไมไม่ใช้ AUTO_INCREMENT: เพราะต้องมี prefix ปี เช่น NBTC-2568-0001
--- UPDATE จะ lock แถวให้เอง → แม้แอดมิน 2 คน Import พร้อมกัน เลขไม่ซ้ำ
+-- ตัวนับเลขอ้างอิงอัตโนมัติ — ไม่ใช้ AUTO_INCREMENT เพราะต้องมี prefix ปี (เช่น NBTC-2568-0001)
 CREATE TABLE ref_no_counters (
   id       CHAR(36)    PRIMARY KEY DEFAULT (UUID()),
   prefix   VARCHAR(20) NOT NULL COMMENT 'เช่น NBTC-2568',
@@ -437,12 +293,10 @@ CREATE TABLE ref_no_counters (
 
 
 -- ════════════════════════════════════════════════════════
--- SEED DATA: บัญชีแอดมินคนแรกเท่านั้น (ไม่มีข้อมูลจำลองอื่น)
+-- SEED DATA: บัญชีแอดมินคนแรกเท่านั้น
 -- ════════════════════════════════════════════════════════
 
--- รหัสผ่านจริงคือ: ChangeMe123!
--- hash นี้สร้างด้วย bcrypt rounds=12
--- เปลี่ยนรหัสทันทีหลัง login ครั้งแรกบน production
+-- รหัสผ่านจริง: ChangeMe123! (bcrypt rounds=12) — เปลี่ยนทันทีหลัง login ครั้งแรกบน production
 INSERT INTO admin_users (email, password_hash, full_name, role) VALUES
 (
   'putita.chaleeprom12@gmail.com',
