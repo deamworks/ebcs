@@ -17,13 +17,13 @@ import uuid
 INTEGRATION_MODE = os.environ.get("INTEGRATION_MODE", "mock")
 
 
-def _log(cur, submission_id, system, action, status, request_payload, response_payload):
+def _log(cur, submission_id, target_system, action, status, request_payload, response_payload):
     cur.execute("""
         INSERT INTO integration_log
-            (submission_id, system, action, status, request_payload, response_payload)
+            (submission_id, target_system, action, status, request_payload, response_payload)
         VALUES (%s, %s, %s, %s, %s, %s)
     """, (
-        submission_id, system, action, status,
+        submission_id, target_system, action, status,
         json.dumps(request_payload, default=str, ensure_ascii=False),
         json.dumps(response_payload, default=str, ensure_ascii=False),
     ))
