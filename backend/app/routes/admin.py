@@ -28,7 +28,6 @@ from ..services.export_service import (
 from ..services.import_service import (
     parse_taxpayer_excel, import_taxpayers,
     parse_licensee_excel, import_licensees,
-    parse_contact_excel,  import_contacts,
     parse_operator_account_excel, import_operator_accounts,
     EMAIL_RE, _get_next_ref_no,
 )
@@ -745,7 +744,7 @@ def get_taxpayers():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(f"""
-                SELECT id, tax_id, operator_name, email, address,
+                SELECT id, tax_id, operator_name,
                        fiscal_year, ref_no, period_start,
                        period_end, due_date, updated_at
                 FROM taxpayer_master
@@ -860,7 +859,7 @@ def update_taxpayer(taxpayer_id):
                               "message": "ไม่พบผู้ประกอบการ"}
                 }), 404
 
-            updatable = ["operator_name", "email", "address", "ref_no",
+            updatable = ["operator_name", "ref_no",
                          "period_start", "period_end", "due_date"]
             set_parts  = []
             set_params = []
@@ -2221,78 +2220,6 @@ def export_payments():
         output = export_payment_report(db, year=year, year_from=year_from, year_to=year_to,
                                         statuses=statuses or None)
     return send_excel_file(output, f"รายงานชำระเงินกองทุน_{export_date_label()}.xlsx")
-
-@admin_bp.route("/import/contacts", methods=["POST"])
-@jwt_required()
-@require_admin
-@require_super_admin
-def import_contacts_route():
-    """
-    Import Excel ที่อยู่ผู้ประกอบการ
-    คอลัมน์: เลขภาษี | ชื่อ | ที่อยู่ | เบอร์โทร | อีเมล
-    mode=preview → ตรวจข้อมูล ยังไม่บันทึก
-    mode=commit  → บันทึกจริง
-    """
-    admin_email = get_jwt_identity()
-
-    if "file" not in request.files:
-        return jsonify({
-            "success": False,
-            "error": {"code": "NO_FILE",
-                      "message": "กรุณาแนบไฟล์ Excel"}
-        }), 400
-
-    file = request.files["file"]
-    mode = request.form.get("mode", "preview")
-
-    rows, errors = parse_contact_excel(file.stream)
-
-    if mode == "preview":
-        return jsonify({
-            "success": True,
-            "data": {
-                "mode":         "preview",
-                "total_rows":   len(rows) + len(errors),
-                "valid_rows":   len(rows),
-                "error_rows":   len(errors),
-                "errors":       errors,
-                "preview_data": rows
-            }
-        }), 200
-
-    if errors:
-        return jsonify({
-            "success": False,
-            "error": {
-                "code":    "VALIDATION_ERROR",
-                "message": f"มีข้อผิดพลาด {len(errors)} แถว",
-                "errors":  errors
-            }
-        }), 400
-
-    with get_db() as db:
-        result = import_contacts(db, rows)
-        save_audit_log(
-            db, admin_email,
-            f"นำเข้าที่อยู่ผู้ประกอบการจากไฟล์ {file.filename}",
-            "contact_master", None, {**result, "file_name": file.filename}
-        )
-        db.commit()
-
-    return jsonify({
-        "success": True,
-        "data": {
-            "mode":     "commit",
-            "inserted": result["inserted"],
-            "updated":  result["updated"],
-            "message":  (
-                f"Import สำเร็จ: "
-                f"เพิ่มใหม่ {result['inserted']} แถว, "
-                f"อัปเดต {result['updated']} แถว"
-            )
-        }
-    }), 200
-
 
 # ════════════════════════════════════════════════════════
 # ประวัติการนำเข้าข้อมูล + Rollback
