@@ -231,8 +231,9 @@ async function loadLicenses(year, taxId) {
   const cntEl = document.getElementById('license-count');
   try {
     // [FIX] ไม่ส่ง tax_id ใน query (backend ดึงจาก JWT)
-    // ไม่กรองตามปีอีกต่อไป — ใบอนุญาตของบริษัทต้องแสดงครบทุกใบเสมอ ไม่ใช่แค่ปีที่กำลังยื่น
-    const res = await api.get(`/operator/licenses`);
+    // ส่ง year กลับไปให้ backend กรองด้วยช่วงวันที่ใบอนุญาตเทียบกับรอบบัญชีปีนี้
+    // (ไม่ใช้ fiscal_year ของ licensee_master ที่ไม่น่าเชื่อถือเหมือนก่อนหน้านี้)
+    const res = await api.get(`/operator/licenses?year=${year}`);
     // รองรับทั้ง { success, data: { licenses } } และ { licenses: [...] } flat
     let licenses;
     if (res?.success === true && res?.data) {
