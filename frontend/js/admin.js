@@ -893,6 +893,7 @@ async function deleteLicense(id, no) {
     rows.forEach(r => {
       // ค่าแรกที่เจอต่อ tax_id คือปีล่าสุด เพราะ allTaxpayers เรียง fiscal_year desc มาแล้ว
       if (!map.has(r.tax_id)) map.set(r.tax_id, {
+        id: r.id,
         tax_id: r.tax_id, operator_name: r.operator_name, years: 0,
         ref_no: r.ref_no || null,
         period_start: r.period_start || null,
@@ -904,6 +905,7 @@ async function deleteLicense(id, no) {
     // เติมบริษัทที่มีใบอนุญาตแต่ไม่มีข้อมูล taxpayer_master เลย (กันตกหล่น)
     (allLicenses || []).forEach(l => {
       if (!map.has(l.tax_id)) map.set(l.tax_id, {
+        id: null,
         tax_id: l.tax_id, operator_name: l.company_name, years: 0,
         ref_no: null, period_start: null, period_end: null, due_date: null,
       });
@@ -991,6 +993,7 @@ async function deleteLicense(id, no) {
           <td style="text-align:center;font-weight:600;color:#2e86ab;font-size:12.5px">${r.licenseCount}</td>
           <td style="text-align:center">
             <button class="adm-btn adm-btn-sm" onclick="openTaxpayerDetail('${r.tax_id}')">ดูใบอนุญาต</button>
+            ${r.id ? `<button class="adm-btn adm-btn-sm" onclick="openEditTaxpayerModal('${r.id}')">แก้ไข</button>` : ''}
             <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteTaxpayerCompany('${r.tax_id}', '${(r.operator_name || '').replace(/'/g, "\\'")}')">ลบ</button>
           </td>
         </tr>`).join('')
