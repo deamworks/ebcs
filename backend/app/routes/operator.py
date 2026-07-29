@@ -37,8 +37,8 @@ def _shift_date_by_years(d, delta_years):
 def _get_or_create_taxpayer_year(cur, tax_id, year):
     """
     ดึงแถว taxpayer_master ของปีที่ขอ ถ้าไม่มี → สร้างให้อัตโนมัติโดยเลื่อน
-    รอบบัญชี/วันครบกำหนดของแถวปีล่าสุดที่มีอยู่ไปเป็นปีที่ขอ (คง sub_type/
-    round_type เดิม, เลขอ้างอิงเจนใหม่) แทนที่จะต้องรอแอดมินเพิ่มมือทุกปี
+    รอบบัญชี/วันครบกำหนดของแถวปีล่าสุดที่มีอยู่ไปเป็นปีที่ขอ (คง round_type
+    เดิม, เลขอ้างอิงเจนใหม่) แทนที่จะต้องรอแอดมินเพิ่มมือทุกปี
     คืน (taxpayer_row, was_created: bool) หรือ (None, False) ถ้าไม่เคยมีข้อมูลบริษัทนี้เลย
     """
     cur.execute("""
@@ -54,7 +54,7 @@ def _get_or_create_taxpayer_year(cur, tax_id, year):
 
     cur.execute("""
         SELECT operator_name, fiscal_year, period_start, period_end, due_date,
-               sub_type, round_type
+               round_type
         FROM   taxpayer_master
         WHERE  tax_id = %s
         ORDER  BY fiscal_year DESC LIMIT 1
@@ -72,12 +72,12 @@ def _get_or_create_taxpayer_year(cur, tax_id, year):
     cur.execute("""
         INSERT INTO taxpayer_master
             (tax_id, operator_name, fiscal_year, ref_no,
-             period_start, period_end, due_date, sub_type, round_type)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+             period_start, period_end, due_date, round_type)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         tax_id, latest["operator_name"], year, ref_no,
         new_period_start, new_period_end, new_due_date,
-        latest["sub_type"], latest["round_type"],
+        latest["round_type"],
     ))
 
     cur.execute("""

@@ -81,7 +81,6 @@ function initDatepickers() {
 function openAddTaxpayerModal() {
   ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('tp-ml-subtype').value   = 'ปกติ';
   document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
   document.getElementById('tp-ml-taxid').disabled  = false;
   document.getElementById('tp-modal-title').textContent = 'เพิ่มผู้ประกอบการ';
@@ -101,7 +100,6 @@ function openEditTaxpayerModal(id) {
   document.getElementById('tp-ml-pend').value     = fdISOToThai(r.period_end);
   document.getElementById('tp-ml-due').value      = fdISOToThai(r.due_date);
   document.getElementById('tp-ml-refno').value    = r.ref_no || '';
-  document.getElementById('tp-ml-subtype').value   = r.sub_type || 'ปกติ';
   document.getElementById('tp-ml-roundtype').value = r.round_type || 'รอบปกติ';
   document.getElementById('tp-modal-title').textContent = 'แก้ไขผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
@@ -132,7 +130,6 @@ async function saveTaxpayer() {
     period_start: fdThaiToISO(document.getElementById('tp-ml-pstart').value),
     period_end:   fdThaiToISO(document.getElementById('tp-ml-pend').value),
     due_date:     fdThaiToISO(document.getElementById('tp-ml-due').value),
-    sub_type:     document.getElementById('tp-ml-subtype').value,
     round_type:   document.getElementById('tp-ml-roundtype').value,
   };
   const refNo = document.getElementById('tp-ml-refno').value.trim();
