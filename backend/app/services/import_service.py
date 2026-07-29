@@ -89,8 +89,15 @@ def _fiscal_year_be(period_end):
 
 
 def _num(val):
+    """แปลงเป็น float — รองรับตัวเลขที่มี comma คั่นหลักพัน เช่น "1,234.50" จาก Excel"""
+    if val in (None, ""):
+        return 0.0
     try:
-        return float(val) if val not in (None, "") else 0.0
+        return float(val)
+    except (ValueError, TypeError):
+        pass
+    try:
+        return float(str(val).replace(",", "").strip())
     except (ValueError, TypeError):
         return 0.0
 
