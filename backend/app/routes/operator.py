@@ -17,8 +17,77 @@ from functools import wraps
 
 from ..db import get_db
 from ..services.integration_service import send_to_datacenter, send_to_sap
+from ..services.import_service import _get_next_ref_no
+from .admin import save_audit_log
 
 operator_bp = Blueprint("operator", __name__)
+
+
+def _shift_date_by_years(d, delta_years):
+    """เลื่อนวันที่ไปข้างหน้า/หลัง N ปี รักษาเดือน/วันเดิม (กัน 29 ก.พ. ปีที่ไม่ใช่อธิกสุรทิน)"""
+    if d is None or not delta_years:
+        return d
+    try:
+        return d.replace(year=d.year + delta_years)
+    except ValueError:
+        # 29 ก.พ. ในปีที่เลื่อนไปไม่ใช่ปีอธิกสุรทิน → ใช้ 28 ก.พ. แทน
+        return d.replace(year=d.year + delta_years, day=28)
+
+
+def _get_or_create_taxpayer_year(cur, tax_id, year):
+    """
+    ดึงแถว taxpayer_master ของปีที่ขอ ถ้าไม่มี → สร้างให้อัตโนมัติโดยเลื่อน
+    รอบบัญชี/วันครบกำหนดของแถวปีล่าสุดที่มีอยู่ไปเป็นปีที่ขอ (คง sub_type/
+    round_type เดิม, เลขอ้างอิงเจนใหม่) แทนที่จะต้องรอแอดมินเพิ่มมือทุกปี
+    คืน (taxpayer_row, was_created: bool) หรือ (None, False) ถ้าไม่เคยมีข้อมูลบริษัทนี้เลย
+    """
+    cur.execute("""
+        SELECT tax_id, operator_name, fiscal_year,
+               ref_no, period_start, period_end, due_date
+        FROM   taxpayer_master
+        WHERE  tax_id = %s AND fiscal_year = %s
+        LIMIT 1
+    """, (tax_id, year))
+    taxpayer = cur.fetchone()
+    if taxpayer:
+        return taxpayer, False
+
+    cur.execute("""
+        SELECT operator_name, fiscal_year, period_start, period_end, due_date,
+               sub_type, round_type
+        FROM   taxpayer_master
+        WHERE  tax_id = %s
+        ORDER  BY fiscal_year DESC LIMIT 1
+    """, (tax_id,))
+    latest = cur.fetchone()
+    if not latest:
+        return None, False
+
+    delta = year - latest["fiscal_year"]
+    new_period_start = _shift_date_by_years(latest["period_start"], delta)
+    new_period_end   = _shift_date_by_years(latest["period_end"], delta)
+    new_due_date     = _shift_date_by_years(latest["due_date"], delta)
+    ref_no = _get_next_ref_no(cur, year)
+
+    cur.execute("""
+        INSERT INTO taxpayer_master
+            (tax_id, operator_name, fiscal_year, ref_no,
+             period_start, period_end, due_date, sub_type, round_type)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        tax_id, latest["operator_name"], year, ref_no,
+        new_period_start, new_period_end, new_due_date,
+        latest["sub_type"], latest["round_type"],
+    ))
+
+    cur.execute("""
+        SELECT tax_id, operator_name, fiscal_year,
+               ref_no, period_start, period_end, due_date
+        FROM   taxpayer_master
+        WHERE  tax_id = %s AND fiscal_year = %s
+        LIMIT 1
+    """, (tax_id, year))
+    return cur.fetchone(), True
 
 
 # ════════════════════════════════════════════════════════
@@ -170,15 +239,9 @@ def autofill():
                         "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการในระบบ"}
                     }), 404
 
-            # ดึงข้อมูล taxpayer
-            cur.execute("""
-                SELECT tax_id, operator_name, fiscal_year,
-                       ref_no, period_start, period_end, due_date
-                FROM   taxpayer_master
-                WHERE  tax_id = %s AND fiscal_year = %s
-                LIMIT 1
-            """, (tax_id, year))
-            taxpayer = cur.fetchone()
+            # ดึงข้อมูล taxpayer — ถ้ายังไม่มีแถวของปีนี้ ลองสร้างอัตโนมัติจาก
+            # รอบบัญชีปีล่าสุดที่มีอยู่ (เลื่อนวันที่ไปเป็นปีที่ขอ) แทนการรอแอดมินเพิ่มมือ
+            taxpayer, was_created = _get_or_create_taxpayer_year(cur, tax_id, year)
 
             if not taxpayer:
                 return jsonify({
@@ -194,6 +257,16 @@ def autofill():
                 LIMIT 1
             """, (tax_id, year))
             existing = cur.fetchone()
+
+        if was_created:
+            save_audit_log(
+                db, "ระบบ (สร้างอัตโนมัติ)",
+                f"สร้างรอบบัญชีปี {year} อัตโนมัติจากปีล่าสุด",
+                "taxpayer_master", None,
+                {"tax_id": tax_id, "fiscal_year": year},
+                record_label=taxpayer.get("operator_name")
+            )
+            db.commit()
 
     return jsonify({
         "success": True,
