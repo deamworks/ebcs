@@ -746,7 +746,8 @@ def get_taxpayers():
             cur.execute(f"""
                 SELECT id, tax_id, operator_name,
                        fiscal_year, ref_no, period_start,
-                       period_end, due_date, updated_at
+                       period_end, due_date, updated_at,
+                       sub_type, round_type
                 FROM taxpayer_master
                 {where}
                 ORDER BY fiscal_year DESC, operator_name
