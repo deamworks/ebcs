@@ -1007,12 +1007,23 @@ def create_licensee():
     with get_db() as db:
         with db.cursor() as cur:
             try:
+                # [FIX] เพิ่มใบอนุญาตทีละใบไม่เคยเซ็ต sub_type/round_type/license_count
+                # เลย เหลือ NULL ค้างไว้ ต่างจากตอน import ที่มีค่าจากไฟล์เสมอ —
+                # ใส่ค่า default ที่สมเหตุสมผลให้ (ปกติ/รอบปกติ) และนับจำนวน
+                # ใบอนุญาตทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count เอง
+                cur.execute(
+                    "SELECT COUNT(*) AS cnt FROM licensee_master WHERE tax_id = %s",
+                    (data["tax_id"],)
+                )
+                license_count = cur.fetchone()["cnt"] + 1
+
                 cur.execute("""
                     INSERT INTO licensee_master
                         (license_no, tax_id, company_name,
                          licensee_type, license_status,
-                         start_date, end_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                         start_date, end_date,
+                         sub_type, round_type, license_count)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["license_no"],
                     data["tax_id"],
@@ -1020,7 +1031,10 @@ def create_licensee():
                     data.get("licensee_type"),
                     data.get("license_status", "active"),
                     data.get("start_date"),
-                    data.get("end_date")
+                    data.get("end_date"),
+                    data.get("sub_type", "ปกติ"),
+                    data.get("round_type", "รอบปกติ"),
+                    license_count
                 ))
                 cur.execute(
                     "SELECT id FROM licensee_master WHERE license_no = %s",

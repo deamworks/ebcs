@@ -284,7 +284,7 @@ def import_taxpayers(db, rows):
 # col index (จาก header แถว 3):
 #  0  ลำดับ
 #  1  ปี (BE)                    → fiscal_year (เก็บเป็น พ.ศ. ตรงกับ taxpayer_master)
-#  2  รหัสอ้างอิง                → ref_code
+#  2  รหัสอ้างอิง                (ไม่ import แล้ว — licensee_master ไม่เก็บ ref_code)
 #  3  ประเภท                     → sub_type
 #  4  รอบ                        → round_type
 #  5  สถานะ                      → sub_status
@@ -364,7 +364,6 @@ def _parse_licensee_row(row, excel_row_num):
     return {
         "tax_id":         tax_id,
         "fiscal_year":    fiscal_year_be,
-        "ref_code":       _s(2),
         "sub_type":       _s(3),
         "round_type":     _s(4),
         "sub_status":     _s(5),
@@ -421,7 +420,7 @@ def import_licensees(db, rows):
             snapshot.append({"table": "licensee_master", "key": key, "old": existing})
             cur.execute("""
                 UPDATE licensee_master SET
-                    tax_id=%s, fiscal_year=%s, ref_code=%s,
+                    tax_id=%s, fiscal_year=%s,
                     sub_type=%s, round_type=%s, sub_status=%s,
                     company_name=%s, license_count=%s,
                     licensee_type=%s, start_date=%s, end_date=%s,
@@ -431,7 +430,7 @@ def import_licensees(db, rows):
                     updated_at=NOW()
                 WHERE license_no=%s
             """, (
-                row["tax_id"],        row["fiscal_year"],  row["ref_code"],
+                row["tax_id"],        row["fiscal_year"],
                 row["sub_type"],      row["round_type"],   row["sub_status"],
                 row["company_name"],  row["license_count"],
                 row["license_type"],  row["license_start"],row["license_end"],
@@ -445,18 +444,18 @@ def import_licensees(db, rows):
             snapshot.append({"table": "licensee_master", "key": key, "old": None})
             cur.execute("""
                 INSERT INTO licensee_master (
-                    tax_id, fiscal_year, ref_code, sub_type, round_type,
+                    tax_id, fiscal_year, sub_type, round_type,
                     sub_status, company_name, license_count, license_no,
                     licensee_type, start_date, end_date, license_status,
                     income, deduction, fund_amount, vat, surcharge, net_amount
                 ) VALUES (
-                    %s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,
                     %s,%s,%s,%s,
                     %s,%s,%s,%s,
                     %s,%s,%s,%s,%s,%s
                 )
             """, (
-                row["tax_id"],        row["fiscal_year"],  row["ref_code"],
+                row["tax_id"],        row["fiscal_year"],
                 row["sub_type"],      row["round_type"],   row["sub_status"],
                 row["company_name"],  row["license_count"],row["license_no"],
                 row["license_type"],  row["license_start"],row["license_end"],

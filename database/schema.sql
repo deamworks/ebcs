@@ -42,8 +42,7 @@ CREATE TABLE licensee_master (
 
   -- คอลัมน์ต่อไปนี้ใช้โดย import/export Excel ใบอนุญาตรายปี (snapshot ล่าสุด)
   fiscal_year    INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด',
-  ref_code       VARCHAR(50)   NULL COMMENT 'รหัสอ้างอิงจากไฟล์ import',
-  sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import)',
+  sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import หรือ default ตอนเพิ่มเอง)',
   round_type     VARCHAR(50)   NULL COMMENT 'รอบ (จากไฟล์ import)',
   sub_status     VARCHAR(50)   NULL COMMENT 'สถานะงวดนำส่ง (จากไฟล์ import)',
   license_count  INT           NULL COMMENT 'จำนวนใบอนุญาตของ tax_id นี้ ณ วันที่ import',
