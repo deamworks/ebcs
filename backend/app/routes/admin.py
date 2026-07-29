@@ -30,7 +30,7 @@ from ..services.import_service import (
     parse_licensee_excel, import_licensees,
     parse_contact_excel,  import_contacts,
     parse_operator_account_excel, import_operator_accounts,
-    EMAIL_RE,
+    EMAIL_RE, _get_next_ref_no,
 )
 from ..services.integration_service import INTEGRATION_MODE
 
@@ -788,6 +788,11 @@ def create_taxpayer():
     with get_db() as db:
         with db.cursor() as cur:
             try:
+                # [FIX] เดิมถ้าไม่กรอกเลขอ้างอิงเอง จะถูกบันทึกเป็น NULL ไปเลย
+                # ตอน import ไฟล์ Excel มีการ gen ให้อัตโนมัติอยู่แล้ว (_get_next_ref_no)
+                # แต่เพิ่มทีละรายการผ่านฟอร์มนี้ไม่เคยเรียกใช้ ทำให้ไม่มีเลขอ้างอิง
+                ref_no = data.get("ref_no") or _get_next_ref_no(cur, int(data["fiscal_year"]))
+
                 cur.execute("""
                     INSERT INTO taxpayer_master
                         (tax_id, operator_name, fiscal_year,
@@ -797,7 +802,7 @@ def create_taxpayer():
                     data["tax_id"],
                     data["operator_name"],
                     data["fiscal_year"],
-                    data.get("ref_no"),
+                    ref_no,
                     data.get("period_start"),
                     data.get("period_end"),
                     data.get("due_date")
