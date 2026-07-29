@@ -984,7 +984,6 @@ async function deleteLicense(id, no) {
 
     document.getElementById('tp-tbody').innerHTML = rows.length
       ? rows.map(r => `<tr>
-          <td style="font-size:12.5px;font-weight:600;color:#1565c0;white-space:nowrap;text-align:center">${r.ref_no || '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.tax_id}</td>
           <td style="font-size:12.5px">${r.operator_name || '—'}</td>
           <td style="text-align:center">${r.periodRound === 'ปกติ' ? '<span class="badge-lic-ok">ปกติ</span>' : r.periodRound === 'อื่นๆ' ? '<span class="badge-lic-warn">อื่นๆ</span>' : '—'}</td>
@@ -997,7 +996,7 @@ async function deleteLicense(id, no) {
             <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteTaxpayerCompany('${r.tax_id}', '${(r.operator_name || '').replace(/'/g, "\\'")}')">ลบ</button>
           </td>
         </tr>`).join('')
-      : '<tr><td colspan="8" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+      : '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
   }
 
   function clearLicFilter() {
