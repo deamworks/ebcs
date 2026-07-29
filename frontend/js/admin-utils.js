@@ -79,9 +79,10 @@ function initDatepickers() {
 // ในตาราง — โมดัลนี้จึงรองรับเฉพาะการเพิ่มใหม่ (ตรงกับสิ่งที่ปุ่มจริงบน UI ทำ)
 
 function openAddTaxpayerModal() {
-  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno', 'tp-ml-subtype']
+  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
+  document.getElementById('tp-ml-subtype').value   = 'ปกติ';
   document.getElementById('tp-ml-taxid').disabled  = false;
   document.getElementById('tp-modal-title').textContent = 'เพิ่มผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
@@ -101,7 +102,7 @@ function openEditTaxpayerModal(id) {
   document.getElementById('tp-ml-due').value      = fdISOToThai(r.due_date);
   document.getElementById('tp-ml-refno').value    = r.ref_no || '';
   document.getElementById('tp-ml-roundtype').value = r.round_type || 'รอบปกติ';
-  document.getElementById('tp-ml-subtype').value  = r.sub_type || '';
+  document.getElementById('tp-ml-subtype').value  = r.sub_type || 'ปกติ';
   document.getElementById('tp-modal-title').textContent = 'แก้ไขผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
   initFdBuddhistDatepickers();

@@ -1103,7 +1103,7 @@
           <input class="adm-form-input fd-buddhist-datepicker" id="tp-ml-due" placeholder="วัน/เดือน/ปี" readonly>
         </div>
         <div class="adm-f-row">
-          <label>รหัสอ้างอิง (ถ้าเว้นว่างจะเจนให้อัตโนมัติ)</label>
+          <label>รหัสอ้างอิง (หากไม่ระบุ ระบบจะกำหนดให้โดยอัตโนมัติ)</label>
           <input class="adm-form-input" id="tp-ml-refno" placeholder="เว้นว่างเพื่อให้ระบบกำหนดให้เอง">
         </div>
         <div class="adm-f-row">
@@ -1114,8 +1114,13 @@
           </select>
         </div>
         <div class="adm-f-row">
-          <label>ประเภท (ปกติจะมาจากไฟล์ import ใบอนุญาต)</label>
-          <input class="adm-form-input" id="tp-ml-subtype" placeholder="เช่น ปกติ">
+          <label>ประเภท</label>
+          <select class="adm-form-input" id="tp-ml-subtype">
+            <option value="ปกติ">ปกติ</option>
+            <option value="ยกเลิก">ยกเลิก</option>
+            <option value="เพิกถอน">เพิกถอน</option>
+            <option value="สิ้นสุด">สิ้นสุด</option>
+          </select>
         </div>
       </div>
     </div>
