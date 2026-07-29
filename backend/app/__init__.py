@@ -44,10 +44,6 @@ def create_app():
     from .routes.admin import admin_bp
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
-    # Upload routes: /api/upload
-    # from .routes.upload import upload_bp
-    # app.register_blueprint(upload_bp, url_prefix="/api/upload")
-
     # Error Handlers
     # จัดการ error ให้ตอบ JSON ทุกครั้ง (ไม่ตอบ HTML)
     # เพราะ frontend คาดหวัง JSON เสมอ
