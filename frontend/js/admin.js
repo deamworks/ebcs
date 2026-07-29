@@ -901,6 +901,7 @@ async function deleteLicense(id, no) {
         period_start: r.period_start || null,
         period_end: r.period_end || null,
         due_date: r.due_date || null,
+        sub_type: r.sub_type || null,
       });
       map.get(r.tax_id).years++;
     });
@@ -910,6 +911,7 @@ async function deleteLicense(id, no) {
         id: null,
         tax_id: l.tax_id, operator_name: l.company_name, years: 0,
         ref_no: null, period_start: null, period_end: null, due_date: null,
+        sub_type: null,
       });
     });
     return [...map.values()].map(c => ({
@@ -989,6 +991,7 @@ async function deleteLicense(id, no) {
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.tax_id}</td>
           <td style="font-size:12.5px">${r.operator_name || '—'}</td>
           <td style="text-align:center">${r.periodRound === 'ปกติ' ? '<span class="badge-lic-ok">ปกติ</span>' : r.periodRound === 'อื่นๆ' ? '<span class="badge-lic-warn">อื่นๆ</span>' : '—'}</td>
+          <td style="text-align:center">${r.sub_type || '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.period_start ? `${fmtBE(r.period_start)} – ${fmtBE(r.period_end)}` : '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${fmtBE(r.due_date)}</td>
           <td style="text-align:center;font-weight:600;color:#2e86ab;font-size:12.5px">${r.licenseCount}</td>
@@ -998,7 +1001,7 @@ async function deleteLicense(id, no) {
             <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="deleteTaxpayerCompany('${r.tax_id}', '${(r.operator_name || '').replace(/'/g, "\\'")}')">ลบ</button>
           </td>
         </tr>`).join('')
-      : '<tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
+      : '<tr><td colspan="8" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
   }
 
   function clearLicFilter() {

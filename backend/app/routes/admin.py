@@ -747,7 +747,7 @@ def get_taxpayers():
                 SELECT id, tax_id, operator_name,
                        fiscal_year, ref_no, period_start,
                        period_end, due_date, updated_at,
-                       round_type
+                       sub_type, round_type
                 FROM taxpayer_master
                 {where}
                 ORDER BY fiscal_year DESC, operator_name
@@ -797,8 +797,8 @@ def create_taxpayer():
                     INSERT INTO taxpayer_master
                         (tax_id, operator_name, fiscal_year,
                          ref_no, period_start, period_end, due_date,
-                         round_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                         sub_type, round_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["tax_id"],
                     data["operator_name"],
@@ -807,6 +807,7 @@ def create_taxpayer():
                     data.get("period_start"),
                     data.get("period_end"),
                     data.get("due_date"),
+                    data.get("sub_type"),
                     data.get("round_type", "รอบปกติ"),
                 ))
 
@@ -864,7 +865,7 @@ def update_taxpayer(taxpayer_id):
 
             updatable = ["operator_name", "ref_no",
                          "period_start", "period_end", "due_date",
-                         "round_type"]
+                         "sub_type", "round_type"]
             set_parts  = []
             set_params = []
             changes    = {}
@@ -1011,16 +1012,15 @@ def create_licensee():
     with get_db() as db:
         with db.cursor() as cur:
             try:
-                # [FIX] round_type ย้ายไปกรอกตอนเพิ่มผู้ประกอบการแทน (ระดับบริษัท/
-                # รอบบัญชี ไม่ใช่ระดับใบอนุญาต) — ตอนเพิ่มใบอนุญาต ดึงค่าจาก
+                # [FIX] sub_type/round_type ย้ายไปกรอกตอนเพิ่มผู้ประกอบการแทน (ระดับ
+                # บริษัท/รอบบัญชี ไม่ใช่ระดับใบอนุญาต) — ตอนเพิ่มใบอนุญาต ดึงค่าจาก
                 # taxpayer_master ของ tax_id นี้มาใช้แทนการถามซ้ำ ถ้าไม่พบใช้ default
-                # (taxpayer_master ไม่เก็บ sub_type แล้ว ใบอนุญาตใช้ default "ปกติ")
                 cur.execute("""
-                    SELECT round_type FROM taxpayer_master
+                    SELECT sub_type, round_type FROM taxpayer_master
                     WHERE tax_id = %s ORDER BY fiscal_year DESC LIMIT 1
                 """, (data["tax_id"],))
                 taxpayer = cur.fetchone()
-                sub_type   = "ปกติ"
+                sub_type   = (taxpayer and taxpayer["sub_type"])   or "ปกติ"
                 round_type = (taxpayer and taxpayer["round_type"]) or "รอบปกติ"
 
                 # นับจำนวนใบอนุญาตทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count อัตโนมัติ
