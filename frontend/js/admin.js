@@ -888,31 +888,6 @@ async function deleteLicense(id, no) {
   /** รวม taxpayer_master (หลายแถวต่อบริษัท แยกตามปีบัญชี) ให้เหลือ 1 แถวต่อบริษัท
    *  พร้อมนับจำนวนปีบัญชีและจำนวนใบอนุญาตของบริษัทนั้น (จาก allLicenses)
    *  แสดงรวมทุกปีเสมอ (เอาระบบแยกปีบัญชีในหน้านี้ออกแล้ว) */
-  /** เลือกสถานะใบอนุญาตที่ "แย่ที่สุด" ของบริษัทมาแสดงเป็นตัวแทน
-   *  (เพิกถอน > ยกเลิก > สิ้นสุด > ปกติ) เพื่อให้แอดมินเห็นปุ๊บว่าบริษัทนี้มีปัญหาไหม
-   *  ดึงจาก licensee_master.license_status ตรงๆ (มาจาก import ใบอนุญาตจริง)
-   *  ไม่ใช่ field แยกที่ต้องกรอกเองอีกที่ */
-  const LICENSE_STATUS_PRIORITY = { revoked: 4, cancelled: 3, ended: 2, active: 1 };
-  const LICENSE_STATUS_TH = { active: 'ปกติ', ended: 'สิ้นสุด', cancelled: 'ยกเลิก', revoked: 'เพิกถอน' };
-
-  function _worstLicenseStatusLabel(taxId) {
-    const licenses = (allLicenses || []).filter(l => l.tax_id === taxId);
-    if (!licenses.length) return null;
-    const worst = licenses.reduce((acc, l) => {
-      const p = LICENSE_STATUS_PRIORITY[l.license_status] || 0;
-      return p > acc.p ? { p, status: l.license_status } : acc;
-    }, { p: 0, status: null });
-    return LICENSE_STATUS_TH[worst.status] || null;
-  }
-
-  function _companyStatusBadge(label) {
-    if (!label) return '—';
-    const cls = label === 'ปกติ' ? 'badge-lic-ok'
-      : label === 'สิ้นสุด' ? 'badge-lic-warn'
-      : 'badge-lic-danger'; // ยกเลิก, เพิกถอน
-    return `<span class="${cls}">${label}</span>`;
-  }
-
   function getCompanyList() {
     const rows = allTaxpayers || [];
 
@@ -941,7 +916,6 @@ async function deleteLicense(id, no) {
       ...c,
       licenseCount: (allLicenses || []).filter(l => l.tax_id === c.tax_id).length,
       periodRound: getPeriodRoundLabel(c.period_start, c.period_end),
-      statusLabel: _worstLicenseStatusLabel(c.tax_id),
     }));
   }
 
@@ -1015,7 +989,6 @@ async function deleteLicense(id, no) {
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.tax_id}</td>
           <td style="font-size:12.5px">${r.operator_name || '—'}</td>
           <td style="text-align:center">${r.periodRound === 'ปกติ' ? '<span class="badge-lic-ok">ปกติ</span>' : r.periodRound === 'อื่นๆ' ? '<span class="badge-lic-warn">อื่นๆ</span>' : '—'}</td>
-          <td style="text-align:center">${_companyStatusBadge(r.statusLabel)}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.period_start ? `${fmtBE(r.period_start)} – ${fmtBE(r.period_end)}` : '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${fmtBE(r.due_date)}</td>
           <td style="text-align:center;font-weight:600;color:#2e86ab;font-size:12.5px">${r.licenseCount}</td>
