@@ -160,7 +160,7 @@ def check_taxpayer():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT tax_id, operator_name, email
+                SELECT tax_id, operator_name
                 FROM   taxpayer_master
                 WHERE  tax_id = %s
                 ORDER BY fiscal_year DESC
@@ -168,7 +168,7 @@ def check_taxpayer():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # operator_accounts (import แยก) มีสิทธิ์เหนือ taxpayer_master เสมอ
+            # อีเมลรับ OTP มาจาก operator_accounts เท่านั้น (taxpayer_master ไม่เก็บ email แล้ว)
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -188,8 +188,7 @@ def check_taxpayer():
         }), 404
 
     # สร้าง list ช่องทางที่มี
-    email = (operator_account["email"] if operator_account else None) \
-        or taxpayer.get("email") or ""
+    email = operator_account["email"] if operator_account else ""
 
     if not email:
         return jsonify({
@@ -266,7 +265,7 @@ def request_otp():
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
-                SELECT operator_name, email
+                SELECT operator_name
                 FROM   taxpayer_master
                 WHERE  tax_id = %s
                 ORDER BY fiscal_year DESC
@@ -274,7 +273,7 @@ def request_otp():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # เหมือน check-taxpayer: operator_accounts มีสิทธิ์เหนือกว่าเสมอ
+            # อีเมลรับ OTP มาจาก operator_accounts เท่านั้น (taxpayer_master ไม่เก็บ email แล้ว)
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -288,8 +287,7 @@ def request_otp():
                       "message": "ไม่พบข้อมูลในระบบ"}
         }), 404
 
-    email = (operator_account["email"] if operator_account else None) \
-        or taxpayer.get("email") or ""
+    email = operator_account["email"] if operator_account else ""
 
     if not email:
         return jsonify({

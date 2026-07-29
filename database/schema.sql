@@ -10,13 +10,11 @@ SET NAMES utf8mb4;
 -- ════════════════════════════════════════════════════════
 
 -- ผู้ประกอบการที่มีสิทธิ์ยื่นแบบ — 1 บริษัทมีได้หลายแถว (แถวละ 1 ปีบัญชี)
+-- phone/email/address เลิกเก็บแล้ว (email รับ OTP ใช้ operator_accounts เท่านั้น)
 CREATE TABLE taxpayer_master (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   tax_id        VARCHAR(13)  NOT NULL,
   operator_name VARCHAR(255) NOT NULL,
-  phone         VARCHAR(10)  NULL COMMENT 'ไม่ใช้ใน flow login ปัจจุบัน (เปลี่ยนไปใช้ email แล้ว)',
-  email         VARCHAR(255) NULL COMMENT 'อีเมลรับ OTP ตอน login',
-  address       VARCHAR(500) NULL,
   fiscal_year   INT          NOT NULL COMMENT 'ปีบัญชี (พ.ศ.)',
   ref_no        VARCHAR(50)  NULL COMMENT 'เลขอ้างอิงสำหรับชำระเงินที่ธนาคาร',
   period_start  DATE NULL,
@@ -26,7 +24,6 @@ CREATE TABLE taxpayer_master (
   updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   UNIQUE KEY uq_tax_year (tax_id, fiscal_year),
-  INDEX idx_txp_phone  (phone),
   INDEX idx_txp_tax_id (tax_id)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
