@@ -20,6 +20,8 @@ CREATE TABLE taxpayer_master (
   period_start  DATE NULL,
   period_end    DATE NULL,
   due_date      DATE NULL,
+  sub_type      VARCHAR(50)  NULL COMMENT 'ประเภท',
+  round_type    VARCHAR(50)  NULL COMMENT 'รอบ (ปกติ = เริ่ม 1 ม.ค. สิ้นสุด 31 ธ.ค. ปีเดียวกัน)',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

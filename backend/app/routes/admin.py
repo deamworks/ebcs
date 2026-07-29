@@ -795,8 +795,9 @@ def create_taxpayer():
                 cur.execute("""
                     INSERT INTO taxpayer_master
                         (tax_id, operator_name, fiscal_year,
-                         ref_no, period_start, period_end, due_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                         ref_no, period_start, period_end, due_date,
+                         sub_type, round_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     data["tax_id"],
                     data["operator_name"],
@@ -804,7 +805,9 @@ def create_taxpayer():
                     ref_no,
                     data.get("period_start"),
                     data.get("period_end"),
-                    data.get("due_date")
+                    data.get("due_date"),
+                    data.get("sub_type", "ปกติ"),
+                    data.get("round_type", "รอบปกติ"),
                 ))
 
                 cur.execute(
@@ -860,7 +863,8 @@ def update_taxpayer(taxpayer_id):
                 }), 404
 
             updatable = ["operator_name", "ref_no",
-                         "period_start", "period_end", "due_date"]
+                         "period_start", "period_end", "due_date",
+                         "sub_type", "round_type"]
             set_parts  = []
             set_params = []
             changes    = {}
@@ -1007,11 +1011,18 @@ def create_licensee():
     with get_db() as db:
         with db.cursor() as cur:
             try:
-                # [FIX] เพิ่มใบอนุญาตทีละใบไม่เคยเซ็ต sub_type/round_type/license_count
-                # เลย เหลือ NULL ค้างไว้ ต่างจากตอน import ที่มีค่าจากไฟล์เสมอ — ตอนนี้
-                # แอดมินเลือก sub_type/round_type เองจาก dropdown ในฟอร์มแล้ว (data.get
-                # ค่า default ไว้แค่กันเหนียวกรณีไม่ได้ส่งมา) และนับจำนวนใบอนุญาต
-                # ทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count อัตโนมัติ
+                # [FIX] sub_type/round_type ย้ายไปกรอกตอนเพิ่มผู้ประกอบการแทน (ระดับ
+                # บริษัท/รอบบัญชี ไม่ใช่ระดับใบอนุญาต) — ตอนเพิ่มใบอนุญาต ดึงค่าจาก
+                # taxpayer_master ของ tax_id นี้มาใช้แทนการถามซ้ำ ถ้าไม่พบใช้ default
+                cur.execute("""
+                    SELECT sub_type, round_type FROM taxpayer_master
+                    WHERE tax_id = %s ORDER BY fiscal_year DESC LIMIT 1
+                """, (data["tax_id"],))
+                taxpayer = cur.fetchone()
+                sub_type   = (taxpayer and taxpayer["sub_type"])   or "ปกติ"
+                round_type = (taxpayer and taxpayer["round_type"]) or "รอบปกติ"
+
+                # นับจำนวนใบอนุญาตทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count อัตโนมัติ
                 cur.execute(
                     "SELECT COUNT(*) AS cnt FROM licensee_master WHERE tax_id = %s",
                     (data["tax_id"],)
@@ -1033,8 +1044,8 @@ def create_licensee():
                     data.get("license_status", "active"),
                     data.get("start_date"),
                     data.get("end_date"),
-                    data.get("sub_type", "ปกติ"),
-                    data.get("round_type", "รอบปกติ"),
+                    sub_type,
+                    round_type,
                     license_count
                 ))
                 cur.execute(
