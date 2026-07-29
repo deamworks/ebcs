@@ -244,6 +244,8 @@ const AUDIT_FIELD_TH = {
   receipt_no:             'เลขที่ใบเสร็จ',
   received_at:            'วันที่รับเงิน',
   ref_no:                 'รหัสอ้างอิง',
+  sub_type:               'ประเภท',
+  round_type:             'รอบ',
   fiscal_year:            'ปีบัญชี',
   period_start:           'วันเริ่มต้นรอบบัญชี',
   period_end:             'วันสิ้นสุดรอบบัญชี',
