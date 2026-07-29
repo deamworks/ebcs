@@ -44,7 +44,6 @@ CREATE TABLE licensee_master (
   fiscal_year    INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด',
   sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import หรือ default ตอนเพิ่มเอง)',
   round_type     VARCHAR(50)   NULL COMMENT 'รอบ (จากไฟล์ import)',
-  sub_status     VARCHAR(50)   NULL COMMENT 'สถานะงวดนำส่ง (จากไฟล์ import)',
   license_count  INT           NULL COMMENT 'จำนวนใบอนุญาตของ tax_id นี้ ณ วันที่ import',
   income         DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้จากใบอนุญาต',
   deduction      DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน',
