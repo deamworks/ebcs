@@ -230,6 +230,7 @@ def get_licenses():
     [FIX] Response: { success, data: { licenses: [...], total: n } }
     """
     tax_id = get_jwt_identity()
+    year   = request.args.get("year", type=int)
 
     status_labels = {
         "active":    "ได้รับอนุญาต",
@@ -239,21 +240,50 @@ def get_licenses():
     }
 
     # [FIX] licensee_master.fiscal_year บันทึกแค่ "ปีของไฟล์ import ล่าสุดที่แก้แถวนี้"
-    # ไม่ใช่ "ใบอนุญาตนี้ใช้ได้เฉพาะปีนี้" — กรองด้วยเงื่อนไขนี้ทำให้ใบอนุญาตที่มีจริง
-    # หายไปจากหน้ากรอกรายได้ (ไม่ตรงกับที่แอดมินเห็นในหน้ารายละเอียดผู้ประกอบการ)
-    # ใบอนุญาตของบริษัทนี้ทั้งหมดต้องแสดงเสมอ ไม่กรองตามปีบัญชีที่กำลังยื่น
+    # ไม่ใช่ "ใบอนุญาตนี้ใช้ได้เฉพาะปีนี้" กรองด้วยมันทำให้ใบอนุญาตที่มีจริงหายไป (เคย
+    # แก้ไปแล้วให้ไม่กรองเลย) แต่นั่นทำให้ใบอนุญาตที่ยังไม่ถึงวันเริ่ม (เช่นเริ่มปีถัดไป)
+    # โผล่มาในปีที่ยื่นปัจจุบันด้วยทั้งที่ยังไม่ถึงรอบชำระ — วิธีที่ถูกต้องคือกรองด้วยช่วง
+    # วันที่ใบอนุญาตจริง (start_date/end_date) เทียบกับรอบบัญชี (period_start/period_end)
+    # ของปีที่กำลังยื่นจาก taxpayer_master แทนการกรองด้วย fiscal_year ที่ไม่น่าเชื่อถือ
     with get_db() as db:
         with db.cursor() as cur:
-            cur.execute("""
-                SELECT id, license_no,
-                       licensee_type AS license_type,
-                       license_status,
-                       start_date AS license_start,
-                       end_date   AS license_end
-                FROM   licensee_master
-                WHERE  tax_id = %s
-                ORDER  BY license_status, license_no
-            """, (tax_id,))
+            period_start = period_end = None
+            if year:
+                cur.execute("""
+                    SELECT period_start, period_end FROM taxpayer_master
+                    WHERE tax_id = %s AND fiscal_year = %s LIMIT 1
+                """, (tax_id, year))
+                taxpayer_period = cur.fetchone()
+                if taxpayer_period:
+                    period_start = taxpayer_period["period_start"]
+                    period_end   = taxpayer_period["period_end"]
+
+            if period_start and period_end:
+                cur.execute("""
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
+                    FROM   licensee_master
+                    WHERE  tax_id = %s
+                      AND  start_date <= %s
+                      AND  (end_date IS NULL OR end_date >= %s)
+                    ORDER  BY license_status, license_no
+                """, (tax_id, period_end, period_start))
+            else:
+                # ไม่รู้รอบบัญชีของปีนี้ (ยังไม่มีแถว taxpayer_master ตรงปี หรือไม่ได้ส่ง year มา)
+                # แสดงใบอนุญาตทั้งหมดไปก่อน ดีกว่าซ่อนของจริงโดยไม่มีเกณฑ์ที่เชื่อถือได้
+                cur.execute("""
+                    SELECT id, license_no,
+                           licensee_type AS license_type,
+                           license_status,
+                           start_date AS license_start,
+                           end_date   AS license_end
+                    FROM   licensee_master
+                    WHERE  tax_id = %s
+                    ORDER  BY license_status, license_no
+                """, (tax_id,))
             licenses = cur.fetchall()
 
     result = []
