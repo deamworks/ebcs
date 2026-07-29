@@ -81,6 +81,8 @@ function initDatepickers() {
 function openAddTaxpayerModal() {
   ['tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('tp-ml-subtype').value   = 'ปกติ';
+  document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
   document.getElementById('tp-modal-title').textContent = 'เพิ่มผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
   initFdBuddhistDatepickers();
@@ -109,6 +111,8 @@ async function saveTaxpayer() {
     period_start: fdThaiToISO(document.getElementById('tp-ml-pstart').value),
     period_end:   fdThaiToISO(document.getElementById('tp-ml-pend').value),
     due_date:     fdThaiToISO(document.getElementById('tp-ml-due').value),
+    sub_type:     document.getElementById('tp-ml-subtype').value,
+    round_type:   document.getElementById('tp-ml-roundtype').value,
   };
   const refNo = document.getElementById('tp-ml-refno').value.trim();
   if (refNo) payload.ref_no = refNo;

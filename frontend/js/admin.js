@@ -691,8 +691,6 @@ function openAddLicenseModal(prefillTaxId) {
   if (prefillTaxId) document.getElementById('lic-ml-taxid').value = prefillTaxId;
   document.getElementById('lic-ml-type').value      = 'NETWORK';
   document.getElementById('lic-ml-status').value    = 'active';
-  document.getElementById('lic-ml-subtype').value   = 'ปกติ';
-  document.getElementById('lic-ml-roundtype').value = 'รอบปกติ';
   document.getElementById('lic-modal').style.display = 'flex';
 }
 
@@ -708,8 +706,6 @@ function openEditLicenseModal(id) {
   document.getElementById('lic-ml-start').value   = fdISOToThai(r.start_date);
   document.getElementById('lic-ml-end').value     = fdISOToThai(r.end_date);
   document.getElementById('lic-ml-status').value  = r.license_status||'active';
-  document.getElementById('lic-ml-subtype').value   = r.sub_type||'ปกติ';
-  document.getElementById('lic-ml-roundtype').value = r.round_type||'รอบปกติ';
   document.getElementById('lic-modal').style.display = 'flex';
 }
 
@@ -727,8 +723,6 @@ async function saveLicense() {
     start_date:     fdThaiToISO(document.getElementById('lic-ml-start').value),
     end_date:       fdThaiToISO(document.getElementById('lic-ml-end').value),
     license_status: document.getElementById('lic-ml-status').value,
-    sub_type:       document.getElementById('lic-ml-subtype').value,
-    round_type:     document.getElementById('lic-ml-roundtype').value,
   };
   if (!payload.tax_id || !payload.license_no) { alert('กรุณากรอก Tax ID และเลขที่ใบอนุญาต'); return; }
 
