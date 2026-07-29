@@ -476,21 +476,22 @@ def import_licensees(db, rows):
             ))
             inserted += 1
 
-        # อัปเดต sub_type/round_type ของ taxpayer_master (ถ้ามีแถวของ tax_id+ปีนี้อยู่แล้ว)
+        # อัปเดต sub_type/round_type ของ taxpayer_master ทุกปีบัญชีของ tax_id นี้
+        # (เป็นค่าระดับบริษัท ไม่ผูกกับปีในไฟล์ใบอนุญาต — เดิมกรองด้วย fiscal_year
+        # ตรงเป๊ะด้วย ทำให้ถ้าไม่มีแถวปีนั้นพอดี ค่าจะไม่ถูกเติมเลย)
         cur.execute(
-            "SELECT * FROM taxpayer_master WHERE tax_id=%s AND fiscal_year=%s",
-            (row["tax_id"], row["fiscal_year"])
+            "SELECT * FROM taxpayer_master WHERE tax_id=%s",
+            (row["tax_id"],)
         )
-        tp_existing = cur.fetchone()
-        if tp_existing:
+        for tp_existing in cur.fetchall():
             snapshot.append({
                 "table": "taxpayer_master",
-                "key": {"tax_id": row["tax_id"], "fiscal_year": row["fiscal_year"]},
+                "key": {"tax_id": row["tax_id"], "fiscal_year": tp_existing["fiscal_year"]},
                 "old": tp_existing,
             })
             cur.execute(
                 "UPDATE taxpayer_master SET sub_type=%s, round_type=%s WHERE tax_id=%s AND fiscal_year=%s",
-                (row["sub_type"], row["round_type"], row["tax_id"], row["fiscal_year"])
+                (row["sub_type"], row["round_type"], row["tax_id"], tp_existing["fiscal_year"])
             )
     db.commit()
     cur.close()
