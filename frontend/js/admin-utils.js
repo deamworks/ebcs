@@ -79,11 +79,31 @@ function initDatepickers() {
 // ในตาราง — โมดัลนี้จึงรองรับเฉพาะการเพิ่มใหม่ (ตรงกับสิ่งที่ปุ่มจริงบน UI ทำ)
 
 function openAddTaxpayerModal() {
-  ['tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
+  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('tp-ml-subtype').value   = 'ปกติ';
   document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
+  document.getElementById('tp-ml-taxid').disabled  = false;
   document.getElementById('tp-modal-title').textContent = 'เพิ่มผู้ประกอบการ';
+  document.getElementById('tp-modal').style.display = 'flex';
+  initFdBuddhistDatepickers();
+}
+
+function openEditTaxpayerModal(id) {
+  const r = (allTaxpayers || []).find(t => t.id === id);
+  if (!r) return;
+  document.getElementById('tp-ml-id').value       = r.id;
+  document.getElementById('tp-ml-taxid').value    = r.tax_id || '';
+  document.getElementById('tp-ml-taxid').disabled = true; // แก้ tax_id ทีหลังไม่ได้ (เป็น key ผูกกับปีบัญชี)
+  document.getElementById('tp-ml-name').value     = r.operator_name || '';
+  document.getElementById('tp-ml-year').value     = r.fiscal_year || '';
+  document.getElementById('tp-ml-pstart').value   = fdISOToThai(r.period_start);
+  document.getElementById('tp-ml-pend').value     = fdISOToThai(r.period_end);
+  document.getElementById('tp-ml-due').value      = fdISOToThai(r.due_date);
+  document.getElementById('tp-ml-refno').value    = r.ref_no || '';
+  document.getElementById('tp-ml-subtype').value   = r.sub_type || 'ปกติ';
+  document.getElementById('tp-ml-roundtype').value = r.round_type || 'รอบปกติ';
+  document.getElementById('tp-modal-title').textContent = 'แก้ไขผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
   initFdBuddhistDatepickers();
 }
@@ -94,6 +114,7 @@ function closeTaxpayerModal() {
 
 async function saveTaxpayer() {
   const btn = document.getElementById('tp-ml-save-btn');
+  const id    = document.getElementById('tp-ml-id').value;
   const taxId = document.getElementById('tp-ml-taxid').value.trim().replace(/-/g, '');
   const name  = document.getElementById('tp-ml-name').value.trim();
   const year  = parseInt(document.getElementById('tp-ml-year').value, 10) || 0;
@@ -119,9 +140,10 @@ async function saveTaxpayer() {
 
   if (btn) btn.disabled = true;
   try {
-    // [FIX] backend POST /admin/taxpayers บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
-    await api.post('/admin/taxpayers', payload);
-    showToast('เพิ่มผู้ประกอบการสำเร็จ');
+    // [FIX] backend POST/PUT /admin/taxpayers บันทึก audit log ให้แล้ว (ไม่ต้องยิงซ้ำ)
+    if (id) await api.put(`/admin/taxpayers/${id}`, payload);
+    else    await api.post('/admin/taxpayers', payload);
+    showToast(id ? 'แก้ไขผู้ประกอบการสำเร็จ' : 'เพิ่มผู้ประกอบการสำเร็จ');
     closeTaxpayerModal();
     await loadTaxpayers();
   } catch (e) {

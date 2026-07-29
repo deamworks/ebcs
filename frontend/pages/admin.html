@@ -1076,6 +1076,7 @@
       <button class="adm-modal-close" onclick="closeTaxpayerModal()">×</button>
     </div>
     <div class="adm-modal-body">
+      <input type="hidden" id="tp-ml-id">
       <div class="adm-f-grid">
         <div class="adm-f-row" style="grid-column:1/-1;">
           <label>Tax ID (13 หลัก)</label>
@@ -1117,7 +1118,7 @@
         <div class="adm-f-row">
           <label>รอบ</label>
           <select class="adm-form-input" id="tp-ml-roundtype">
-            <option value="รอบปกติ">รอบปกติ (เริ่ม 1 ม.ค. - สิ้นสุด 31 ธ.ค. ปีเดียวกัน)</option>
+            <option value="รอบปกติ">รอบปกติ</option>
             <option value="รอบอื่น">รอบอื่น</option>
           </select>
         </div>
