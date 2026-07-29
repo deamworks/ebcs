@@ -1008,9 +1008,10 @@ def create_licensee():
         with db.cursor() as cur:
             try:
                 # [FIX] เพิ่มใบอนุญาตทีละใบไม่เคยเซ็ต sub_type/round_type/license_count
-                # เลย เหลือ NULL ค้างไว้ ต่างจากตอน import ที่มีค่าจากไฟล์เสมอ —
-                # ใส่ค่า default ที่สมเหตุสมผลให้ (ปกติ/รอบปกติ) และนับจำนวน
-                # ใบอนุญาตทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count เอง
+                # เลย เหลือ NULL ค้างไว้ ต่างจากตอน import ที่มีค่าจากไฟล์เสมอ — ตอนนี้
+                # แอดมินเลือก sub_type/round_type เองจาก dropdown ในฟอร์มแล้ว (data.get
+                # ค่า default ไว้แค่กันเหนียวกรณีไม่ได้ส่งมา) และนับจำนวนใบอนุญาต
+                # ทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count อัตโนมัติ
                 cur.execute(
                     "SELECT COUNT(*) AS cnt FROM licensee_master WHERE tax_id = %s",
                     (data["tax_id"],)
@@ -1089,7 +1090,8 @@ def update_licensee(licensee_id):
                 }), 404
 
             updatable = ["company_name", "licensee_type",
-                         "license_status", "start_date", "end_date"]
+                         "license_status", "start_date", "end_date",
+                         "sub_type", "round_type"]
             set_parts  = []
             set_params = []
             changes    = {}

@@ -1050,13 +1050,27 @@
           <label>วันที่สิ้นสุด</label>
           <input class="adm-form-input fd-buddhist-datepicker" id="lic-ml-end" placeholder="วัน/เดือน/ปี" readonly>
         </div>
-        <div class="adm-f-row" style="grid-column:1/-1;">
+        <div class="adm-f-row">
           <label>สถานะ</label>
           <select class="adm-form-input" id="lic-ml-status">
             <option value="active">Active (ได้รับอนุญาต)</option>
             <option value="ended">สิ้นสุด</option>
             <option value="cancelled">ยกเลิก</option>
             <option value="revoked">เพิกถอน</option>
+          </select>
+        </div>
+        <div class="adm-f-row">
+          <label>ประเภท (sub_type)</label>
+          <select class="adm-form-input" id="lic-ml-subtype">
+            <option value="ปกติ">ปกติ</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="adm-f-row">
+          <label>รอบ (round_type)</label>
+          <select class="adm-form-input" id="lic-ml-roundtype">
+            <option value="รอบปกติ">รอบปกติ (เริ่ม 1 ม.ค. - สิ้นสุด 31 ธ.ค. ปีเดียวกัน)</option>
+            <option value="รอบอื่น">รอบอื่น</option>
           </select>
         </div>
       </div>
