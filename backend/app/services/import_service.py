@@ -414,6 +414,11 @@ def import_licensees(db, rows):
     Upsert licensee_master  unique: license_no
     คืน: {"inserted": n, "updated": n, "snapshot": [...]}
     snapshot เก็บค่าก่อนนำเข้าของแต่ละแถว (old=None ถ้าเป็นแถวใหม่) สำหรับ rollback
+
+    [FIX] "ประเภท"/"รอบ" (sub_type/round_type) ในไฟล์นี้เป็นค่าระดับบริษัท
+    (ซ้ำกันทุกแถวของบริษัทเดียวกันในไฟล์) ไม่ใช่ระดับใบอนุญาต จึงอัปเดตให้
+    taxpayer_master ของ tax_id+ปีเดียวกันด้วย ถ้ามีแถวอยู่แล้ว (ไม่สร้างแถว
+    taxpayer_master ใหม่จากตรงนี้ — เป็นหน้าที่ของ import ผู้ประกอบการ)
     """
     inserted = updated = 0
     snapshot = []
@@ -470,6 +475,23 @@ def import_licensees(db, rows):
                 row["vat"],           row["surcharge"],    row["net_amount"],
             ))
             inserted += 1
+
+        # อัปเดต sub_type/round_type ของ taxpayer_master (ถ้ามีแถวของ tax_id+ปีนี้อยู่แล้ว)
+        cur.execute(
+            "SELECT * FROM taxpayer_master WHERE tax_id=%s AND fiscal_year=%s",
+            (row["tax_id"], row["fiscal_year"])
+        )
+        tp_existing = cur.fetchone()
+        if tp_existing:
+            snapshot.append({
+                "table": "taxpayer_master",
+                "key": {"tax_id": row["tax_id"], "fiscal_year": row["fiscal_year"]},
+                "old": tp_existing,
+            })
+            cur.execute(
+                "UPDATE taxpayer_master SET sub_type=%s, round_type=%s WHERE tax_id=%s AND fiscal_year=%s",
+                (row["sub_type"], row["round_type"], row["tax_id"], row["fiscal_year"])
+            )
     db.commit()
     cur.close()
     return {"inserted": inserted, "updated": updated, "snapshot": snapshot}

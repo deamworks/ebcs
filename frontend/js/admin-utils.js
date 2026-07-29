@@ -79,7 +79,7 @@ function initDatepickers() {
 // ในตาราง — โมดัลนี้จึงรองรับเฉพาะการเพิ่มใหม่ (ตรงกับสิ่งที่ปุ่มจริงบน UI ทำ)
 
 function openAddTaxpayerModal() {
-  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
+  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno', 'tp-ml-subtype']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
   document.getElementById('tp-ml-taxid').disabled  = false;
@@ -101,6 +101,7 @@ function openEditTaxpayerModal(id) {
   document.getElementById('tp-ml-due').value      = fdISOToThai(r.due_date);
   document.getElementById('tp-ml-refno').value    = r.ref_no || '';
   document.getElementById('tp-ml-roundtype').value = r.round_type || 'รอบปกติ';
+  document.getElementById('tp-ml-subtype').value  = r.sub_type || '';
   document.getElementById('tp-modal-title').textContent = 'แก้ไขผู้ประกอบการ';
   document.getElementById('tp-modal').style.display = 'flex';
   initFdBuddhistDatepickers();
@@ -131,6 +132,7 @@ async function saveTaxpayer() {
     period_end:   fdThaiToISO(document.getElementById('tp-ml-pend').value),
     due_date:     fdThaiToISO(document.getElementById('tp-ml-due').value),
     round_type:   document.getElementById('tp-ml-roundtype').value,
+    sub_type:     document.getElementById('tp-ml-subtype').value.trim() || null,
   };
   const refNo = document.getElementById('tp-ml-refno').value.trim();
   if (refNo) payload.ref_no = refNo;
