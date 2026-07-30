@@ -997,7 +997,7 @@ function printDepositSlip() {
     .ds-qr-box img { width:100%; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
     .ds-barcode-wrap { margin-top:14px; text-align:center; max-width:calc(70% - 96px); margin-left:auto; margin-right:auto; }
     .ds-barcode-wrap img { width:auto; max-width:100%; height:42px; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
-    .ds-ref-mono { font-family:'Sarabun',Arial,sans-serif; font-size:10px; font-weight:700; margin-top:6px; word-break:break-all; color:#555; }
+    .ds-ref-mono { font-family:'Sarabun',Arial,sans-serif; font-size:10px; font-weight:200; margin-top:6px; word-break:break-all; color:#000; }
   `;
 
   const html = `
