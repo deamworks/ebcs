@@ -180,10 +180,11 @@ async function autoFillFromAuth() {
 
     if (msgEl) msgEl.textContent = '';
 
-     // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
-     // (คืนค่า income/deduction/ผู้สอบบัญชี ที่กรอกไว้ก่อนหน้า)
+     // โหลด draft จาก localStorage — เฉพาะปีที่เคยเริ่มยื่นแบบไว้จริงแล้วเท่านั้น
+     // (มี existing_submission) ปีใหม่ที่ยังไม่เคยยื่นเลยต้องเริ่มจากศูนย์เสมอ
+     // ไม่งั้น draft เก่าจากการทดสอบปีนั้นค้างไว้ก่อนหน้านี้จะโผล่มาอีก
      await new Promise(r => setTimeout(r, 80));
-     if (typeof loadDraft === 'function') {
+     if (typeof loadDraft === 'function' && info.existing_submission) {
        const hasDraft = loadDraft(taxId, String(info.fiscal_year));
        if (hasDraft) {
          appState._draftLoaded = true;
