@@ -157,6 +157,13 @@ async function autoFillFromAuth() {
       appState.financialIncome  = '';
       appState.customOtherIncome = [];
       appState._draftLoaded     = false;
+
+      // [FIX] ล้าง DOM ของช่อง "รายได้รวมตามงบการเงิน" ด้วย ไม่ใช่แค่ appState —
+      // เดิมค่าที่พิมพ์ไว้ในช่องนี้ตอนปีก่อนยังค้างอยู่บนหน้าจอ เพราะโค้ดด้านล่าง
+      // จะเซ็ตค่าใหม่ให้ก็ต่อเมื่อมี draft ของปีใหม่เท่านั้น (ปีใหม่ที่ยังไม่เคย
+      // กรอกจะไม่เข้าเงื่อนไขนั้นเลย ช่องเลยโชว์ค่าเก่าค้างไว้)
+      const _finEl = document.getElementById('total-income-financial');
+      if (_finEl) _finEl.value = '';
     }
 
     // update appState
