@@ -1259,31 +1259,6 @@
     </div>
   </div>
 
-<!-- ══ Receipt Modal ══ -->
-<div class="modal-overlay open" id="receiptModal" style="display:none;">
-  <div class="modal-box" style="max-width:400px;">
-    <div class="modal-header">
-      <span>บันทึกรับชำระเงิน</span>
-      <button class="modal-close" onclick="closeReceiptModal()">×</button>
-    </div>
-    <div class="modal-body" style="padding:20px;">
-      <input type="hidden" id="receipt-sub-id">
-      <div style="margin-bottom:14px;">
-        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:5px;">เลขที่ใบเสร็จ <span style="color:#dc2626">*</span></label>
-        <input id="receipt-no" type="text" class="adm-form-input" style="width:100%;" placeholder="เช่น RC-2568-00001">
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:5px;">ยอดชำระ (บาท)</label>
-        <input id="receipt-amount" type="number" step="0.01" class="adm-form-input" style="width:100%;">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="adm-btn" onclick="closeReceiptModal()">ยกเลิก</button>
-      <button class="adm-btn adm-btn-primary" onclick="submitReceiptModal()">บันทึก</button>
-    </div>
-  </div>
-</div>
-
   <div class="toast" id="toast"></div>
 
   <script src="../lib/flatpickr.min.js"></script>

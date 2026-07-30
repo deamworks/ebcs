@@ -420,48 +420,6 @@ function renderSubmissionStatusCell(s) {
 }
 
 // ── บันทึกรับชำระ ──────────────────────────────────────────────
-async function openReceiptModal(submissionId) {
-  const modal = document.getElementById('receiptModal');
-  if (!modal) {
-    // ถ้าไม่มี modal ในหน้า ให้ใช้ prompt แทนชั่วคราว
-    const receiptNo = prompt('เลขที่ใบเสร็จ:');
-    if (!receiptNo) return;
-    const amount = parseFloat(prompt('ยอดชำระ (บาท):') || '0');
-    await recordReceipt(submissionId, receiptNo, amount);
-    return;
-  }
-  document.getElementById('receipt-sub-id').value = submissionId;
-  document.getElementById('receipt-no').value     = '';
-  document.getElementById('receipt-amount').value = '';
-  modal.style.display = 'flex';
-}
-
-async function submitReceiptModal() {
-  const subId     = document.getElementById('receipt-sub-id').value;
-  const receiptNo = document.getElementById('receipt-no').value.trim();
-  const amount    = parseFloat(document.getElementById('receipt-amount').value || '0');
-  if (!receiptNo) { alert('กรุณากรอกเลขที่ใบเสร็จ'); return; }
-  await recordReceipt(subId, receiptNo, amount);
-  document.getElementById('receiptModal').style.display = 'none';
-}
-
-async function recordReceipt(submissionId, receiptNo, amount) {
-  try {
-    // [FIX] เดิมไม่ได้ส่ง submission_id ไปด้วย ทั้งที่ backend ต้องการ (required field)
-    await api.post('/admin/receipts', {
-      submission_id: submissionId,
-      receipt_no:    receiptNo,
-      amount,
-      received_at:   new Date().toISOString().slice(0, 10),
-    });
-  } catch (e) {
-    showToast('บันทึกไม่สำเร็จ: ' + (e.message || ''));
-    return;
-  }
-  showToast('บันทึกรับชำระเรียบร้อยแล้ว ✓');
-  await loadSubmissions();
-}
-
 // ── จำลองแจ้งชำระจากธนาคาร (Mock — ยังไม่เชื่อมต่อ Data Center/SAP จริง) ─────
 async function simulateMockPayment(submissionId) {
   if (!confirm('จำลองการแจ้งชำระจากธนาคาร?\n(ใช้สำหรับทดสอบตอนยังไม่ได้เชื่อมต่อ Data Center/SAP จริง)')) return;
@@ -538,7 +496,6 @@ function renderTable() {
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${fmtDate(s.submitted_at)}</td>
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
-        ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-success" onclick="openReceiptModal('${s.id}')">บันทึกรับชำระ</button>` : ''}
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm" title="จำลองแจ้งชำระอัตโนมัติ (ยังไม่เชื่อมต่อ Data Center/SAP จริง)" onclick="simulateMockPayment('${s.id}')">จำลองแจ้งชำระ (Mock)</button>` : ''}
         <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
       </td>
