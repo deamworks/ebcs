@@ -16,12 +16,12 @@ CREATE TABLE taxpayer_master (
   tax_id        VARCHAR(13)  NOT NULL,
   operator_name VARCHAR(255) NOT NULL,
   fiscal_year   INT          NOT NULL COMMENT 'ปีบัญชี (พ.ศ.)',
-  ref_no        VARCHAR(50)  NULL COMMENT 'เลขอ้างอิงสำหรับชำระเงินที่ธนาคาร',
+  ref_no        VARCHAR(50)  NULL COMMENT 'เลขอ้างอิงชำระเงิน',
   period_start  DATE NULL,
   period_end    DATE NULL,
   due_date      DATE NULL,
-  sub_type      VARCHAR(50)  NULL COMMENT 'ประเภท (จากไฟล์ import ใบอนุญาต)',
-  round_type    VARCHAR(50)  NULL COMMENT 'รอบ (ปกติ = เริ่ม 1 ม.ค. สิ้นสุด 31 ธ.ค. ปีเดียวกัน — จากไฟล์ import ใบอนุญาต)',
+  sub_type      VARCHAR(50)  NULL COMMENT 'ประเภท (จาก import ใบอนุญาต)',
+  round_type    VARCHAR(50)  NULL COMMENT 'รอบ (จาก import ใบอนุญาต)',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -43,10 +43,10 @@ CREATE TABLE licensee_master (
   end_date       DATE NULL COMMENT 'วันหมดอายุใบอนุญาต',
 
   -- คอลัมน์ต่อไปนี้ใช้โดย import/export Excel ใบอนุญาตรายปี (snapshot ล่าสุด)
-  fiscal_year    INT           NULL COMMENT 'ปีบัญชี (พ.ศ.) ที่ import ล่าสุด',
-  sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จากไฟล์ import หรือ default ตอนเพิ่มเอง)',
-  round_type     VARCHAR(50)   NULL COMMENT 'รอบ (จากไฟล์ import)',
-  license_count  INT           NULL COMMENT 'จำนวนใบอนุญาตของ tax_id นี้ ณ วันที่ import',
+  fiscal_year    INT           NULL COMMENT 'ปีบัญชีที่ import ล่าสุด',
+  sub_type       VARCHAR(50)   NULL COMMENT 'ประเภท (จาก import)',
+  round_type     VARCHAR(50)   NULL COMMENT 'รอบ (จาก import)',
+  license_count  INT           NULL COMMENT 'จำนวนใบอนุญาต ณ วันที่ import',
   income         DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้จากใบอนุญาต',
   deduction      DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน',
   fund_amount    DECIMAL(18,2) DEFAULT 0 COMMENT 'เงินนำส่งเข้ากองทุน',
@@ -83,10 +83,10 @@ CREATE TABLE operator_accounts (
 CREATE TABLE admin_users (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   email         VARCHAR(255) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL COMMENT 'bcrypt hash เท่านั้น ห้ามเก็บรหัสจริง',
+  password_hash VARCHAR(255) NOT NULL COMMENT 'bcrypt hash เท่านั้น',
   full_name     VARCHAR(255) NULL,
-  role          ENUM('super_admin','admin') NOT NULL DEFAULT 'admin' COMMENT 'super_admin จัดการแอดมินอื่นได้ด้วย',
-  is_active     BOOLEAN  DEFAULT TRUE COMMENT 'ปิดบัญชีโดยไม่ลบ (audit_logs ยังอ้างอิง email อยู่)',
+  role          ENUM('super_admin','admin') NOT NULL DEFAULT 'admin' COMMENT 'จัดการแอดมินอื่นได้',
+  is_active     BOOLEAN  DEFAULT TRUE COMMENT 'ปิดบัญชีโดยไม่ลบ',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME NULL COMMENT 'เวลา login ล่าสุด',
 
@@ -114,12 +114,12 @@ CREATE TABLE submissions (
   due_date      DATE NULL,
 
   status ENUM('draft','pending_payment','paid') DEFAULT 'draft' COMMENT 'คำนวณจากการกระทำจริง',
-  datacenter_ref VARCHAR(50) NULL COMMENT 'reference จาก Data Center (mock จนกว่าจะเชื่อมต่อจริง)',
-  sap_doc_no     VARCHAR(50) NULL COMMENT 'เลขที่เอกสารตั้งหนี้ใน SAP/ZAT (mock จนกว่าจะเชื่อมต่อจริง)',
+  datacenter_ref VARCHAR(50) NULL COMMENT 'reference จาก Data Center (mock)',
+  sap_doc_no     VARCHAR(50) NULL COMMENT 'เลขที่เอกสาร SAP/ZAT (mock)',
   sap_status     ENUM('not_sent','mock_sent','confirmed') NOT NULL DEFAULT 'not_sent',
 
   total_income     DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวม',
-  total_income_financial DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมตามงบการเงิน (กรอกเอง Step 1)',
+  total_income_financial DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมตามงบการเงิน',
   deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน Step3',
   fund_amount      DECIMAL(18,2) DEFAULT 0 COMMENT 'เงินกองทุน 2%',
   vat_amount       DECIMAL(18,2) DEFAULT 0 COMMENT 'VAT 7%',
@@ -146,8 +146,8 @@ CREATE TABLE submissions (
 -- ใบอนุญาตในใบยื่นแต่ละฉบับ (1 ใบยื่น : N ใบอนุญาต)
 CREATE TABLE licenses (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
-  submission_id CHAR(36)      NOT NULL COMMENT 'ลบใบยื่น → ลบใบอนุญาตตามด้วย (CASCADE)',
-  sort_order    INT           NOT NULL DEFAULT 0 COMMENT 'ลำดับแถวตามที่ส่งมาตอนยื่นแบบ',
+  submission_id CHAR(36)      NOT NULL COMMENT 'CASCADE ตามใบยื่น',
+  sort_order    INT           NOT NULL DEFAULT 0 COMMENT 'ลำดับแถวตอนยื่นแบบ',
   license_no    VARCHAR(50)   NOT NULL,
   licensee_type VARCHAR(100)  NULL,
   license_status VARCHAR(20)  NULL,
@@ -155,7 +155,7 @@ CREATE TABLE licenses (
   start_date    DATE          NULL,
   end_date      DATE          NULL,
   fee_amount    DECIMAL(18,2) DEFAULT 0 COMMENT 'รายได้รวมของใบอนุญาตนี้',
-  deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อนของใบอนุญาตนี้ (Step 3)',
+  deduction_amount DECIMAL(18,2) DEFAULT 0 COMMENT 'ค่าลดหย่อน (Step 3)',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
@@ -169,7 +169,7 @@ CREATE TABLE license_incomes (
   id          CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   license_id  CHAR(36)      NOT NULL,
   income_type VARCHAR(50)   NULL COMMENT 'รหัสประเภท เช่น ads, rental',
-  field_key   VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น f1_1, custom_1',
+  field_key   VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์ฟอร์ม เช่น f1_1',
   label       VARCHAR(255)  NULL COMMENT 'ชื่อแสดงผล เช่น รายได้ค่าโฆษณา',
   amount      DECIMAL(18,2) DEFAULT 0,
   is_custom   BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง',
@@ -185,7 +185,7 @@ CREATE TABLE other_incomes (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)      NOT NULL,
   income_type   VARCHAR(50)   NULL,
-  field_key     VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์จากฟอร์ม Frontend เช่น o1, other_custom_1',
+  field_key     VARCHAR(50)   NULL COMMENT 'รหัสฟิลด์ฟอร์ม เช่น o1',
   label         VARCHAR(255)  NULL,
   amount        DECIMAL(18,2) DEFAULT 0,
   is_custom     BOOLEAN       DEFAULT FALSE COMMENT 'รายการที่ผู้ใช้กำหนดเอง',
@@ -202,7 +202,7 @@ CREATE TABLE document_attachments (
   submission_id CHAR(36)     NOT NULL,
   doc_type      VARCHAR(50)  NULL COMMENT 'ประเภทเอกสาร',
   file_name     VARCHAR(255) NOT NULL COMMENT 'ชื่อไฟล์เดิมของผู้ใช้',
-  storage_path  VARCHAR(500) NOT NULL COMMENT 'path จริงบน server (ชื่อไฟล์เปลี่ยนเป็น UUID แล้ว)',
+  storage_path  VARCHAR(500) NOT NULL COMMENT 'path จริงบน server (ชื่อไฟล์เป็น UUID)',
   mime_type     VARCHAR(100) NULL,
   file_size     INT NULL COMMENT 'ขนาดไฟล์ (bytes)',
   uploaded_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -220,7 +220,7 @@ CREATE TABLE invoice (
   invoice_no    VARCHAR(50)   NULL,
   amount        DECIMAL(18,2) DEFAULT 0,
   issued_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
-  issued_by     VARCHAR(255)  NULL COMMENT 'email เจ้าหน้าที่ผู้ออกใบแจ้งหนี้',
+  issued_by     VARCHAR(255)  NULL COMMENT 'ผู้ออกใบแจ้งหนี้',
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
   UNIQUE KEY uq_inv_sub (submission_id)
@@ -235,7 +235,7 @@ CREATE TABLE receipt (
   receipt_no    VARCHAR(50)   NULL,
   amount        DECIMAL(18,2) DEFAULT 0,
   received_at   DATETIME NULL COMMENT 'วันเวลารับชำระจริง',
-  recorded_by   VARCHAR(255)  NULL COMMENT 'email เจ้าหน้าที่ผู้บันทึก',
+  recorded_by   VARCHAR(255)  NULL COMMENT 'ผู้บันทึก',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
@@ -255,8 +255,8 @@ CREATE TABLE audit_logs (
   action      VARCHAR(255) NOT NULL COMMENT 'ทำอะไร',
   table_name  VARCHAR(100) NOT NULL COMMENT 'ตารางไหน',
   record_id   VARCHAR(50)  NULL     COMMENT 'แถวไหน',
-  record_label VARCHAR(255) NULL    COMMENT 'ของใคร เช่น ชื่อผู้ประกอบการ/เลขผู้เสียภาษี',
-  changes     JSON NULL COMMENT 'ค่าก่อน/หลัง เช่น {"phone":{"old":"..","new":".."}}',
+  record_label VARCHAR(255) NULL    COMMENT 'ของใคร เช่น ชื่อ/เลขผู้เสียภาษี',
+  changes     JSON NULL COMMENT 'ค่าก่อน/หลัง (JSON)',
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 
   INDEX idx_log_created (created_at DESC),
@@ -285,11 +285,11 @@ CREATE TABLE integration_log (
 CREATE TABLE import_batches (
   id            CHAR(36)      PRIMARY KEY DEFAULT (UUID()),
   import_type   ENUM('taxpayer','license','operator_account') NOT NULL,
-  imported_by   VARCHAR(255)  NOT NULL COMMENT 'อีเมลแอดมินที่นำเข้า',
+  imported_by   VARCHAR(255)  NOT NULL COMMENT 'ผู้นำเข้า',
   imported_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
   row_count     INT           NOT NULL DEFAULT 0,
   status        ENUM('active','rolled_back') NOT NULL DEFAULT 'active',
-  snapshot      LONGTEXT      NOT NULL COMMENT 'JSON array: [{"table","key","old"}] old=null คือแถวใหม่',
+  snapshot      LONGTEXT      NOT NULL COMMENT 'snapshot สำหรับ rollback',
 
   INDEX idx_imb_type (import_type),
   INDEX idx_imb_status (status)
