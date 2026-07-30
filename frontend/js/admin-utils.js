@@ -749,15 +749,6 @@ async function saveFullDetailChanges() {
 }
 
 
-// ════════════════════ Receipt modal close ════════════════════
-// (openReceiptModal/submitReceiptModal อยู่ใน admin.js แล้ว แต่ไม่มี close)
-
-function closeReceiptModal() {
-  const modal = document.getElementById('receiptModal');
-  if (modal) modal.style.display = 'none';
-}
-
-
 // ════════════════════ Income/Deduct edit modal stubs ════════════════════
 // stub กันปุ่มปิด/บันทึก error — โมดัลนี้ยังไม่มีปุ่มเปิดใช้งานจริง (Panel 1/3 อ่านอย่างเดียว)
 
