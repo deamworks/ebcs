@@ -155,7 +155,14 @@ function renderReadOnlySubmission(data, opts = {}) {
     console.error('[renderReadOnlySubmission]', err);
   }
 
-  _vsLockReadOnly();
+  // [FIX] แอดมินแก้ไขข้อมูลในใบยื่นที่ยังไม่ได้จ่ายเงิน (draft/pending_payment)
+  // ได้เหมือนหน้ากรอกของผู้ประกอบการ — เดิมล็อกอ่านอย่างเดียวทุกสถานะ ทั้งที่
+  // paid เท่านั้นที่ควรห้ามแก้ (มีใบเสร็จอ้างอิงยอดเดิมไปแล้ว)
+  if (opts.editable) {
+    _vsUnlockForAdminEdit(data);
+  } else {
+    _vsLockReadOnly();
+  }
 }
 
 /** ปิดการแก้ไขทุกช่อง + ซ่อนปุ่มที่ทำให้เกิดการบันทึก/อัปโหลด/ยืนยันซ้ำ
@@ -173,12 +180,32 @@ function _vsLockReadOnly() {
   });
 }
 
+/** โหมดแอดมินแก้ไข — ปล่อยให้กรอกรายได้/ค่าลดหย่อน/ผู้สอบบัญชีได้ตามปกติ
+ *  (เหมือนหน้าผู้ประกอบการ) แต่ยังล็อกช่องโครงสร้าง (เลขผู้เสียภาษี วันที่
+ *  ใบอนุญาต ฯลฯ) กับปุ่ม/ช่องอัปโหลดเอกสารที่ไม่ได้อยู่ในขอบเขตนี้ */
+function _vsUnlockForAdminEdit(data) {
+  document.body.classList.add('vs-admin-edit');
+  const confirmBtn = document.getElementById('btn-confirm-submit');
+  if (confirmBtn) confirmBtn.style.display = 'none';
+  document.querySelectorAll('input[type="file"]').forEach(el => {
+    const row = el.closest('.doc-upload-row') || el.parentElement;
+    if (row) row.style.display = 'none';
+  });
+
+  const bar = document.createElement('div');
+  bar.style.cssText = 'background:#e8f4fd;border:1px solid #90caf9;color:#0d47a1;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  bar.innerHTML = `<span>โหมดแอดมินแก้ไข — แก้ไขรายได้/ค่าลดหย่อน/ผู้สอบบัญชีได้ อย่าลืมกด "บันทึกการแก้ไข" หลังแก้เสร็จ</span>
+    <button type="button" class="btn btn-primary btn-sm" id="btn-admin-save-submission" onclick="saveAdminSubmissionEdit('${data.submission?.id || ''}')">บันทึกการแก้ไข</button>`;
+  const main = document.querySelector('.main') || document.body;
+  main.insertBefore(bar, main.firstChild);
+}
+
 function _vsRenderStatusBanner(s, statusLabelOverride) {
   const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
   const bar = document.createElement('div');
   bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;';
-  bar.textContent = `โหมดดูอย่างเดียว — ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})`;
+  bar.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})`;
   const main = document.querySelector('.main') || document.body;
   main.insertBefore(bar, main.firstChild);
 }
