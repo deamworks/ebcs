@@ -36,7 +36,7 @@ function renderStep5AndSummary() {
     let penalty = 0;
     let months = 0;
     if (isLate) {
-      const pResult = calcPenalty(fund, dueDateObj, payDateObj);
+      const pResult = calcPenalty(fund, appState.dueDate);
       penalty = pResult.penalty;
       months = pResult.months;
     }
