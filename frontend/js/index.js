@@ -133,11 +133,37 @@ async function autoFillFromAuth() {
     _setDate(document.getElementById('ph1-period-end'),   isoToBE(info.period_end));
     _setDate(document.getElementById('ph1-due-date'),     isoToBE(info.due_date));
 
+    // [FIX] เปลี่ยนปีบัญชี (เช่น จาก 2568 เป็น 2569 ในหน้าเดียวโดยไม่รีเฟรช) ต้อง
+    // ล้างข้อมูลที่กรอกไว้ของปีเก่าออกทั้งหมด ยกเว้นช่อง "สถานี/รายการ" ที่ให้จำไว้
+    // (เดิม rowsData ค้างอยู่ใน memory ข้ามปี ทำให้รายได้/ค่าลดหย่อนของปีก่อน
+    // ติดมาด้วยตอนเปลี่ยนปี ทั้งที่ loadLicenses แก้แค่เลขที่/ประเภท/วันที่ใบอนุญาต)
+    const _newYear = String(info.fiscal_year || '');
+    if (appState.year && appState.year !== _newYear) {
+      const preservedStations = {};
+      Object.entries(appState.rowsData || {}).forEach(([idx, row]) => {
+        if (row && row.station) preservedStations[idx] = row.station;
+      });
+      appState.rowsData = {};
+      Object.entries(preservedStations).forEach(([idx, station]) => {
+        appState.rowsData[idx] = {
+          income: 0, deduction: 0, no: '', type: '', station,
+          startDate: '', endDate: '', hasIncome: 'yes', noIncomeReason: '',
+          licenseStatus: 'active', customItems: [], savedInputs: {}
+        };
+      });
+      appState.step2Inputs      = {};
+      appState.step2CustomRows  = [];
+      appState.auditor          = {};
+      appState.financialIncome  = '';
+      appState.customOtherIncome = [];
+      appState._draftLoaded     = false;
+    }
+
     // update appState
     appState.taxId    = taxId;
     appState.taxid    = taxId;
     appState.refNo    = info.ref_no || '';
-    appState.year     = String(info.fiscal_year || '');
+    appState.year     = _newYear;
     appState.dueDate  = isoToBE(info.due_date);
     appState.licensee = info.operator_name || '';
 
