@@ -217,7 +217,9 @@ function groupLicensesByType(count) {
  * @returns {string} HTML string พร้อม <style>
  */
 function generateRawTemplateHtml() {
-  const totalFinancial  = document.getElementById('total-income-financial')?.value || '0.00';
+  const totalFinancial  = typeof fmt === 'function'
+    ? fmt(document.getElementById('total-income-financial')?.value)
+    : (document.getElementById('total-income-financial')?.value || '0.00');
   const totalOther      = document.getElementById('otherGrandTotal')?.value         || '0.00';
   const totalBiz        = document.getElementById('total-income-license')?.value    || '0.00';
   const totalNetPayment = document.getElementById('s5-net')?.value                  || '0.00';
