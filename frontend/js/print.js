@@ -961,18 +961,18 @@ function printDepositSlip() {
     `<img src="../images/banks/${b.file}" alt="${b.n}" class="ds-bank-icon" onerror="this.style.display='none'"/> ${b.n}`;
 
   const css = `
-    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:400; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+    .ds-wrap { width:100%; font-family:'Sarabun',Arial,sans-serif; font-size:11px; color:#000; background:#fff; font-weight:200; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .ds-page { padding:14mm 12mm; }
     .ds-title-bar { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-    .ds-title-box { border:2px solid #000; padding:6px 12px; font-weight:700; font-size:12.5px; }
+    .ds-title-box { border:2px solid #000; padding:6px 12px; font-weight:400; font-size:12.5px; }
     .ds-title-right { text-align:right; font-size:10.5px; }
     .ds-header-row { display:flex; justify-content:space-between; gap:16px; margin-bottom:10px; }
     .ds-org { display:flex; gap:10px; align-items:flex-start; }
     .ds-org-text { font-size:10.5px; line-height:1.6; }
-    .ds-org-text .ds-org-title { font-weight:700; font-size:12px; }
+    .ds-org-text .ds-org-title { font-weight:400; font-size:12px; }
     .ds-info-table { border-collapse:collapse; min-width:280px; }
     .ds-info-table td { border:1px solid #000; padding:4px 8px; font-size:10.5px; }
-    .ds-info-table .ds-info-hd { background:#dbe9f7; font-weight:700; text-align:center; }
+    .ds-info-table .ds-info-hd { background:#dbe9f7; font-weight:400; text-align:center; }
     .ds-info-table .ds-info-label { background:#eaf3fb; white-space:nowrap; }
     .ds-info-table .ds-info-val { min-width:150px; }
     .ds-branch-line { text-align:right; font-size:10.5px; margin-bottom:8px; }
@@ -981,11 +981,11 @@ function printDepositSlip() {
     .ds-deadline { color:#c62828; font-size:10.5px; text-align:right; line-height:1.6; }
     .ds-main-table { border-collapse:collapse; width:100%; margin-top:10px; font-size:10.5px; }
     .ds-main-table td { border:1px solid #000; padding:5px 8px; vertical-align:middle; }
-    .ds-main-table .ds-hd { background:#dbe9f7; font-weight:700; }
-    .ds-amount-words { background:#dbe9f7; font-weight:700; white-space:nowrap; }
+    .ds-main-table .ds-hd { background:#dbe9f7; font-weight:400; }
+    .ds-amount-words { background:#dbe9f7; font-weight:400; white-space:nowrap; }
     .ds-footer-row { display:flex; justify-content:space-between; margin-top:10px; font-size:10.5px; }
     .ds-bank-use { border:1px solid #000; }
-    .ds-bank-use-hd { background:#dbe9f7; font-weight:700; padding:4px 8px; border-bottom:1px solid #000; }
+    .ds-bank-use-hd { background:#dbe9f7; font-weight:400; padding:4px 8px; border-bottom:1px solid #000; }
     .ds-bank-use-body { padding:6px 8px; }
     .ds-note-line { text-align:center; font-size:10.5px; margin:12px 0 8px; }
     .ds-bank-grid-wrap { display:flex; gap:16px; align-items:flex-start; }
@@ -1062,7 +1062,7 @@ function printDepositSlip() {
           <tr>
             <td colspan="2"></td>
             <td>&nbsp;</td>
-            <td style="text-align:right;font-weight:700;">${netAmountFmt}</td>
+            <td style="text-align:right;font-weight:400;">${netAmountFmt}</td>
           </tr>
           <tr>
             <td class="ds-amount-words" colspan="2">จำนวนเงินเป็นตัวอักษร / Amount in Words</td>
