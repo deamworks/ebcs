@@ -100,7 +100,7 @@ function renderStep5AndSummary() {
   const banner = document.getElementById('penalty-alert-banner');
   if (banner) {
     if (isLate && sumPenalty > 0) {
-      const pCount = calcPenalty(sumFund, dueDateObj, payDateObj);
+      const pCount = calcPenalty(sumFund, appState.dueDate);
       const days   = Math.ceil((payDateObj - dueDateObj) / (1000 * 60 * 60 * 24));
       const fmtBE  = d => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()+543}` : '—';
       banner.innerHTML = `
