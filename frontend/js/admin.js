@@ -946,6 +946,12 @@ async function deleteLicense(id, no) {
     return isNormal ? 'ปกติ' : 'อื่นๆ';
   }
 
+  function _taxpayerSubTypeBadge(subType) {
+    const map = { 'ปกติ': 'badge-lic-ok', 'สิ้นสุด': 'badge-lic-warn', 'ยกเลิก': 'badge-lic-danger', 'เพิกถอน': 'badge-lic-danger' };
+    const cls = map[subType];
+    return cls ? `<span class="${cls}">${subType}</span>` : '—';
+  }
+
   function renderTaxpayerTable() {
     const search = (document.getElementById('tp-search')?.value || '').toLowerCase();
     const yearFrom     = parseInt(document.getElementById('tp-year-from')?.value || '') || null;
@@ -991,7 +997,7 @@ async function deleteLicense(id, no) {
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.tax_id}</td>
           <td style="font-size:12.5px">${r.operator_name || '—'}</td>
           <td style="text-align:center">${r.periodRound === 'ปกติ' ? '<span class="badge-lic-ok">ปกติ</span>' : r.periodRound === 'อื่นๆ' ? '<span class="badge-lic-warn">อื่นๆ</span>' : '—'}</td>
-          <td style="text-align:center">${r.sub_type || '—'}</td>
+          <td style="text-align:center">${_taxpayerSubTypeBadge(r.sub_type)}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${r.period_start ? `${fmtBE(r.period_start)} – ${fmtBE(r.period_end)}` : '—'}</td>
           <td style="font-size:12.5px;white-space:nowrap;text-align:center">${fmtBE(r.due_date)}</td>
           <td style="text-align:center;font-weight:600;color:#2e86ab;font-size:12.5px">${r.licenseCount}</td>
