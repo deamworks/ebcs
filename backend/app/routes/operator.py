@@ -223,21 +223,38 @@ def autofill():
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ถ้าไม่ระบุปี → ดึงปีล่าสุดอัตโนมัติ
+            # ถ้าไม่ระบุปี → ดึงปีที่ยังไม่จ่ายเงินปีแรกสุด (ปีที่ต้องยื่นตอนนี้)
+            # [FIX] เดิมดึง "ปีล่าสุดที่มีแถวอยู่" ตรงๆ ซึ่งวิ่งไปเรื่อยๆ ทุกครั้งที่มี
+            # การเข้าปีถัดไป (เช่นตอนทดสอบ) เพราะแถวปีถัดไปถูกสร้างอัตโนมัติค้างไว้
+            # ทำให้ "ปีล่าสุด" เพี้ยนไปไกลกว่าปีที่ต้องยื่นจริง — เปลี่ยนมาดึงปีแรกสุด
+            # ที่ยังไม่มี submission สถานะ paid แทน (ถ้าทุกปีจ่ายครบแล้วค่อยขยับไปปีถัดจากปีล่าสุด)
             if not year:
                 cur.execute("""
-                    SELECT fiscal_year FROM taxpayer_master
-                    WHERE  tax_id = %s
-                    ORDER  BY fiscal_year DESC LIMIT 1
+                    SELECT tm.fiscal_year FROM taxpayer_master tm
+                    WHERE  tm.tax_id = %s
+                      AND  NOT EXISTS (
+                          SELECT 1 FROM submissions s
+                          WHERE s.tax_id = tm.tax_id AND s.fiscal_year = tm.fiscal_year AND s.status = 'paid'
+                      )
+                    ORDER  BY tm.fiscal_year ASC LIMIT 1
                 """, (tax_id,))
                 row = cur.fetchone()
                 if row:
                     year = row["fiscal_year"]
                 else:
-                    return jsonify({
-                        "success": False,
-                        "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการในระบบ"}
-                    }), 404
+                    cur.execute("""
+                        SELECT fiscal_year FROM taxpayer_master
+                        WHERE  tax_id = %s
+                        ORDER  BY fiscal_year DESC LIMIT 1
+                    """, (tax_id,))
+                    row = cur.fetchone()
+                    if row:
+                        year = row["fiscal_year"] + 1
+                    else:
+                        return jsonify({
+                            "success": False,
+                            "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการในระบบ"}
+                        }), 404
 
             # ดึงข้อมูล taxpayer — ถ้ายังไม่มีแถวของปีนี้ ลองสร้างอัตโนมัติจาก
             # รอบบัญชีปีล่าสุดที่มีอยู่ (เลื่อนวันที่ไปเป็นปีที่ขอ) แทนการรอแอดมินเพิ่มมือ
