@@ -56,6 +56,50 @@ function _displayRefNo() {
   return previewRef ? `${previewRef}` : '—';
 }
 
+/* ── Thai QR Payment (EMV QR Code) — Bill Payment ─────────────────────────
+ * โครงสร้างตามมาตรฐาน Thai QR Payment (BOT/EMVCo interoperable QR):
+ * Tag 00 = Payload Format, 01 = Point of Initiation (12 = dynamic/มีจำนวนเงิน),
+ * Tag 30 = Merchant Account Info สำหรับ Bill Payment (AID A000000677010112 +
+ * Biller ID + Ref1 + Ref2), 53 = สกุลเงิน (764 = THB), 54 = จำนวนเงิน,
+ * 58 = ประเทศ, 63 = CRC16 checksum ปิดท้ายเสมอ
+ * หมายเหตุ: Biller ID ต้องลงทะเบียนกับธนาคารจริงถึงจะ "จ่ายสำเร็จ" ได้ —
+ * ไฟล์นี้แค่สร้าง QR ให้ถูกฟอร์แมตมาตรฐาน แอปธนาคารจะอ่าน/แสดงยอดได้ปกติ */
+function _emvTag(id, value) {
+  const len = String(value.length).padStart(2, '0');
+  return `${id}${len}${value}`;
+}
+
+function _crc16Ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function buildThaiQRBillPayment({ billerId, ref1, ref2, amount }) {
+  const merchantInfo =
+    _emvTag('00', 'A000000677010112') +
+    _emvTag('01', billerId) +
+    _emvTag('02', ref1) +
+    (ref2 ? _emvTag('03', ref2) : '');
+
+  const payload =
+    _emvTag('00', '01') +
+    _emvTag('01', '12') +
+    _emvTag('30', merchantInfo) +
+    _emvTag('53', '764') +
+    _emvTag('54', amount.toFixed(2)) +
+    _emvTag('58', 'TH') +
+    '6304';
+
+  return payload + _crc16Ccitt(payload);
+}
+
 /**
  * สร้าง HTML หัวเอกสาร (ตราครุฑ + ชื่อแบบฟอร์ม)
  * @param {string} mainTitle - ชื่อแบบฟอร์มหลัก
@@ -853,8 +897,16 @@ function printDepositSlip() {
   // บาร์โค้ด: |{เลขผู้เสียภาษี กสทช.}{Ref1}{Ref2}{จำนวนเงินหน่วยสตางค์}
   const barcodeContent = `|${nbtcOrgId}${ref1}${ref2}${amountCents}`;
 
-  // QR Code: ใช้ข้อมูลชุดเดียวกับบาร์โค้ด (ตามใบนำฝากจริงของ กสทช./ธนาคาร)
-  const qrContent = barcodeContent;
+  // [FIX] QR Code: เดิมใช้ข้อความดิบชุดเดียวกับบาร์โค้ด ซึ่งไม่ใช่ฟอร์แมต Thai QR
+  // Payment มาตรฐาน แอปธนาคารจะอ่านไม่ออกเลย — เปลี่ยนเป็นฟอร์แมต EMV QR (Bill
+  // Payment) จริงตามสเปก ธปท./EMVCo แทน (nbtcOrgId ต้องเป็น Biller ID ที่
+  // ลงทะเบียนกับธนาคารจริงแล้วเท่านั้น การ "จ่ายสำเร็จ" ถึงจะทำได้จริง)
+  const qrContent = buildThaiQRBillPayment({
+    billerId: nbtcOrgId,
+    ref1,
+    ref2,
+    amount: netAmount,
+  });
 
   console.log('[printDepositSlip] barcode:', barcodeContent);
   console.log('[printDepositSlip] QR:', qrContent);
