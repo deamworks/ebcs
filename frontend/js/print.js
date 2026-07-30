@@ -978,7 +978,7 @@ function printDepositSlip() {
               <tr><td class="ds-info-hd" colspan="2">ค่านำส่งเงินรายปีเข้ากองทุนวิจัยและพัฒนา</td></tr>
               <tr><td class="ds-info-label">ชื่อ/Name</td><td class="ds-info-val">${licensee}</td></tr>
               <tr><td class="ds-info-label">รหัสลูกค้า/Customer&nbsp;No.&nbsp;(Ref.1)</td><td class="ds-info-val">${taxId}</td></tr>
-              <tr><td class="ds-info-label">หมายเลขอ้างอิง/Reference&nbsp;No.(Ref&nbsp;2)</td><td class="ds-info-val">${refNo}</td></tr>
+              <tr><td class="ds-info-label">หมายเลขอ้างอิง/Reference&nbsp;No.(Ref&nbsp;2)</td><td class="ds-info-val">${ref2}</td></tr>
             </table>
           </div>
         </div>
