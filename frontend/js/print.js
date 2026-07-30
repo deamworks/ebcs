@@ -978,7 +978,7 @@ function printDepositSlip() {
     .ds-branch-line { text-align:right; font-size:10.5px; margin-bottom:8px; }
     .ds-account-line { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:11px; }
     .ds-box { width:13px; height:13px; border:1.4px solid #000; display:inline-block; flex-shrink:0; }
-    .ds-deadline { color:#c62828; font-size:10.5px; text-align:right; line-height:1.6; }
+    .ds-deadline { color:#c62828; font-size:10.5px; text-align:left; line-height:1.6; }
     .ds-main-table { border-collapse:collapse; width:100%; margin-top:10px; font-size:10.5px; }
     .ds-main-table td { border:1px solid #000; padding:5px 8px; vertical-align:middle; }
     .ds-main-table .ds-hd { background:#dbe9f7; font-weight:400; }
