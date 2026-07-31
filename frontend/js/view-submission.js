@@ -172,8 +172,22 @@ function _vsLockReadOnly() {
   document.querySelectorAll('input, select, textarea').forEach(el => {
     el.disabled = true;
   });
+  // [FIX] เดิมซ่อนแค่ปุ่มยืนยันจริง (#btn-confirm-submit ใน Phase 3) แต่ปุ่ม
+  // "ยืนยันข้อมูลการชำระเงินกองทุน" ที่ Step 6 (พาไป Phase 3) ไม่มี id ไม่ถูกซ่อน
+  // เลย ทำให้กดเข้าไปดู Phase 3 ได้ทั้งที่เป็นโหมดดูอย่างเดียว
   const confirmBtn = document.getElementById('btn-confirm-submit');
   if (confirmBtn) confirmBtn.style.display = 'none';
+  const confirmFundBtn = document.getElementById('btn-confirm-fund-payment');
+  if (confirmFundBtn) confirmFundBtn.style.display = 'none';
+  // [FIX] ซ่อนปุ่ม "+ เพิ่มรายการ" ทั้งหมด — เพิ่มรายการใหม่ไม่ได้อยู่แล้วในโหมดดู
+  document.querySelectorAll('.btn-add-custom-row').forEach(el => {
+    el.style.display = 'none';
+  });
+  // [FIX] ปุ่ม "บันทึกข้อมูล" ใน modal กรอกรายได้ (เปิดดูได้ปกติ แต่กรอก/บันทึก
+  // ไม่ได้แล้วในโหมดดู) เปลี่ยนข้อความให้สื่อความหมายถูกต้องแทนที่จะบอกว่า
+  // "บันทึกข้อมูล" ทั้งที่กดแล้วไม่มีอะไรถูกบันทึกจริง
+  const incomeModalSaveBtn = document.getElementById('btn-income-modal-save');
+  if (incomeModalSaveBtn) incomeModalSaveBtn.textContent = 'ปิด';
   document.querySelectorAll('input[type="file"]').forEach(el => {
     const row = el.closest('.doc-upload-row') || el.parentElement;
     if (row) row.style.display = 'none';
@@ -203,9 +217,14 @@ function _vsUnlockForAdminEdit(data) {
 function _vsRenderStatusBanner(s, statusLabelOverride) {
   const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
+  // [FIX] เดิมโหมดดูอย่างเดียวไม่มีทางกลับหน้าหลักเลย ต้องกดปุ่ม back ของเบราว์
+  // เซอร์เอง — เพิ่มปุ่ม "กลับหน้าหลัก" ไว้ในแถบแจ้งสถานะเดียวกันนี้
+  const isAdminPage = window.location.pathname.includes('admin');
+  const homeHref = isAdminPage ? '/pages/admin.html' : '/pages/index.html';
   const bar = document.createElement('div');
-  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;';
-  bar.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})`;
+  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  bar.innerHTML = `<span>ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})</span>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="window.location.href='${homeHref}'">กลับหน้าหลัก</button>`;
   const main = document.querySelector('.main') || document.body;
   main.insertBefore(bar, main.firstChild);
 }
