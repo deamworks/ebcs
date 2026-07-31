@@ -5,16 +5,6 @@
   --fs-xs:  11px; --fs-sm: 12px; --fs-md: 13px;
   --fs-lg:  14px; --fs-xl: 15px; --fs-2xl: 20px;
 }
-/* ── โหมดดูอย่างเดียว (view-submission.js: _vsLockReadOnly) ─── */
-.vs-readonly input:disabled,
-.vs-readonly select:disabled,
-.vs-readonly textarea:disabled {
-  background: #f4f5f7 !important;
-  color: #888 !important;
-  opacity: .75;
-  cursor: not-allowed;
-}
-
 /* ── Start Card ─── */
 .start-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); max-width:900px; margin:0 auto; overflow:hidden; }
 .start-card-header { background:linear-gradient(135deg,var(--primary),var(--primary-mid)); padding:16px 22px; display:flex; align-items:center; gap:14px; }
