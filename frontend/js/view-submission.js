@@ -266,7 +266,7 @@ function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
     btn.type = 'button';
     btn.className = 'btn btn-secondary btn-sm';
     btn.style.cssText = 'white-space:nowrap;';
-    btn.textContent = 'ปิด';
+    btn.textContent = 'กลับหน้าหลัก';
     btn.onclick = onClose;
     bar.appendChild(btn);
   }
