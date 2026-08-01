@@ -74,7 +74,7 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  _vsRenderStatusBanner(s, opts.statusLabel);
+  _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
 
   // ── appState หลัก ──
   appState.taxId       = s.tax_id || '';
@@ -200,12 +200,23 @@ function _vsUnlockForAdminEdit(data) {
   main.insertBefore(bar, main.firstChild);
 }
 
-function _vsRenderStatusBanner(s, statusLabelOverride) {
+function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
   const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
   const bar = document.createElement('div');
-  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;';
-  bar.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})`;
+  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;';
+  const msg = document.createElement('span');
+  msg.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label}) — ดูข้อมูลและพิมพ์เอกสารได้เท่านั้น ไม่สามารถแก้ไขข้อมูลได้`;
+  bar.appendChild(msg);
+  if (typeof onClose === 'function') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-secondary btn-sm';
+    btn.style.cssText = 'white-space:nowrap;';
+    btn.textContent = 'ปิด';
+    btn.onclick = onClose;
+    bar.appendChild(btn);
+  }
   const main = document.querySelector('.main') || document.body;
   main.insertBefore(bar, main.firstChild);
 }

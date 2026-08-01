@@ -249,6 +249,7 @@ async function viewExistingSubmission() {
       renderReadOnlySubmission(detail, {
         downloadBase: '/operator',
         statusLabel: statusTh[detail.status] || detail.status,
+        onClose: () => window.location.reload(),
       });
     }
   } catch (e) {
