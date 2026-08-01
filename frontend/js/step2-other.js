@@ -33,6 +33,10 @@ function calcOtherTotal() {
 function addCustomOtherIncomeRow(label = '', value = '') {
   const container = document.getElementById('custom-other-income-container');
   if (!container) return;
+  // [FIX] แถวนี้ถูกสร้างใหม่ตอน restore ค่า step 2 ซึ่งเกิดขึ้นทีหลัง
+  // _vsLockReadOnly() ไปแล้ว — ปุ่ม "ลบ" กับช่องกรอกเลยไม่โดนล็อก ต้องเช็ค
+  // โหมดดูอย่างเดียวตรงนี้เองด้วย
+  const isReadOnly = document.body.classList.contains('vs-readonly');
   const rowId = 'other_row_' + Date.now();
   const tr = document.createElement('tr');
   tr.id        = rowId;
@@ -41,11 +45,11 @@ function addCustomOtherIncomeRow(label = '', value = '') {
     <td class="income-label main-page-indent"
       style="text-align:left !important;padding-left:25px !important;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <button type="button" class="btn btn-danger btn-sm"
+        ${isReadOnly ? '' : `<button type="button" class="btn btn-danger btn-sm"
           onclick="removeCustomOtherIncomeRow('${rowId}')"
-          style="padding:1px 6px;font-size:10px;">ลบ</button>
+          style="padding:1px 6px;font-size:10px;">ลบ</button>`}
         <input type="text" class="form-input custom-other-label"
-          value="${label}" placeholder="ระบุรายการ..."
+          value="${label}" placeholder="ระบุรายการ..." ${isReadOnly ? 'disabled' : ''}
           style="flex:1;padding:4px 6px;font-size:12px;
                  border:1px solid #ccc;border-radius:4px;">
       </div>
@@ -53,7 +57,7 @@ function addCustomOtherIncomeRow(label = '', value = '') {
     <td style="text-align:center;">
       <input type="text"
         class="income-input text-right-input custom-other-value"
-        value="${value}" placeholder="0.00"
+        value="${value}" placeholder="0.00" ${isReadOnly ? 'disabled' : ''}
         oninput="calcOtherTotal()">
     </td>
     <td class="unit-baht"
