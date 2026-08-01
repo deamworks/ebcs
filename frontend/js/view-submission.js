@@ -189,10 +189,9 @@ function _vsLockReadOnly() {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = 'none';
   });
-  document.querySelectorAll('input[type="file"]').forEach(el => {
-    const row = el.closest('.doc-upload-row') || el.parentElement;
-    if (row) row.style.display = 'none';
-  });
+  // หมายเหตุ: ปุ่ม/แถวอัปโหลดเอกสาร (Step 6) ไม่ต้องซ่อน — _vsRenderAttachments()
+  // จัดการเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" (มีไฟล์) หรือปิดใช้งาน (ไม่มีไฟล์)
+  // ให้เองแล้วก่อนหน้านี้ ในขณะที่ปุ่มลบ (X) ถูกซ่อนแยกในฟังก์ชันนั้น
 
   // ปุ่ม "+ เพิ่มรายการ" (รายได้ Step 1 / รายได้อื่นๆ Step 2) — ปิดใช้งานเพราะ
   // เพิ่มข้อมูลใหม่ไม่ได้อยู่แล้วในใบยื่นแบบที่ยืนยันแล้ว
@@ -275,18 +274,37 @@ function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
   main.insertBefore(bar, main.firstChild);
 }
 
-/** แทนที่กล่องอัปโหลดเอกสารด้วยรายการไฟล์ที่แนบไว้จริง + ปุ่มดาวน์โหลด */
+/** เติมชื่อไฟล์ที่แนบไว้จริงลงในตารางเอกสารแนบ (Step 6) ตัวเดิม โดยคงหน้าตา
+ *  ตารางไว้ทุกอย่าง — เปลี่ยนแค่ปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" สำหรับรายการที่
+ *  มีไฟล์แนบไว้แล้ว และซ่อนปุ่มลบ (X) เพราะแก้ไขข้อมูลไม่ได้ในโหมดนี้ */
 function _vsRenderAttachments(attachments, downloadBase) {
-  const list = document.getElementById('doc-upload-list');
-  if (!list) return;
-  list.innerHTML = attachments.length
-    ? attachments.map(a => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
-          <span style="font-size:13px;">${a.doc_type || ''} — ${a.file_name || ''}</span>
-          <button type="button" class="btn btn-secondary btn-sm"
-            onclick="_vsDownloadAttachment('${downloadBase}/attachments/${a.id}/download', '${(a.file_name || '').replace(/'/g, "\\'")}')">
-            ดาวน์โหลด
-          </button>
-        </div>`).join('')
-    : `<p style="padding:16px;color:#888;">ไม่มีไฟล์แนบ</p>`;
+  const rows = document.querySelectorAll('#doc-upload-list .doc-row');
+  if (!rows.length) return;
+  rows.forEach(row => {
+    const idx      = row.id.replace('docrow-', '');
+    const nameEl   = row.querySelector('.doc-row-name');
+    const fnameEl  = document.getElementById(`fname-${idx}`);
+    const btn      = row.querySelector('.doc-row-btn button');
+    const clearBtn = document.getElementById(`clear-${idx}`);
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    const label = nameEl ? nameEl.textContent.trim() : '';
+    const att   = attachments.find(a => (a.doc_type || '').trim() === label);
+
+    if (att) {
+      if (fnameEl) { fnameEl.textContent = att.file_name || 'เอกสารแนบ'; fnameEl.classList.add('attached'); }
+      if (btn) {
+        btn.textContent = 'ดูเอกสาร';
+        btn.onclick = () => _vsDownloadAttachment(`${downloadBase}/attachments/${att.id}/download`, att.file_name);
+      }
+    } else {
+      if (fnameEl) fnameEl.textContent = '—';
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.onclick = null;
+      }
+    }
+  });
 }
