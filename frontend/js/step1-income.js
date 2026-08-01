@@ -114,6 +114,10 @@ function calcModalTotal() {
 function addCustomIncomeRow(label = '', value = '') {
   const container = document.getElementById('custom-income-container');
   if (!container) return;
+  // [FIX] แถวนี้ถูกสร้างใหม่ทุกครั้งที่เปิด Modal (ตอน restore customItems) ซึ่ง
+  // เกิดขึ้นทีหลัง _vsLockReadOnly() ไปแล้ว — ปุ่ม "ลบ" กับช่องกรอกเลยไม่โดนล็อก
+  // ต้องเช็คโหมดดูอย่างเดียวตรงนี้เองด้วย
+  const isReadOnly = document.body.classList.contains('vs-readonly');
   const rowId = 'custom_row_' + Date.now();
   const tr = document.createElement('tr');
   tr.id        = rowId;
@@ -122,11 +126,11 @@ function addCustomIncomeRow(label = '', value = '') {
     <td class="td-indent"
       style="display:flex;align-items:center;gap:8px;
              border-bottom:none;border-right:none;">
-      <button type="button" class="btn btn-danger btn-sm"
+      ${isReadOnly ? '' : `<button type="button" class="btn btn-danger btn-sm"
         onclick="removeCustomIncomeRow('${rowId}')"
-        style="padding:2px 8px;font-size:11px;border-radius:4px;">ลบ</button>
+        style="padding:2px 8px;font-size:11px;border-radius:4px;">ลบ</button>`}
       <input type="text" class="form-input custom-item-label"
-        value="${label}" placeholder="ระบุชื่อรายการ..."
+        value="${label}" placeholder="ระบุชื่อรายการ..." ${isReadOnly ? 'disabled' : ''}
         style="flex:1;padding:5px 8px;font-size:13px;
                border:1px solid #ccc;border-radius:4px;font-family:'Sarabun';">
     </td>
@@ -135,7 +139,7 @@ function addCustomIncomeRow(label = '', value = '') {
              border-right:1px solid #e0e0e0;border-left:1px solid #e0e0e0;">
       <input type="text"
         class="text-right-input modal-calc-input custom-item-value"
-        value="${value}" placeholder="0.00"
+        value="${value}" placeholder="0.00" ${isReadOnly ? 'disabled' : ''}
         oninput="calcModalTotal()">
     </td>
     <td class="td-center" style="border-bottom:1px solid #e0e0e0;color:#888;">
