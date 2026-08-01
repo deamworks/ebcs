@@ -35,6 +35,19 @@ function generateDeductRows() {
       income: 0, deduction: 0, no: '', type: '', station: '',
     };
 
+    // [FIX] ใบยื่นแบบที่ยืนยันแล้ว (โหมดดูอย่างเดียว) — ปุ่มต้องเป็นไอคอนรูปตา
+    // สีเทาจาง สื่อว่าดูค่าลดหย่อนได้เท่านั้น แก้ไขไม่ได้ (ช่องกรอกใน modal
+    // ถูกล็อกไว้แล้วจาก _vsLockReadOnly ใน view-submission.js)
+    const isReadOnly = document.body.classList.contains('vs-readonly');
+    const deductBtnClass = isReadOnly ? 'btn-secondary' : 'btn-primary';
+    const deductBtnStyle = isReadOnly
+      ? 'padding:4px 8px;color:#888;border-color:#ccc;'
+      : 'padding:4px 8px;';
+    const deductBtnTitle = isReadOnly ? 'ดูค่าลดหย่อน' : 'กรอกค่าลดหย่อน';
+    const deductBtnIcon = isReadOnly
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
+
     const row = document.createElement('tr');
     row.innerHTML = `
       <td style="text-align:center;">${i}</td>
@@ -43,17 +56,10 @@ function generateDeductRows() {
       <td style="text-align:center;">${rowData.station || '—'}</td>
       <td style="text-align:center;">${fmt(rowData.income)} บาท</td>
       <td style="text-align:center;">
-        <button type="button" class="btn btn-primary btn-sm"
-          onclick="openDeductModal(${i})" title="กรอกค่าลดหย่อน"
-          style="padding:4px 8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <rect x="4" y="2" width="16" height="20" rx="2"/>
-            <line x1="8" y1="10" x2="16" y2="10"/>
-            <line x1="8" y1="14" x2="16" y2="14"/>
-            <line x1="8" y1="18" x2="12" y2="18"/>
-          </svg>
+        <button type="button" class="btn ${deductBtnClass} btn-sm"
+          onclick="openDeductModal(${i})" title="${deductBtnTitle}"
+          style="${deductBtnStyle}">
+          ${deductBtnIcon}
         </button>
       </td>
       <td id="deduct-display-${i}" style="text-align:center;font-weight:600;color:#c62828;">${rowData.deduction > 0 ? fmt(rowData.deduction) + ' บาท' : '—'}</td>`;

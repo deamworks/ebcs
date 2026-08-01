@@ -74,7 +74,7 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  _vsRenderStatusBanner(s, opts.statusLabel);
+  _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
 
   // ── appState หลัก ──
   appState.taxId       = s.tax_id || '';
@@ -165,6 +165,8 @@ function renderReadOnlySubmission(data, opts = {}) {
   }
 }
 
+const _VS_EYE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+
 /** ปิดการแก้ไขทุกช่อง + ซ่อนปุ่มที่ทำให้เกิดการบันทึก/อัปโหลด/ยืนยันซ้ำ
  *  (ปุ่มเปลี่ยน step และปุ่มพิมพ์เอกสารยังกดได้ตามปกติ) */
 function _vsLockReadOnly() {
@@ -172,11 +174,53 @@ function _vsLockReadOnly() {
   document.querySelectorAll('input, select, textarea').forEach(el => {
     el.disabled = true;
   });
-  const confirmBtn = document.getElementById('btn-confirm-submit');
-  if (confirmBtn) confirmBtn.style.display = 'none';
+  // ปุ่มที่กดแล้วเปลี่ยนสถานะ/ส่งข้อมูลซ้ำ — ต้องซ่อนทั้งหมดในโหมดดูอย่างเดียว
+  ['btn-confirm-submit', 'btn-confirm-fund-payment'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = 'none';
+  });
   document.querySelectorAll('input[type="file"]').forEach(el => {
     const row = el.closest('.doc-upload-row') || el.parentElement;
     if (row) row.style.display = 'none';
+  });
+
+  // ปุ่ม "+ เพิ่มรายการ" (รายได้ Step 1 / รายได้อื่นๆ Step 2) — ปิดใช้งานเพราะ
+  // เพิ่มข้อมูลใหม่ไม่ได้อยู่แล้วในใบยื่นแบบที่ยืนยันแล้ว
+  ['btn-add-income-row', 'btn-add-other-income-row'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    }
+  });
+
+  // ปุ่มไอคอน "กรอกรายได้" ต่อรายการใบอนุญาต (Step 1 — สร้างไว้แล้วก่อนเรียก
+  // ฟังก์ชันนี้) — เปลี่ยนเป็นไอคอนรูปตาสีเทาจาง สื่อว่าเปิดดูได้เท่านั้น
+  // (ช่องกรอกใน modal ถูกล็อกไว้แล้ว) ส่วนปุ่ม "กรอกค่าลดหย่อน" ของ Step 3
+  // ถูกสร้างใหม่ทุกครั้งที่เข้า step นั้น จึงจัดการแยกใน generateDeductRows()
+  document.querySelectorAll('button[onclick^="openIncomeModal"]').forEach(btn => {
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-secondary');
+    btn.style.color = '#888';
+    btn.style.borderColor = '#ccc';
+    btn.title = 'ดูรายได้';
+    btn.innerHTML = _VS_EYE_ICON;
+  });
+
+  // ปุ่ม "ยกเลิก/บันทึกข้อมูล" ใน Modal กรอกรายได้-ค่าลดหย่อน — เหลือแค่ปุ่ม
+  // "ปิด" ปุ่มเดียว เพราะไม่มีอะไรให้บันทึก (แก้ไขข้อมูลไม่ได้)
+  [
+    { save: 'btn-save-income-modal', cancel: 'btn-cancel-income-modal', close: 'closeIncomeModal' },
+    { save: 'btn-save-deduct-modal', cancel: 'btn-cancel-deduct-modal', close: 'closeDeductModal' },
+  ].forEach(({ save, cancel, close }) => {
+    const cancelBtn = document.getElementById(cancel);
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    const saveBtn = document.getElementById(save);
+    if (saveBtn) {
+      saveBtn.textContent = 'ปิด';
+      saveBtn.setAttribute('onclick', `${close}()`);
+    }
   });
 }
 
@@ -200,12 +244,23 @@ function _vsUnlockForAdminEdit(data) {
   main.insertBefore(bar, main.firstChild);
 }
 
-function _vsRenderStatusBanner(s, statusLabelOverride) {
+function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
   const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
   const bar = document.createElement('div');
-  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;text-align:center;';
-  bar.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label})`;
+  bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;';
+  const msg = document.createElement('span');
+  msg.textContent = `ใบยื่นแบบนี้ยืนยันแล้ว (สถานะ: ${label}) — ดูข้อมูลและพิมพ์เอกสารได้เท่านั้น ไม่สามารถแก้ไขข้อมูลได้`;
+  bar.appendChild(msg);
+  if (typeof onClose === 'function') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-secondary btn-sm';
+    btn.style.cssText = 'white-space:nowrap;';
+    btn.textContent = 'ปิด';
+    btn.onclick = onClose;
+    bar.appendChild(btn);
+  }
   const main = document.querySelector('.main') || document.body;
   main.insertBefore(bar, main.firstChild);
 }

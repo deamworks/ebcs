@@ -159,6 +159,18 @@ body {
 }
 .form-unit { color: var(--text-muted); font-size: 12.5px; }
 .field-invalid { border-color: var(--danger) !important; background: #FFF5F5 !important; }
+
+/* ── โหมดดูอย่างเดียว (ใบยื่นแบบที่ยืนยันแล้ว) ──────────
+   ทำให้ช่องกรอกทุกช่องดูจางลงชัดเจน สื่อว่าดูได้แต่แก้ไขไม่ได้ */
+.vs-readonly input:disabled,
+.vs-readonly select:disabled,
+.vs-readonly textarea:disabled {
+  background: #f0f1f3 !important;
+  color: #8a8f98 !important;
+  border-color: #dcdfe4 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
 hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
 /* ── Section Header ────────────────────────────────── */
