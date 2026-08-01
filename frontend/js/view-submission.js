@@ -172,6 +172,16 @@ const _VS_EYE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 function _vsLockReadOnly() {
   document.body.classList.add('vs-readonly');
   document.querySelectorAll('input, select, textarea').forEach(el => {
+    // ช่องที่ readonly อยู่แล้วแต่เดิม (จำนวนใบอนุญาต, รายได้รวมตามใบอนุญาต) —
+    // ไม่ต้องแตะ ปล่อยให้หน้าตาเหมือนเดิมทุกโหมด ไม่ใช่แค่โหมดดูอย่างเดียว
+    if (el.hasAttribute('readonly')) return;
+    if (el.id === 'total-income-financial') {
+      // [FIX] ฟิลด์นี้ผู้ใช้กรอกเองได้ปกติ — ในโหมดดูอย่างเดียวห้ามแก้ไข แต่ไม่
+      // ต้องการให้ดูจางเหมือนช่องอื่นๆ จึงใช้ readonly แทน disabled (ไม่โดน
+      // CSS .vs-readonly input:disabled ทำให้สีจาง)
+      el.readOnly = true;
+      return;
+    }
     el.disabled = true;
   });
   // ปุ่มที่กดแล้วเปลี่ยนสถานะ/ส่งข้อมูลซ้ำ — ต้องซ่อนทั้งหมดในโหมดดูอย่างเดียว
