@@ -136,10 +136,14 @@ function closeDeductModal() {
 
 /** เปิด/ปิดทั้งแถวของช่องทาง (Analog/Digital/IPTV) เมื่อติ๊ก/ยกเลิก checkbox */
 function toggleDeductSection(ch) {
+  // [FIX] เดิมเปิดใช้งานช่องกรอกของช่องทางที่ติ๊กไว้เสมอ แม้อยู่ในโหมดดูอย่าง
+  // เดียว (vs-readonly) — ทำให้ผู้ใช้แก้ไขค่าลดหย่อนของใบยื่นแบบที่ยืนยันแล้ว
+  // ได้ ต้องบังคับ disabled ไว้เสมอถ้าอยู่ในโหมดนี้ ไม่สนใจว่าติ๊กหรือไม่
+  const isReadOnly = document.body.classList.contains('vs-readonly');
   const isChecked = document.getElementById(`dm-ch-${ch}`)?.checked;
   ['members', 'price', 'income'].forEach(f => {
     const el = document.getElementById(`dm-${ch}-${f}`);
-    if (el) el.disabled = !isChecked;
+    if (el) el.disabled = isReadOnly ? true : !isChecked;
   });
   checkChannelIncomeLimit();
 }
