@@ -125,6 +125,25 @@ function renderStep5AndSummary() {
  * ประมวลผลหน้า Phase 3 (หน้าสรุปยืนยันตรวจทานก่อนยื่นส่งจริง)
  */
 function confirmFundPayment() {
+  // บังคับแนบเอกสารหลัก 3 อัน (งบดุลการเงิน, ชส.01, ชส.02) ก่อนไปหน้าตรวจทาน
+  // Phase 3 — เช็คตั้งแต่ตรงนี้เลยกันผู้ใช้เข้าไปแล้วโดนเด้งกลับที่ปุ่มยืนยันนำส่ง
+  const REQUIRED_DOCS = {
+    1: 'งบดุลการเงิน',
+    2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
+    3: 'แบบแสดงรายได้ (ชส.02)',
+  };
+  const missingDocs = Object.entries(REQUIRED_DOCS)
+    .filter(([idx]) => !appState.attachedFiles?.[idx])
+    .map(([, label]) => label);
+  if (missingDocs.length) {
+    if (typeof showToast === 'function') {
+      showToast(`กรุณาแนบเอกสารให้ครบก่อนยืนยันนำส่งข้อมูล: ${missingDocs.join(', ')}`);
+    } else {
+      alert(`กรุณาแนบเอกสารให้ครบก่อนยืนยันนำส่งข้อมูล: ${missingDocs.join(', ')}`);
+    }
+    return;
+  }
+
   renderStep5AndSummary();
 
   const net = pv(document.getElementById('s5-net')?.value);
@@ -268,9 +287,25 @@ function goToPhase3Next() {
   // กันเหนียว: ถ้าปุ่มถูกปิดอยู่แล้ว (กำลังบันทึกข้อมูลรอบก่อนยังไม่จบ) ห้ามเริ่มซ้ำ
   if (btn && btn.disabled) return;
 
-  // [FIX] เดิมบังคับแนบเอกสาร 3 อัน (งบดุลการเงิน, ชส.01, ชส.02) ก่อนยืนยันนำส่ง
-  // ไม่ได้ — เปลี่ยนเป็นยื่นแบบได้แม้แนบไม่ครบ แล้วให้ไปขึ้นสถานะ "รอแนบ" ที่
-  // ฝั่งแอดมินแทน (ดูได้ว่าใบไหนแนบเอกสารไม่ครบ ไม่ใช่บล็อกผู้ประกอบการไว้)
+  // [FIX] บังคับแนบเอกสารหลัก 3 อัน (งบดุลการเงิน, ชส.01, ชส.02) ก่อนยืนยันนำส่ง
+  // เสมอ — ถ้าแนบไม่ครบ ห้ามส่งข้อมูล พากลับไป Step 6 ให้แนบให้ครบก่อน
+  const REQUIRED_DOCS = {
+    1: 'งบดุลการเงิน',
+    2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
+    3: 'แบบแสดงรายได้ (ชส.02)',
+  };
+  const missingDocs = Object.entries(REQUIRED_DOCS)
+    .filter(([idx]) => !appState.attachedFiles?.[idx])
+    .map(([, label]) => label);
+  if (missingDocs.length) {
+    if (typeof showToast === 'function') {
+      showToast(`กรุณาแนบเอกสารให้ครบก่อนยืนยันนำส่งข้อมูล: ${missingDocs.join(', ')}`);
+    } else {
+      alert(`กรุณาแนบเอกสารให้ครบก่อนยืนยันนำส่งข้อมูล: ${missingDocs.join(', ')}`);
+    }
+    if (typeof backToPhase2 === 'function') backToPhase2();
+    return;
+  }
 
   const originalHtml = btn ? btn.innerHTML : '';
   if (btn) {
