@@ -46,6 +46,13 @@
 .income-summary-box-value input { flex:1; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:6px 8px; font-family:var(--font); font-size:15px; font-weight:600; text-align:right; color:var(--primary); outline:none; }
 .income-summary-box-value input[readonly] { background:#fff; border-color:var(--border-strong); }
 .income-summary-box-unit { font-size:12px; color:var(--text-muted); flex-shrink:0; }
+
+/* ── โหมดดูอย่างเดียว (ใบยื่นแบบที่ยืนยันแล้ว) ──────────
+   สลับกล่องสีเทา: "รายได้รวมตามงบการเงิน" แก้ไขไม่ได้แล้วในโหมดนี้ จึงให้
+   ดูเป็นกล่องสีเทาแทน ส่วน "รายได้รวมตามใบอนุญาต" ที่ไม่เคยแก้ไขได้อยู่แล้ว
+   ให้พื้นหลังเป็นสีขาวตามปกติ ไม่ต้องดูเทาซ้ำ */
+.vs-readonly .income-summary-box.editable { background:var(--accent-bg); border-color:var(--accent-light); }
+.vs-readonly .income-summary-box:not(.editable) { background:#fff; border-color:var(--border-strong); }
 .license-count-badge { display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:99px; padding:5px 14px; font-size:14px !important; color:var(--primary); font-weight:600; margin-bottom:12px; gap:2px; }
 .license-count-badge span, .license-count-badge input { font-size:14px !important; }
 /* ── Income/Deduct Tables ─── */
