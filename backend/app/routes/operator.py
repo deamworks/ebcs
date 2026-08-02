@@ -1041,6 +1041,10 @@ def get_my_submissions():
             "net_amount":   float(sub["net_amount"] or 0),
             "submitted_at": date_to_str(sub["submitted_at"]),
             "created_at":   date_to_str(sub["created_at"]),
+            # [FIX] เพิ่ม field แยกเก็บวัน+เวลาเต็ม (ISO) ไว้ให้ frontend แปลง
+            # เป็นวันที่/เวลาแบบไทยเอง — created_at เดิมตัด time ทิ้งหมด (แค่
+            # YYYY-MM-DD) ใช้โชว์ "บันทึกล่าสุด" ในตารางร่างหน้าแรกไม่พอ
+            "created_at_iso": sub["created_at"].isoformat() if sub["created_at"] else None,
             "can_edit":     sub["actual_status"] == "draft",
         })
 
