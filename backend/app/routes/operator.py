@@ -486,26 +486,6 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # [FIX] กันยื่นซ้ำ: มีใบยื่นปีนี้ที่ยืนยันแล้วห้ามสร้างใหม่ (draft เก่าลบแล้วสร้างใหม่ได้)
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute("""
-                SELECT id, status FROM submissions
-                WHERE  tax_id = %s AND fiscal_year = %s LIMIT 1
-            """, (tax_id, fiscal_year))
-            existing = cur.fetchone()
-            if existing:
-                if existing["status"] != "draft":
-                    return jsonify({
-                        "success": False,
-                        "error": {
-                            "code":    "ALREADY_SUBMITTED",
-                            "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
-                        }
-                    }), 400
-                cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
-        db.commit()
-
     # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
     total_income = sum(
         float(lic.get("income", 0))
@@ -522,6 +502,29 @@ def create_submission():
     # บันทึกลง DB แบบ Transaction
     with get_db() as db:
         with db.cursor() as cur:
+
+            # [FIX] กันยื่นซ้ำ + กันแถว draft ซ้ำซ้อน (มีใบยื่นปีนี้ที่ยืนยันแล้ว
+            # ห้ามสร้างใหม่, draft เก่าลบแล้วสร้างใหม่ได้) — เดิม select/delete
+            # อยู่คนละ transaction กับ insert ด้านล่าง ทำให้ถ้ามีคำขอซ้อนกัน
+            # (เช่นกดปุ่ม "บันทึกร่าง" ถี่ๆ) ทั้งสองคำขอเห็น "ไม่มี draft เดิม"
+            # พร้อมกันได้ แล้วต่างคน insert แถวใหม่ กลายเป็น draft ซ้ำหลายแถว
+            # ต่อปีเดียวกัน — ย้ายมาอยู่ transaction เดียวกับ insert พร้อมใช้
+            # FOR UPDATE ล็อกแถวกันคำขอที่มาพร้อมกันสำหรับ tax_id+ปีเดียวกัน
+            cur.execute("""
+                SELECT id, status FROM submissions
+                WHERE  tax_id = %s AND fiscal_year = %s LIMIT 1 FOR UPDATE
+            """, (tax_id, fiscal_year))
+            existing = cur.fetchone()
+            if existing:
+                if existing["status"] != "draft":
+                    return jsonify({
+                        "success": False,
+                        "error": {
+                            "code":    "ALREADY_SUBMITTED",
+                            "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
+                        }
+                    }), 400
+                cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
 
             # 1. สร้างใบยื่นหลัก
             # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
