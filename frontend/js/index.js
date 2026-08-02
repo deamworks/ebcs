@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (taxEl) taxEl.value = taxId;
     await autoFillFromAuth();
   }
+
+  if (typeof loadDraftList === 'function') loadDraftList();
 });
 
 // ── autofill จาก Flask API ───────────────────────────
@@ -309,85 +311,149 @@ async function loadLicenses(year, taxId) {
 
 // [FIX] startProcess ลบออกจากไฟล์นี้ — ซ้ำกับนิยามใน license.js ที่สมบูรณ์กว่า
 
-// ── saveSubmission — บันทึกใบยื่นแบบไปที่ Flask API, เรียกจาก step5-summary.js ──
-async function saveSubmission() {
-  try {
-    const count = parseInt(document.getElementById('license-count')?.value) || 1;
-    const { perLicense, totals } = calcAllLicenseSummary(count);
+// ── _buildSubmissionPayload — รวม logic สร้าง payload ใบยื่นแบบไว้ที่เดียว
+// ใช้ร่วมกันทั้งตอนยืนยันนำส่งจริง (saveSubmission) และตอนบันทึกร่างเฉยๆ
+// (saveDraft) เพื่อให้สองทางไม่หลุดไม่ตรงกัน ──
+function _buildSubmissionPayload() {
+  const count = parseInt(document.getElementById('license-count')?.value) || 1;
+  const { totals } = calcAllLicenseSummary(count);
 
-    // [FIX] build licenses array — ส่ง income/deduction ต่อใบ + incomes รายการย่อย
-    const licenses = [];
-    for (let i = 1; i <= count; i++) {
-      const d = appState.rowsData[i] || {};
-      const incomes = [];
+  const licenses = [];
+  for (let i = 1; i <= count; i++) {
+    const d = appState.rowsData[i] || {};
+    const incomes = [];
 
-      // รายการมาตรฐาน (savedInputs)
-      Object.entries(d.savedInputs || {}).forEach(([key, val]) => {
-        const amount = pv(val);
-        if (amount > 0) incomes.push({ field_key: key, label: key, amount, is_custom: false });
-      });
-
-      // รายการกำหนดเอง (customItems)
-      (d.customItems || []).forEach((item, idx) => {
-        if ((item.value || 0) > 0 || item.label) {
-          incomes.push({
-            field_key: `custom_${idx + 1}`,
-            label:     item.label || `รายการ ${idx + 1}`,
-            amount:    item.value || 0,
-            is_custom: true
-          });
-        }
-      });
-
-      licenses.push({
-        license_no:     d.no       || '',
-        income:         d.income   || 0,    // [FIX] ส่ง income แยก (backend ใช้ sum นี้)
-        deduction:      d.deduction || 0,  // [FIX] ส่ง deduction แยก
-        // [FIX] เดิมไม่ส่ง 3 ฟิลด์นี้เลย ทำให้ snapshot ใบอนุญาตในใบยื่นแบบ
-        // ไม่มีประเภท/วันที่/สถานะ — หน้าดูรายละเอียด (แอดมิน) เลยข้อมูลไม่ครบ
-        license_type:   d.type          || '',
-        license_start:  thaiToISO(d.startDate),
-        license_end:    thaiToISO(d.endDate),
-        license_status: d.licenseStatus || 'active',
-        // [FIX] เดิมไม่ส่ง "สถานี/ช่องรายการ" ไปเก็บเลย พิมพ์แล้วหายหลังยื่นแบบ
-        station:        d.station || '',
-        incomes,
-      });
-    }
-
-    // build other_incomes
-    const other_incomes = [];
-    ['o1','o2','o3','o4','o5'].forEach(key => {
-      const amount = pv(document.getElementById(key)?.value);
-      if (amount > 0) other_incomes.push({ field_key: key, label: key, amount, is_custom: false });
+    Object.entries(d.savedInputs || {}).forEach(([key, val]) => {
+      const amount = pv(val);
+      if (amount > 0) incomes.push({ field_key: key, label: key, amount, is_custom: false });
     });
-    document.querySelectorAll('.custom-other-income-item-row').forEach((row, idx) => {
-      const label  = row.querySelector('.custom-other-label')?.value?.trim() || '';
-      const amount = pv(row.querySelector('.custom-other-value')?.value);
-      if (amount > 0 || label) {
-        other_incomes.push({ field_key: `other_custom_${idx+1}`, label, amount, is_custom: true });
+
+    (d.customItems || []).forEach((item, idx) => {
+      if ((item.value || 0) > 0 || item.label) {
+        incomes.push({
+          field_key: `custom_${idx + 1}`,
+          label:     item.label || `รายการ ${idx + 1}`,
+          amount:    item.value || 0,
+          is_custom: true
+        });
       }
     });
 
-    // [FIX] ส่ง auditor เป็น flat fields (ตรงกับ backend ที่แก้แล้ว)
-    const result = await api.post('/operator/submissions', {
-      fiscal_year:      parseInt(appState.year) || 0,
-      total_income:     totals.totalIncome,
-      // [FIX] เดิมไม่เคยส่งค่านี้ไปเก็บเลย มีแค่ใน localStorage draft ทำให้
-      // หายไปหลังยื่นแบบ และหน้าดูอย่างเดียวโชว์ 0.00 เสมอ
-      total_income_financial: pv(document.getElementById('total-income-financial')?.value),
-      deduction_amount: totals.totalDeduct,
-      fund_amount:      totals.totalFund,
-      vat_amount:       totals.totalVat,
-      extra_amount:     totals.totalPenalty,
-      net_amount:       totals.totalNet,
-      auditor_name:     document.getElementById('auditorName')?.value    || '',
-      auditor_license:  document.getElementById('auditorRegNo')?.value   || '',
-      auditor_office:   document.getElementById('auditorCompany')?.value || '',
-      audited_date:     thaiToISO(document.getElementById('auditorDate')?.value),
-      licenses,
-      other_incomes,
+    licenses.push({
+      license_no:     d.no       || '',
+      income:         d.income   || 0,
+      deduction:      d.deduction || 0,
+      license_type:   d.type          || '',
+      license_start:  thaiToISO(d.startDate),
+      license_end:    thaiToISO(d.endDate),
+      license_status: d.licenseStatus || 'active',
+      station:        d.station || '',
+      incomes,
     });
+  }
+
+  const other_incomes = [];
+  ['o1','o2','o3','o4','o5'].forEach(key => {
+    const amount = pv(document.getElementById(key)?.value);
+    if (amount > 0) other_incomes.push({ field_key: key, label: key, amount, is_custom: false });
+  });
+  document.querySelectorAll('.custom-other-income-item-row').forEach((row, idx) => {
+    const label  = row.querySelector('.custom-other-label')?.value?.trim() || '';
+    const amount = pv(row.querySelector('.custom-other-value')?.value);
+    if (amount > 0 || label) {
+      other_incomes.push({ field_key: `other_custom_${idx+1}`, label, amount, is_custom: true });
+    }
+  });
+
+  return {
+    fiscal_year:      parseInt(appState.year) || 0,
+    total_income:     totals.totalIncome,
+    total_income_financial: pv(document.getElementById('total-income-financial')?.value),
+    deduction_amount: totals.totalDeduct,
+    fund_amount:      totals.totalFund,
+    vat_amount:       totals.totalVat,
+    extra_amount:     totals.totalPenalty,
+    net_amount:       totals.totalNet,
+    auditor_name:     document.getElementById('auditorName')?.value    || '',
+    auditor_license:  document.getElementById('auditorRegNo')?.value   || '',
+    auditor_office:   document.getElementById('auditorCompany')?.value || '',
+    audited_date:     thaiToISO(document.getElementById('auditorDate')?.value),
+    licenses,
+    other_incomes,
+  };
+}
+
+// ── โหลดรายการร่างที่เคยบันทึกไว้ (จาก saveDraft) มาแสดงในหน้าแรก ให้กด
+// "ทำต่อ" ข้ามเครื่อง/เบราว์เซอร์ได้ ──
+async function loadDraftList() {
+  const wrap = document.getElementById('draft-list-wrap');
+  if (!wrap) return;
+  try {
+    const res = await api.get('/operator/submissions');
+    const all = res?.data?.submissions || res?.submissions || [];
+    const drafts = all.filter(s => s.status === 'draft');
+    if (!drafts.length) { wrap.style.display = 'none'; return; }
+
+    const tbody = document.getElementById('draft-list-tbody');
+    tbody.innerHTML = drafts.map(d => `
+      <tr>
+        <td style="padding:8px 10px;">พ.ศ. ${d.fiscal_year}</td>
+        <td style="padding:8px 10px;">${d.created_at || '—'}</td>
+        <td style="padding:8px 10px;text-align:right;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="resumeDraftSubmission('${d.id}')">ทำต่อ</button>
+        </td>
+      </tr>`).join('');
+    wrap.style.display = 'block';
+  } catch (err) {
+    console.error('[loadDraftList]', err);
+  }
+}
+
+// ── resumeDraftSubmission — โหลดร่างที่บันทึกไว้ในระบบ (ไม่ใช่ localStorage)
+// กลับเข้ามาแก้ไขต่อได้ตามปกติ ใช้ hydration เดียวกับหน้าดูอย่างเดียว แต่ไม่ล็อก
+// อะไรเลยเพราะยังเป็นแค่ร่าง (ไฟล์แนบต้องเลือกใหม่เสมอ — ดูหมายเหตุใน saveDraft) ──
+async function resumeDraftSubmission(id) {
+  try {
+    const detail = await api.get(`/operator/submissions/${id}`);
+    if (typeof renderReadOnlySubmission !== 'function') return;
+    renderReadOnlySubmission(detail, {
+      downloadBase:    '/operator',
+      skipBanner:      true,
+      skipAttachments: true,
+      skipLock:        true,
+    });
+    showToast('โหลดร่างที่บันทึกไว้เรียบร้อยแล้ว (ต้องแนบไฟล์เอกสารใหม่อีกครั้งใน Step 6)');
+  } catch (err) {
+    console.error('[resumeDraftSubmission]', err);
+    showToast('โหลดร่างไม่สำเร็จ: ' + (err.message || ''));
+  }
+}
+
+// ── saveDraft — บันทึกร่างเฉยๆ (ไม่ล็อกสถานะ ไม่อัปโหลดไฟล์แนบ) กดได้ทุก step
+// ของ Phase 2 เพื่อกันข้อมูลหายถ้าเปลี่ยนเครื่อง/เบราว์เซอร์ ──
+async function saveDraft() {
+  if (!appState.year) {
+    showToast('กรุณาระบุปีบัญชีก่อนบันทึกร่าง');
+    return;
+  }
+  try {
+    const payload = _buildSubmissionPayload();
+    const result  = await api.post('/operator/submissions', payload);
+    if (result?.success === false) {
+      throw new Error(result?.error?.message || result?.message || 'บันทึกร่างไม่สำเร็จ');
+    }
+    showToast('บันทึกร่างเรียบร้อยแล้ว (ไฟล์แนบต้องเลือกใหม่ทุกครั้งที่กลับมาทำต่อ)');
+  } catch (err) {
+    console.error('[saveDraft]', err);
+    showToast('บันทึกร่างไม่สำเร็จ: ' + (err.message || ''));
+  }
+}
+
+// ── saveSubmission — บันทึกใบยื่นแบบไปที่ Flask API, เรียกจาก step5-summary.js ──
+async function saveSubmission() {
+  try {
+    const payload = _buildSubmissionPayload();
+    const result  = await api.post('/operator/submissions', payload);
 
     // รองรับทั้ง { success, data: { submission_id } } และ { submission_id } flat
     let submissionId;
