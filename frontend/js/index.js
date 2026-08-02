@@ -313,7 +313,7 @@ async function loadLicenses(year, taxId) {
 
 // ── _buildSubmissionPayload — รวม logic สร้าง payload ใบยื่นแบบไว้ที่เดียว
 // ใช้ร่วมกันทั้งตอนยืนยันนำส่งจริง (saveSubmission) และตอนบันทึกร่างเฉยๆ
-// (saveDraft) เพื่อให้สองทางไม่หลุดไม่ตรงกัน ──
+// (saveDraftToServer) เพื่อให้สองทางไม่หลุดไม่ตรงกัน ──
 function _buildSubmissionPayload() {
   const count = parseInt(document.getElementById('license-count')?.value) || 1;
   const { totals } = calcAllLicenseSummary(count);
@@ -383,7 +383,7 @@ function _buildSubmissionPayload() {
   };
 }
 
-// ── โหลดร่างที่เคยบันทึกไว้ (จาก saveDraft) มาแสดงเป็นข้อความสั้นๆ ในหน้าแรก
+// ── โหลดร่างที่เคยบันทึกไว้ (จาก saveDraftToServer) มาแสดงเป็นข้อความสั้นๆ ในหน้าแรก
 // ให้กด "ทำต่อ" ข้ามเครื่อง/เบราว์เซอร์ได้ — ปกติจะมีแค่ 1 ปีบัญชีที่ค้างอยู่
 // (upsert ต่อปีอยู่แล้ว) แต่รองรับกรณีค้างหลายปีด้วยแสดงเป็นหลายบรรทัด ──
 async function loadDraftList() {
@@ -409,7 +409,7 @@ async function loadDraftList() {
 
 // ── resumeDraftSubmission — โหลดร่างที่บันทึกไว้ในระบบ (ไม่ใช่ localStorage)
 // กลับเข้ามาแก้ไขต่อได้ตามปกติ ใช้ hydration เดียวกับหน้าดูอย่างเดียว แต่ไม่ล็อก
-// อะไรเลยเพราะยังเป็นแค่ร่าง (ไฟล์แนบต้องเลือกใหม่เสมอ — ดูหมายเหตุใน saveDraft) ──
+// อะไรเลยเพราะยังเป็นแค่ร่าง (ไฟล์แนบต้องเลือกใหม่เสมอ — ดูหมายเหตุใน saveDraftToServer) ──
 async function resumeDraftSubmission(id) {
   try {
     const detail = await api.get(`/operator/submissions/${id}`);
@@ -427,9 +427,13 @@ async function resumeDraftSubmission(id) {
   }
 }
 
-// ── saveDraft — บันทึกร่างเฉยๆ (ไม่ล็อกสถานะ ไม่อัปโหลดไฟล์แนบ) กดได้ทุก step
-// ของ Phase 2 เพื่อกันข้อมูลหายถ้าเปลี่ยนเครื่อง/เบราว์เซอร์ ──
-async function saveDraft() {
+// ── saveDraftToServer — บันทึกร่างลงฐานข้อมูลจริงเฉยๆ (ไม่ล็อกสถานะ ไม่
+// อัปโหลดไฟล์แนบ) กดเองเท่านั้นจากปุ่ม "บันทึกร่าง" — ไม่ใช่ auto-save
+// [FIX] เดิมตั้งชื่อ saveDraft() ชนกับฟังก์ชัน saveDraft() ที่มีอยู่แล้วใน
+// ui.js (auto-save ลง localStorage เฉยๆ เรียกทุกครั้งที่เปลี่ยน step/พิมพ์
+// ในหลายไฟล์) ทำให้ฟังก์ชันนี้ถูกเรียกไปสร้างแถว draft ใหม่ในฐานข้อมูลซ้ำๆ
+// โดยไม่ได้ตั้งใจทุกครั้งที่ผู้ใช้เปลี่ยน step เปลี่ยนชื่อกันชนแล้ว ──
+async function saveDraftToServer() {
   if (!appState.year) {
     showToast('กรุณาระบุปีบัญชีก่อนบันทึกร่าง');
     return;
@@ -442,7 +446,7 @@ async function saveDraft() {
     }
     showToast('บันทึกร่างเรียบร้อยแล้ว (ไฟล์แนบต้องเลือกใหม่ทุกครั้งที่กลับมาทำต่อ)');
   } catch (err) {
-    console.error('[saveDraft]', err);
+    console.error('[saveDraftToServer]', err);
     showToast('บันทึกร่างไม่สำเร็จ: ' + (err.message || ''));
   }
 }
