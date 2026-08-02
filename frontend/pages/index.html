@@ -65,20 +65,8 @@
 
       <!-- ════ PHASE 1 ════ -->
       <div id="phase1" class="phase-enter">
-        <!-- รายการร่างที่เคยบันทึกไว้ (saveDraft) — ซ่อนไว้ก่อน loadDraftList() แสดงถ้ามี -->
-        <div id="draft-list-wrap" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;">
-          <div style="background:#fff8e1;border-bottom:1px solid #ffe082;padding:10px 16px;font-size:13px;font-weight:700;color:#7b5800;">ร่างที่ยังไม่ได้ยื่น</div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr style="background:var(--surface-2);">
-                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);">ปีบัญชี</th>
-                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-secondary);">บันทึกล่าสุด</th>
-                <th style="padding:8px 10px;"></th>
-              </tr>
-            </thead>
-            <tbody id="draft-list-tbody"></tbody>
-          </table>
-        </div>
+        <!-- ข้อความแจ้งร่างที่เคยบันทึกไว้ (saveDraft) — ซ่อนไว้ก่อน loadDraftList() แสดงถ้ามี -->
+        <div id="draft-list-wrap" style="display:none;"></div>
         <div class="start-card">
           <!-- Card Header -->
           <div class="start-card-header">

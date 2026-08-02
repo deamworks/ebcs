@@ -383,8 +383,9 @@ function _buildSubmissionPayload() {
   };
 }
 
-// ── โหลดรายการร่างที่เคยบันทึกไว้ (จาก saveDraft) มาแสดงในหน้าแรก ให้กด
-// "ทำต่อ" ข้ามเครื่อง/เบราว์เซอร์ได้ ──
+// ── โหลดร่างที่เคยบันทึกไว้ (จาก saveDraft) มาแสดงเป็นข้อความสั้นๆ ในหน้าแรก
+// ให้กด "ทำต่อ" ข้ามเครื่อง/เบราว์เซอร์ได้ — ปกติจะมีแค่ 1 ปีบัญชีที่ค้างอยู่
+// (upsert ต่อปีอยู่แล้ว) แต่รองรับกรณีค้างหลายปีด้วยแสดงเป็นหลายบรรทัด ──
 async function loadDraftList() {
   const wrap = document.getElementById('draft-list-wrap');
   if (!wrap) return;
@@ -394,16 +395,13 @@ async function loadDraftList() {
     const drafts = all.filter(s => s.status === 'draft');
     if (!drafts.length) { wrap.style.display = 'none'; return; }
 
-    const tbody = document.getElementById('draft-list-tbody');
-    tbody.innerHTML = drafts.map(d => `
-      <tr>
-        <td style="padding:8px 10px;">พ.ศ. ${d.fiscal_year}</td>
-        <td style="padding:8px 10px;">${d.created_at || '—'}</td>
-        <td style="padding:8px 10px;text-align:right;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="resumeDraftSubmission('${d.id}')">ทำต่อ</button>
-        </td>
-      </tr>`).join('');
-    wrap.style.display = 'block';
+    wrap.style.display = 'flex';
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;';
+    wrap.innerHTML = drafts.map(d => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:#7b5800;">
+        <span>พบร่างที่บันทึกไว้ — ปีบัญชี พ.ศ. ${d.fiscal_year} (บันทึกล่าสุด ${d.created_at || '—'}) สถานะ: <strong>${d.status_label || 'ร่าง (ยังไม่ยืนยัน)'}</strong></span>
+        <button type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="resumeDraftSubmission('${d.id}')">ทำต่อ</button>
+      </div>`).join('');
   } catch (err) {
     console.error('[loadDraftList]', err);
   }
