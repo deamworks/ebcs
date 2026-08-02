@@ -14,6 +14,15 @@ function isoToBE(iso) {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()+543}`;
 }
+// ── Format datetime ISO → วัน/เดือน/ปี พ.ศ. เวลา ชม:นาที (แบบไทย) ──
+function isoToBEDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const datePart = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()+543}`;
+  const timePart = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} น.`;
+  return `${datePart} เวลา ${timePart}`;
+}
 function thaiToISO(str) {
   if (!str) return null;
   const p = str.trim().split('/');
@@ -399,7 +408,7 @@ async function loadDraftList() {
     wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;';
     wrap.innerHTML = drafts.map(d => `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:#7b5800;">
-        <span>พบร่างที่บันทึกไว้ — ปีบัญชี พ.ศ. ${d.fiscal_year} (บันทึกล่าสุด ${d.created_at || '—'}) สถานะ: <strong>${d.status_label || 'ร่าง (ยังไม่ยืนยัน)'}</strong></span>
+        <span>พบร่างที่บันทึกไว้ — ปีบัญชี พ.ศ. ${d.fiscal_year} (บันทึกล่าสุด ${isoToBEDateTime(d.created_at_iso) || d.created_at || '—'}) สถานะ: <strong>${d.status_label || 'ร่าง (ยังไม่ยืนยัน)'}</strong></span>
         <button type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="resumeDraftSubmission('${d.id}')">ทำต่อ</button>
       </div>`).join('');
   } catch (err) {
