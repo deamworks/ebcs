@@ -74,7 +74,9 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
+  if (!opts.skipBanner) {
+    _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
+  }
 
   // ── appState หลัก ──
   appState.taxId       = s.tax_id || '';
@@ -150,7 +152,7 @@ function renderReadOnlySubmission(data, opts = {}) {
 
     if (typeof generateRows === 'function') generateRows();
     if (typeof goToStep === 'function') goToStep(1);
-    _vsRenderAttachments(attachments, downloadBase);
+    if (!opts.skipAttachments) _vsRenderAttachments(attachments, downloadBase);
   } catch (err) {
     console.error('[renderReadOnlySubmission]', err);
   }
@@ -158,7 +160,12 @@ function renderReadOnlySubmission(data, opts = {}) {
   // [FIX] แอดมินแก้ไขข้อมูลในใบยื่นที่ยังไม่ได้จ่ายเงิน (draft/pending_payment)
   // ได้เหมือนหน้ากรอกของผู้ประกอบการ — เดิมล็อกอ่านอย่างเดียวทุกสถานะ ทั้งที่
   // paid เท่านั้นที่ควรห้ามแก้ (มีใบเสร็จอ้างอิงยอดเดิมไปแล้ว)
-  if (opts.editable) {
+  // opts.skipLock ใช้ตอนผู้ประกอบการเปิด draft ของตัวเองมาทำต่อ (resumeDraftSubmission
+  // ใน index.js) — อยากให้แก้ไขได้ปกติทุกอย่างเหมือนกรอกใหม่ ไม่ต้องล็อกหรือโชว์
+  // แบนเนอร์ "ยืนยันแล้ว" เพราะยังเป็นแค่ร่าง
+  if (opts.skipLock) {
+    // ไม่ทำอะไร — ปล่อยให้แก้ไขได้ปกติทุกช่อง
+  } else if (opts.editable) {
     _vsUnlockForAdminEdit(data);
   } else {
     _vsLockReadOnly();
