@@ -498,7 +498,7 @@ function renderTable() {
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-danger" title="ตีกลับให้ผู้ประกอบการแก้ไขและยืนยันใหม่เอง" onclick="rejectSubmissionToDraft('${s.id}')">ตีกลับเป็นร่าง</button>` : ''}
-        <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
+        ${s.status !== 'draft' ? `<button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>` : ''}
       </td>
     </tr>`).join('');
 }
