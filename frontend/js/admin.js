@@ -507,7 +507,7 @@ function renderTable() {
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${s.tax_id || '—'}</td>
       <td style="text-align:center;font-size:12.5px">${s.fiscal_year || '—'}</td>
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${s.due_date ? fmtDate(s.due_date) : '—'}</td>
-      <td style="text-align:center;font-size:12.5px;white-space:nowrap">${s.net_amount ? Number(s.net_amount).toLocaleString('th-TH',{minimumFractionDigits:2}) : '—'}</td>
+      <td style="text-align:center;font-size:12.5px;white-space:nowrap">${(s.status !== 'draft' && s.net_amount) ? Number(s.net_amount).toLocaleString('th-TH',{minimumFractionDigits:2}) : '—'}</td>
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${fmtDate(s.submitted_at)}</td>
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">

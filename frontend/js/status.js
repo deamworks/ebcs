@@ -116,6 +116,12 @@ function showSubmitted(data) {
   setText('infoSubmittedAt', isoToBE(data.submitted_at || data.created_at));
 
   // ── Amounts ────────────────────────────────────────
+  // [FIX] สถานะร่างยังกรอกข้อมูลไม่เสร็จ ยอดที่คำนวณได้ตอนนี้ไม่นิ่ง (อาจ
+  // เปลี่ยนไปอีกก่อนยืนยันนำส่งจริง) ไม่ควรโชว์การ์ดยอดเงินให้เข้าใจผิดว่าเป็น
+  // ยอดสุดท้าย — ซ่อนทั้งการ์ดไว้จนกว่าจะยืนยันนำส่งแล้ว (pending_payment/paid)
+  const amountCard = document.getElementById('amountCard');
+  if (amountCard) amountCard.style.display = (statusKey === 'draft') ? 'none' : 'block';
+
   setText('amtIncome', fmt(data.total_income));
   setText('amtFund',   fmt(data.fund_amount));
   setText('amtVat',    fmt(data.vat_amount));
