@@ -74,7 +74,10 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  if (!opts.skipBanner) {
+  // [FIX] เดิมโชว์แบนเนอร์เหลือง "ยืนยันแล้ว...ไม่สามารถแก้ไขข้อมูลได้" แม้อยู่
+  // ในโหมด "แอดมินแก้ไข" (opts.editable) ที่แก้ไขได้จริง — ขึ้นพร้อมกันแล้ว
+  // ข้อความขัดแย้งกันเอง (บอกทั้งแก้ไม่ได้และมีปุ่มบันทึกการแก้ไขให้กด)
+  if (!opts.skipBanner && !opts.editable) {
     _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
   }
 
