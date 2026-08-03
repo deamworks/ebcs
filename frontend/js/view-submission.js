@@ -281,7 +281,10 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
     const btn      = row.querySelector('.doc-row-btn button');
     const clearBtn = document.getElementById(`clear-${idx}`);
 
-    const label = nameEl ? nameEl.textContent.trim() : '';
+    // [FIX] ดอกจัน (*) ที่ต่อท้ายชื่อเอกสารบังคับใน .doc-row-name (เพิ่มเข้ามาทีหลัง
+    // เพื่อบอกว่าบังคับแนบ) ไม่ได้เป็นส่วนหนึ่งของ doc_type ที่เก็บในฐานข้อมูล
+    // ต้องตัดออกก่อนเทียบ ไม่งั้นจะจับคู่ไม่เจอ ทำให้เอกสารที่แนบไว้แล้วหายไป
+    const label = nameEl ? nameEl.textContent.trim().replace(/\s*\*\s*$/, '') : '';
     const att   = attachments.find(a => (a.doc_type || '').trim() === label);
 
     if (editable) {
