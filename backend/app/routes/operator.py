@@ -524,7 +524,23 @@ def create_submission():
                             "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
                         }
                     }), 400
+                # [FIX] เดิมลบแค่แถว DB (CASCADE ลบ document_attachments ตามไป
+                # ด้วย) แต่ไม่ได้ลบไฟล์จริงที่ /uploads เลย ทุกครั้งที่บันทึก
+                # ร่างซ้ำ/ยื่นซ้ำ ไฟล์แนบของร่างเดิมเลยกลายเป็นไฟล์กำพร้าค้าง
+                # บนดิสก์ตลอดไปแบบไม่มีใครอ้างอิงถึง ต้องลบไฟล์จริงก่อนลบแถว
+                cur.execute(
+                    "SELECT storage_path FROM document_attachments WHERE submission_id = %s",
+                    (existing["id"],)
+                )
+                old_files = [row["storage_path"] for row in cur.fetchall()]
                 cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
+
+            for path in old_files if existing else []:
+                try:
+                    if path and os.path.exists(path):
+                        os.remove(path)
+                except OSError:
+                    pass  # ไฟล์ลบไม่ได้ก็ปล่อยผ่าน ไม่ให้บันทึกร่าง/ยื่นแบบล้มเหลว
 
             # 1. สร้างใบยื่นหลัก
             # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
