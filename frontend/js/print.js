@@ -639,10 +639,13 @@ function handleFileAttach(idx, input) {
     }
 
     // ── เก็บ File object จริงไว้ใน appState เพื่อใช้อัปโหลดตอนยืนยันนำส่ง ──
+    // [FIX] ดอกจัน (*) ที่ต่อท้ายชื่อเอกสารบังคับใน .doc-row-name เป็นแค่ตัวช่วย
+    // แสดงผล ไม่ใช่ส่วนหนึ่งของ doc_type ที่ส่งขึ้น server ต้องตัดออกก่อน ไม่งั้น
+    // เอกสารที่เพิ่งอัปโหลดใหม่จะถูกบันทึก doc_type ไม่ตรงกับที่หน้าจออื่นใช้จับคู่
     const labelEl = rowEl?.querySelector('.doc-row-name');
     appState.attachedFiles[idx] = {
       file,
-      label: labelEl ? labelEl.textContent.trim() : `เอกสาร ${idx}`,
+      label: labelEl ? labelEl.textContent.trim().replace(/\s*\*\s*$/, '') : `เอกสาร ${idx}`,
     };
 
     fname.textContent = file.name;
