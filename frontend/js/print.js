@@ -648,17 +648,33 @@ function handleFileAttach(idx, input) {
     fname.textContent = file.name;
     fname.classList.add('attached');
     if (clearBtn) clearBtn.style.display = 'inline-flex';
-    // [FIX] แนบไฟล์แล้วซ่อนปุ่ม "แนบไฟล์" ไปเลย — กันสับสนว่ายังกดแนบซ้ำได้อีก
-    // ทั้งที่มีไฟล์อยู่แล้ว (ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ได้)
-    if (attachBtn) attachBtn.style.display = 'none';
+    // [FIX] แนบไฟล์แล้วเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" แทนการซ่อนไปเลย
+    // ให้เปิดดูไฟล์ที่เพิ่งเลือกได้ทันที (ไฟล์อยู่ในเครื่อง ยังไม่อัปโหลด จึงใช้
+    // URL.createObjectURL ตรงๆ ไม่ต้องเรียก server) ต้องกดลบ (X) ก่อนถึงจะ
+    // แนบไฟล์ใหม่ทับได้
+    if (attachBtn) {
+      attachBtn.textContent = 'ดูเอกสาร';
+      attachBtn.onclick = () => _previewLocalFile(file);
+    }
     showToast(`แนบไฟล์เอกสาร "${file.name}" เรียบร้อยแล้ว`);
   } else {
     delete appState.attachedFiles[idx];
     fname.textContent = '—';
     fname.classList.remove('attached');
     if (clearBtn) clearBtn.style.display = 'none';
-    if (attachBtn) attachBtn.style.display = '';
+    if (attachBtn) {
+      attachBtn.textContent = 'แนบไฟล์';
+      attachBtn.onclick = () => document.getElementById(`file-${idx}`).click();
+    }
   }
+}
+
+/** เปิดดูไฟล์ที่เพิ่งเลือกในเครื่อง (ยังไม่อัปโหลด) แบบ preview ในแท็บใหม่ —
+ *  ต่างจาก _vsPreviewAttachment ใน view-submission.js ที่ดึงไฟล์จาก server */
+function _previewLocalFile(file) {
+  const url = URL.createObjectURL(file);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /**
@@ -674,7 +690,10 @@ function clearFileAttach(idx) {
   if (fileInput) fileInput.value = '';
   if (fname)     { fname.textContent = '—'; fname.classList.remove('attached'); }
   if (clearBtn)  clearBtn.style.display = 'none';
-  if (attachBtn) attachBtn.style.display = ''; // เอาปุ่ม "แนบไฟล์" กลับมาให้แนบใหม่ได้
+  if (attachBtn) {
+    attachBtn.textContent = 'แนบไฟล์';
+    attachBtn.onclick = () => document.getElementById(`file-${idx}`).click();
+  }
   delete appState.attachedFiles[idx];
   showToast('ยกเลิกการแนบไฟล์เรียบร้อยแล้ว');
 }

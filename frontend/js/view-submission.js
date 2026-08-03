@@ -263,7 +263,7 @@ function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
  *    สำหรับรายการที่มีไฟล์แนบไว้แล้ว และซ่อนปุ่มลบ (X) เพราะแก้ไขไม่ได้
  *  - โหมดแก้ไข/ทำร่างต่อ (editable=true — resumeDraftSubmission ใน index.js):
  *    โชว์ชื่อไฟล์ที่เคยแนบไว้ + เปิดปุ่มลบ (X) ให้ลบออกจากฐานข้อมูลจริงได้
- *    ส่วนปุ่ม "แนบไฟล์" ปล่อยให้ทำงานปกติ (แนบทับได้ผ่าน handleFileAttach เดิม) */
+ *    ปุ่ม "แนบไฟล์" เปลี่ยนเป็น "ดูเอกสาร" เช่นกัน ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ทับได้ */
 function _vsRenderAttachments(attachments, downloadBase, editable) {
   const rows = document.querySelectorAll('#doc-upload-list .doc-row');
   if (!rows.length) return;
@@ -284,10 +284,13 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
           clearBtn.style.display = 'inline-flex';
           clearBtn.onclick = () => _vsRemoveExistingAttachment(downloadBase, idx, att.id);
         }
-        // [FIX] ซ่อนปุ่ม "แนบไฟล์" เมื่อมีไฟล์แนบอยู่แล้ว (เหมือนพฤติกรรมตอน
-        // เพิ่งเลือกไฟล์ใหม่ใน handleFileAttach) กันสับสน ต้องกดลบ (X) ก่อน
-        // ถึงจะแนบใหม่ทับได้
-        if (btn) btn.style.display = 'none';
+        // [FIX] เปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" เมื่อมีไฟล์แนบอยู่แล้ว
+        // (เหมือนพฤติกรรมตอนเพิ่งเลือกไฟล์ใหม่ใน handleFileAttach) กันสับสน
+        // ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ทับได้
+        if (btn) {
+          btn.textContent = 'ดูเอกสาร';
+          btn.onclick = () => _vsPreviewAttachment(`${downloadBase}/attachments/${att.id}/download`, att.file_name);
+        }
       }
       return;
     }
@@ -323,7 +326,10 @@ async function _vsRemoveExistingAttachment(downloadBase, idx, attachmentId) {
     const clearBtn  = document.getElementById(`clear-${idx}`);
     if (fnameEl)   { fnameEl.textContent = '—'; fnameEl.classList.remove('attached'); }
     if (clearBtn)  clearBtn.style.display = 'none';
-    if (attachBtn) attachBtn.style.display = ''; // เอาปุ่ม "แนบไฟล์" กลับมาให้แนบใหม่ได้
+    if (attachBtn) {
+      attachBtn.textContent = 'แนบไฟล์';
+      attachBtn.onclick = () => document.getElementById(`file-${idx}`).click();
+    }
     if (typeof showToast === 'function') showToast('ลบไฟล์แนบเรียบร้อยแล้ว');
   } catch (e) {
     if (typeof showToast === 'function') showToast('ลบไฟล์แนบไม่สำเร็จ: ' + (e.message || ''), 'error');
