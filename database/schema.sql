@@ -200,7 +200,7 @@ CREATE TABLE other_incomes (
 CREATE TABLE document_attachments (
   id            CHAR(36)     PRIMARY KEY DEFAULT (UUID()),
   submission_id CHAR(36)     NOT NULL,
-  doc_type      VARCHAR(50)  NULL COMMENT 'ประเภทเอกสาร',
+  doc_type      VARCHAR(255) NULL COMMENT 'ประเภทเอกสาร',
   file_name     VARCHAR(255) NOT NULL COMMENT 'ชื่อไฟล์เดิมของผู้ใช้',
   storage_path  VARCHAR(500) NOT NULL COMMENT 'path จริงบน server (ชื่อไฟล์เป็น UUID)',
   mime_type     VARCHAR(100) NULL,
