@@ -18,9 +18,11 @@ function _vsIsoToBE(iso) {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543}`;
 }
 
-/** ดาวน์โหลดไฟล์แนบผ่าน fetch + Bearer token (ห้ามใช้ <a href> ตรงๆ
- *  เพราะ token เก็บใน localStorage ไม่ใช่ cookie นำทางตรงๆ จะไม่ส่ง token ไปด้วย) */
-async function _vsDownloadAttachment(path, fileName) {
+/** เปิดดูไฟล์แนบแบบ preview ในแท็บใหม่ (ไม่บังคับดาวน์โหลด) ผ่าน fetch +
+ *  Bearer token (ห้ามใช้ <a href> ตรงๆ เพราะ token เก็บใน localStorage ไม่ใช่
+ *  cookie นำทางตรงๆ จะไม่ส่ง token ไปด้วย) — browser จะพรีวิวให้เองถ้าเป็น
+ *  ไฟล์ pdf/รูปภาพที่ดูได้ในตัว (ไม่ตั้ง .download จึงไม่บังคับ save ไฟล์) */
+async function _vsPreviewAttachment(path, fileName) {
   try {
     const isAdminPage = window.location.pathname.includes('admin');
     const token = isAdminPage
@@ -29,19 +31,15 @@ async function _vsDownloadAttachment(path, fileName) {
     const res = await fetch(`${API_BASE}${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    if (!res.ok) throw new Error('ดาวน์โหลดไม่สำเร็จ');
+    if (!res.ok) throw new Error('เปิดดูเอกสารไม่สำเร็จ');
     const blob    = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = fileName || 'document';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(blobUrl);
+    window.open(blobUrl, '_blank');
+    // คืนหน่วยความจำหลังเปิดแท็บใหม่ไปพักหนึ่ง (ให้เวลาแท็บใหม่โหลดไฟล์เสร็จก่อน)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
   } catch (e) {
-    if (typeof showToast === 'function') showToast('ดาวน์โหลดไฟล์ไม่สำเร็จ: ' + (e.message || ''), 'error');
-    else alert('ดาวน์โหลดไฟล์ไม่สำเร็จ');
+    if (typeof showToast === 'function') showToast('เปิดดูเอกสารไม่สำเร็จ: ' + (e.message || ''), 'error');
+    else alert('เปิดดูเอกสารไม่สำเร็จ');
   }
 }
 
@@ -280,7 +278,7 @@ function _vsRenderAttachments(attachments, downloadBase) {
       if (fnameEl) { fnameEl.textContent = att.file_name || 'เอกสารแนบ'; fnameEl.classList.add('attached'); }
       if (btn) {
         btn.textContent = 'ดูเอกสาร';
-        btn.onclick = () => _vsDownloadAttachment(`${downloadBase}/attachments/${att.id}/download`, att.file_name);
+        btn.onclick = () => _vsPreviewAttachment(`${downloadBase}/attachments/${att.id}/download`, att.file_name);
       }
     } else {
       if (fnameEl) fnameEl.textContent = '—';
