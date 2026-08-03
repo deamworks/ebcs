@@ -85,6 +85,10 @@ function renderReadOnlySubmission(data, opts = {}) {
   appState.dueDate      = _vsIsoToBE(s.due_date);
   // กัน restoreStepState(1) โหลด draft เก่าจาก localStorage มาทับข้อมูลจริงที่เพิ่ง hydrate
   appState._draftLoaded = true;
+  // เคลียร์ก่อน hydrate ใหม่ทุกครั้ง กันข้อมูลไฟล์แนบของใบยื่นแบบก่อนหน้าค้าง
+  // ข้ามมา (เช่นสลับดูร่างคนละปีในหน้าเดียวกันโดยไม่รีเฟรชหน้า)
+  appState.attachedFiles = {};
+  appState.existingAttachments = {};
 
   try {
     // ── appState.rowsData จากใบอนุญาตของใบยื่นนี้ (snapshot ณ วันยื่น) ──
@@ -279,6 +283,14 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
 
     if (editable) {
       if (att) {
+        // [FIX] resumeDraftSubmission() ไม่มี File object จริงให้ appState.
+        // attachedFiles (ไฟล์อยู่บน server แล้ว ดึงกลับมาเป็น File ไม่ได้)
+        // ทำให้ตอนกดยืนยันนำส่ง เช็คเอกสารบังคับ 3 รายการ (step5-summary.js)
+        // มองไม่เห็นว่ามีไฟล์นี้อยู่แล้ว ต้องจดไว้ใน appState.existingAttachments
+        // แยกต่างหาก ให้ตัวเช็คนั้นมองเห็นด้วยว่า "มีไฟล์อยู่แล้วบน server"
+        appState.existingAttachments = appState.existingAttachments || {};
+        appState.existingAttachments[idx] = att.id;
+
         if (fnameEl) { fnameEl.textContent = att.file_name || 'เอกสารแนบ'; fnameEl.classList.add('attached'); }
         if (clearBtn) {
           clearBtn.style.display = 'inline-flex';
@@ -320,6 +332,7 @@ async function _vsRemoveExistingAttachment(downloadBase, idx, attachmentId) {
   if (!confirm('ลบไฟล์แนบนี้?')) return;
   try {
     await api.delete(`${downloadBase}/attachments/${attachmentId}`);
+    if (appState.existingAttachments) delete appState.existingAttachments[idx];
     const rowEl     = document.getElementById(`docrow-${idx}`);
     const attachBtn = rowEl?.querySelector('.doc-row-btn button');
     const fnameEl   = document.getElementById(`fname-${idx}`);

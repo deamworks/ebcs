@@ -132,8 +132,13 @@ function confirmFundPayment() {
     2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
     3: 'แบบแสดงรายได้ (ชส.02)',
   };
+  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง ยังไม่
+  // อัปโหลด) อย่างเดียว — ตอน resume draft ที่มีไฟล์แนบอยู่แล้วบน server (โหลด
+  // กลับมาไม่ได้เป็น File object ใหม่ ดูได้อย่างเดียว) เช็คนี้จะมองไม่เห็นเลย
+  // ทั้งที่แนบไว้แล้วจริง ต้องเช็ค appState.existingAttachments ควบคู่ไปด้วย
+  // (ดู _vsRenderAttachments ใน view-submission.js)
   const missingDocs = Object.entries(REQUIRED_DOCS)
-    .filter(([idx]) => !appState.attachedFiles?.[idx])
+    .filter(([idx]) => !appState.attachedFiles?.[idx] && !appState.existingAttachments?.[idx])
     .map(([, label]) => label);
   if (missingDocs.length) {
     if (typeof showToast === 'function') {
@@ -242,6 +247,7 @@ function goToPhase4Home() {
   appState.rowsData    = {};
   appState.customOtherIncome = [];
   appState.attachedFiles     = {};
+  appState.existingAttachments = {};
 
   const clearIds = ['ph1-licensee', 'ph1-taxid', 'ph1-year', 'ph1-period-start', 'ph1-period-end', 'total-income-financial', 'auditorName', 'auditorRegNo', 'auditorCompany'];
   clearIds.forEach(id => {
@@ -294,8 +300,13 @@ function goToPhase3Next() {
     2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
     3: 'แบบแสดงรายได้ (ชส.02)',
   };
+  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง ยังไม่
+  // อัปโหลด) อย่างเดียว — ตอน resume draft ที่มีไฟล์แนบอยู่แล้วบน server (โหลด
+  // กลับมาไม่ได้เป็น File object ใหม่ ดูได้อย่างเดียว) เช็คนี้จะมองไม่เห็นเลย
+  // ทั้งที่แนบไว้แล้วจริง ต้องเช็ค appState.existingAttachments ควบคู่ไปด้วย
+  // (ดู _vsRenderAttachments ใน view-submission.js)
   const missingDocs = Object.entries(REQUIRED_DOCS)
-    .filter(([idx]) => !appState.attachedFiles?.[idx])
+    .filter(([idx]) => !appState.attachedFiles?.[idx] && !appState.existingAttachments?.[idx])
     .map(([, label]) => label);
   if (missingDocs.length) {
     if (typeof showToast === 'function') {
