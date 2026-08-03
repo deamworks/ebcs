@@ -419,20 +419,6 @@ function renderSubmissionStatusCell(s) {
           </span>`;
 }
 
-// ── บันทึกรับชำระ ──────────────────────────────────────────────
-// ── จำลองแจ้งชำระจากธนาคาร (Mock — ยังไม่เชื่อมต่อ Data Center/SAP จริง) ─────
-async function simulateMockPayment(submissionId) {
-  if (!confirm('จำลองการแจ้งชำระจากธนาคาร?\n(ใช้สำหรับทดสอบตอนยังไม่ได้เชื่อมต่อ Data Center/SAP จริง)')) return;
-  try {
-    await api.post(`/admin/submissions/${submissionId}/simulate-payment`, {});
-  } catch (e) {
-    showToast('จำลองไม่สำเร็จ: ' + (e.message || ''));
-    return;
-  }
-  showToast('จำลองการแจ้งชำระสำเร็จ ✓');
-  await loadSubmissions();
-}
-
 // ── ตีกลับใบยื่นแบบเป็นร่าง (ให้ผู้ประกอบการแก้ไข/ยืนยันใหม่เอง แทนแอดมิน
 // แก้ตัวเลขตรงๆ ซึ่งจะทำให้เลขไม่ตรงกับใบที่ผู้ประกอบการพิมพ์ไปแล้ว) ─────────
 async function rejectSubmissionToDraft(submissionId) {
@@ -511,7 +497,6 @@ function renderTable() {
       <td style="text-align:center;font-size:12.5px;white-space:nowrap">${fmtDate(s.submitted_at)}</td>
       <td style="text-align:center">${renderSubmissionStatusCell(s)}</td>
       <td style="text-align:center">
-        ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm" title="จำลองแจ้งชำระอัตโนมัติ (ยังไม่เชื่อมต่อ Data Center/SAP จริง)" onclick="simulateMockPayment('${s.id}')">จำลองแจ้งชำระ (Mock)</button>` : ''}
         ${s.status === 'pending_payment' ? `<button class="adm-btn adm-btn-sm adm-btn-danger" title="ตีกลับให้ผู้ประกอบการแก้ไขและยืนยันใหม่เอง" onclick="rejectSubmissionToDraft('${s.id}')">ตีกลับเป็นร่าง</button>` : ''}
         <button class="adm-btn adm-btn-sm" onclick="window.open('/pages/admin-view-submission.html?id=${s.id}', '_blank')">ดูข้อมูล</button>
       </td>
