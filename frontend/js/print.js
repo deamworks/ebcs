@@ -623,6 +623,8 @@ function printAllCS02() {
 function handleFileAttach(idx, input) {
   const fname    = document.getElementById(`fname-${idx}`);
   const clearBtn = document.getElementById(`clear-${idx}`);
+  const rowEl    = document.getElementById(`docrow-${idx}`);
+  const attachBtn = rowEl?.querySelector('.doc-row-btn button');
   if (!fname) return;
 
   if (input.files?.[0]) {
@@ -637,7 +639,6 @@ function handleFileAttach(idx, input) {
     }
 
     // ── เก็บ File object จริงไว้ใน appState เพื่อใช้อัปโหลดตอนยืนยันนำส่ง ──
-    const rowEl   = document.getElementById(`docrow-${idx}`);
     const labelEl = rowEl?.querySelector('.doc-row-name');
     appState.attachedFiles[idx] = {
       file,
@@ -647,13 +648,33 @@ function handleFileAttach(idx, input) {
     fname.textContent = file.name;
     fname.classList.add('attached');
     if (clearBtn) clearBtn.style.display = 'inline-flex';
+    // [FIX] แนบไฟล์แล้วเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" แทนการซ่อนไปเลย
+    // ให้เปิดดูไฟล์ที่เพิ่งเลือกได้ทันที (ไฟล์อยู่ในเครื่อง ยังไม่อัปโหลด จึงใช้
+    // URL.createObjectURL ตรงๆ ไม่ต้องเรียก server) ต้องกดลบ (X) ก่อนถึงจะ
+    // แนบไฟล์ใหม่ทับได้
+    if (attachBtn) {
+      attachBtn.textContent = 'ดูเอกสาร';
+      attachBtn.onclick = () => _previewLocalFile(file);
+    }
     showToast(`แนบไฟล์เอกสาร "${file.name}" เรียบร้อยแล้ว`);
   } else {
     delete appState.attachedFiles[idx];
     fname.textContent = '—';
     fname.classList.remove('attached');
     if (clearBtn) clearBtn.style.display = 'none';
+    if (attachBtn) {
+      attachBtn.textContent = 'แนบไฟล์';
+      attachBtn.onclick = () => document.getElementById(`file-${idx}`).click();
+    }
   }
+}
+
+/** เปิดดูไฟล์ที่เพิ่งเลือกในเครื่อง (ยังไม่อัปโหลด) แบบ preview ในแท็บใหม่ —
+ *  ต่างจาก _vsPreviewAttachment ใน view-submission.js ที่ดึงไฟล์จาก server */
+function _previewLocalFile(file) {
+  const url = URL.createObjectURL(file);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /**
@@ -664,9 +685,15 @@ function clearFileAttach(idx) {
   const fileInput = document.getElementById(`file-${idx}`);
   const fname     = document.getElementById(`fname-${idx}`);
   const clearBtn  = document.getElementById(`clear-${idx}`);
+  const rowEl     = document.getElementById(`docrow-${idx}`);
+  const attachBtn = rowEl?.querySelector('.doc-row-btn button');
   if (fileInput) fileInput.value = '';
   if (fname)     { fname.textContent = '—'; fname.classList.remove('attached'); }
   if (clearBtn)  clearBtn.style.display = 'none';
+  if (attachBtn) {
+    attachBtn.textContent = 'แนบไฟล์';
+    attachBtn.onclick = () => document.getElementById(`file-${idx}`).click();
+  }
   delete appState.attachedFiles[idx];
   showToast('ยกเลิกการแนบไฟล์เรียบร้อยแล้ว');
 }
