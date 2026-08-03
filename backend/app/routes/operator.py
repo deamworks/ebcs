@@ -524,23 +524,19 @@ def create_submission():
                             "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
                         }
                     }), 400
-                # [FIX] เดิมลบแค่แถว DB (CASCADE ลบ document_attachments ตามไป
-                # ด้วย) แต่ไม่ได้ลบไฟล์จริงที่ /uploads เลย ทุกครั้งที่บันทึก
-                # ร่างซ้ำ/ยื่นซ้ำ ไฟล์แนบของร่างเดิมเลยกลายเป็นไฟล์กำพร้าค้าง
-                # บนดิสก์ตลอดไปแบบไม่มีใครอ้างอิงถึง ต้องลบไฟล์จริงก่อนลบแถว
-                cur.execute(
-                    "SELECT storage_path FROM document_attachments WHERE submission_id = %s",
-                    (existing["id"],)
-                )
-                old_files = [row["storage_path"] for row in cur.fetchall()]
+                # [FIX] ดึงไฟล์แนบเดิมของ draft นี้มาก่อนลบแถว — จะ "ย้าย"
+                # (carry-forward) ไปผูกกับแถวใหม่ที่กำลังจะสร้างด้านล่างแทนที่
+                # จะปล่อยให้ CASCADE ลบ metadata ทิ้งไปเฉยๆ (ไฟล์จริงบนดิสก์ไม่
+                # ต้องย้าย ใช้ path เดิมได้เลย) ผู้ใช้จะได้ไม่ต้องแนบไฟล์ใหม่
+                # ทุกครั้งที่บันทึกร่างซ้ำ/ถูกตีกลับแล้วยื่นใหม่
+                cur.execute("""
+                    SELECT doc_type, file_name, storage_path, mime_type, file_size
+                    FROM document_attachments WHERE submission_id = %s
+                """, (existing["id"],))
+                carried_attachments = cur.fetchall()
                 cur.execute("DELETE FROM submissions WHERE id = %s", (existing["id"],))
-
-            for path in old_files if existing else []:
-                try:
-                    if path and os.path.exists(path):
-                        os.remove(path)
-                except OSError:
-                    pass  # ไฟล์ลบไม่ได้ก็ปล่อยผ่าน ไม่ให้บันทึกร่าง/ยื่นแบบล้มเหลว
+            else:
+                carried_attachments = []
 
             # 1. สร้างใบยื่นหลัก
             # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
@@ -587,6 +583,18 @@ def create_submission():
                 audited_date,
                 now_bangkok(),
             ))
+
+            # 1b. ย้ายไฟล์แนบเดิม (ถ้ามี) มาผูกกับใบยื่นแบบใหม่นี้ — ดู carried_attachments
+            # ด้านบน แถวใหม่ใช้ id ใหม่ แต่ storage_path เดิม (ไฟล์จริงไม่ต้องย้าย)
+            for att in carried_attachments:
+                cur.execute("""
+                    INSERT INTO document_attachments
+                        (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    new_uuid(), submission_id, att["doc_type"],
+                    att["file_name"], att["storage_path"], att["mime_type"], att["file_size"],
+                ))
 
             # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
             # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่น
@@ -1000,6 +1008,24 @@ def upload_attachment(submission_id):
     attachment_id = new_uuid()
     with get_db() as db:
         with db.cursor() as cur:
+            # [FIX] เดิม insert ซ้อนได้เรื่อยๆ ไม่เช็คว่า doc_type นี้เคยแนบไว้
+            # แล้วหรือยัง — ตอนนี้ร่างที่ถูก "ตีกลับ"/บันทึกซ้ำจะพา attachment
+            # เดิมติดไปด้วย (carry-forward ใน create_submission) ถ้าผู้ใช้แนบ
+            # ไฟล์ใหม่ทับรายการเดิมจะกลายเป็นมีสองแถวซ้ำกันสำหรับเอกสารประเภท
+            # เดียวกัน ต้องลบของเก่า (ทั้งแถว DB และไฟล์จริง) ก่อนแนบใหม่เสมอ
+            cur.execute(
+                "SELECT id, storage_path FROM document_attachments WHERE submission_id = %s AND doc_type = %s",
+                (submission_id, doc_type)
+            )
+            old_atts = cur.fetchall()
+            for old in old_atts:
+                cur.execute("DELETE FROM document_attachments WHERE id = %s", (old["id"],))
+                try:
+                    if old["storage_path"] and os.path.exists(old["storage_path"]):
+                        os.remove(old["storage_path"])
+                except OSError:
+                    pass
+
             cur.execute("""
                 INSERT INTO document_attachments
                     (id, submission_id, doc_type, file_name, storage_path, mime_type, file_size)
