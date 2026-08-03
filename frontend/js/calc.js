@@ -145,4 +145,5 @@ const appState = {
   rowsData:    {},          // { [rowIdx]: { income, deduction, no, type, ... } }
   customOtherIncome: [],
   attachedFiles: {},
+  existingAttachments: {}, // { [docRowIdx]: attachmentId } — ไฟล์ที่แนบไว้แล้วบน server (resume draft)
 };
