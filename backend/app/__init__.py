@@ -25,7 +25,7 @@ def create_app():
     def health():
         return jsonify({
             "success": True,
-            "data": {"status": "ok", "message": "e-BCS API Ready!"}
+            "data": {"status": "ok", "message": "NBTC Filing API Ready!"}
         })
     
       # ลงทะเบียน Blueprints (Routes) 

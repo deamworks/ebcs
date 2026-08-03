@@ -77,7 +77,7 @@ def send_email(email, otp, operator_name=""):
 
     try:
         msg            = MIMEMultipart("alternative")
-        msg["Subject"] = "รหัสยืนยันตัวตน (OTP) สำหรับเข้าสู่ระบบ e-BCS กสทช."
+        msg["Subject"] = "รหัสยืนยันตัวตน (OTP) สำหรับเข้าสู่ระบบ NBTC Filing กสทช."
         msg["From"]    = (
             f"{Config.MAIL_FROM_NAME} <{Config.MAIL_FROM}>"
         )
@@ -88,10 +88,10 @@ def send_email(email, otp, operator_name=""):
                     margin:0 auto; padding:24px;
                     border:1px solid #ddd; border-radius:8px;">
             <h2 style="color:#1E2D5E; margin-top:0;">
-                ระบบ e-BCS กสทช.
+                ระบบ NBTC Filing กสทช.
             </h2>
             <p>เรียน {operator_name or 'ผู้ประกอบการ'}</p>
-            <p>ท่านได้ทำรายการขอรหัสยืนยันตัวตน (OTP) เพื่อเข้าสู่ระบบ e-BCS กรุณาใช้รหัสด้านล่างนี้เพื่อยืนยันตัวตน:</p>
+            <p>ท่านได้ทำรายการขอรหัสยืนยันตัวตน (OTP) เพื่อเข้าสู่ระบบ NBTC Filing กรุณาใช้รหัสด้านล่างนี้เพื่อยืนยันตัวตน:</p>
             <div style="background:#EEF2FF; padding:20px;
                         text-align:center; border-radius:8px;
                         margin:20px 0;">

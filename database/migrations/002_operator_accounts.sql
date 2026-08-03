@@ -3,7 +3,7 @@
 --
 -- schema.sql only runs automatically the first time MySQL
 -- initializes its data directory (docker-entrypoint-initdb.d).
--- If you already have a running e-BCS database (docker compose
+-- If you already have a running NBTC Filing database (docker compose
 -- volumes/db is not empty), run this script once by hand to bring
 -- an existing database up to date with the current schema.sql:
 --
