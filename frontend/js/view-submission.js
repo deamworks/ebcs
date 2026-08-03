@@ -284,6 +284,10 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
           clearBtn.style.display = 'inline-flex';
           clearBtn.onclick = () => _vsRemoveExistingAttachment(downloadBase, idx, att.id);
         }
+        // [FIX] ซ่อนปุ่ม "แนบไฟล์" เมื่อมีไฟล์แนบอยู่แล้ว (เหมือนพฤติกรรมตอน
+        // เพิ่งเลือกไฟล์ใหม่ใน handleFileAttach) กันสับสน ต้องกดลบ (X) ก่อน
+        // ถึงจะแนบใหม่ทับได้
+        if (btn) btn.style.display = 'none';
       }
       return;
     }
@@ -313,10 +317,13 @@ async function _vsRemoveExistingAttachment(downloadBase, idx, attachmentId) {
   if (!confirm('ลบไฟล์แนบนี้?')) return;
   try {
     await api.delete(`${downloadBase}/attachments/${attachmentId}`);
-    const fnameEl  = document.getElementById(`fname-${idx}`);
-    const clearBtn = document.getElementById(`clear-${idx}`);
-    if (fnameEl)  { fnameEl.textContent = '—'; fnameEl.classList.remove('attached'); }
-    if (clearBtn) clearBtn.style.display = 'none';
+    const rowEl     = document.getElementById(`docrow-${idx}`);
+    const attachBtn = rowEl?.querySelector('.doc-row-btn button');
+    const fnameEl   = document.getElementById(`fname-${idx}`);
+    const clearBtn  = document.getElementById(`clear-${idx}`);
+    if (fnameEl)   { fnameEl.textContent = '—'; fnameEl.classList.remove('attached'); }
+    if (clearBtn)  clearBtn.style.display = 'none';
+    if (attachBtn) attachBtn.style.display = ''; // เอาปุ่ม "แนบไฟล์" กลับมาให้แนบใหม่ได้
     if (typeof showToast === 'function') showToast('ลบไฟล์แนบเรียบร้อยแล้ว');
   } catch (e) {
     if (typeof showToast === 'function') showToast('ลบไฟล์แนบไม่สำเร็จ: ' + (e.message || ''), 'error');

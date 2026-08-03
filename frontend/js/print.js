@@ -623,6 +623,8 @@ function printAllCS02() {
 function handleFileAttach(idx, input) {
   const fname    = document.getElementById(`fname-${idx}`);
   const clearBtn = document.getElementById(`clear-${idx}`);
+  const rowEl    = document.getElementById(`docrow-${idx}`);
+  const attachBtn = rowEl?.querySelector('.doc-row-btn button');
   if (!fname) return;
 
   if (input.files?.[0]) {
@@ -637,7 +639,6 @@ function handleFileAttach(idx, input) {
     }
 
     // ── เก็บ File object จริงไว้ใน appState เพื่อใช้อัปโหลดตอนยืนยันนำส่ง ──
-    const rowEl   = document.getElementById(`docrow-${idx}`);
     const labelEl = rowEl?.querySelector('.doc-row-name');
     appState.attachedFiles[idx] = {
       file,
@@ -647,12 +648,16 @@ function handleFileAttach(idx, input) {
     fname.textContent = file.name;
     fname.classList.add('attached');
     if (clearBtn) clearBtn.style.display = 'inline-flex';
+    // [FIX] แนบไฟล์แล้วซ่อนปุ่ม "แนบไฟล์" ไปเลย — กันสับสนว่ายังกดแนบซ้ำได้อีก
+    // ทั้งที่มีไฟล์อยู่แล้ว (ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ได้)
+    if (attachBtn) attachBtn.style.display = 'none';
     showToast(`แนบไฟล์เอกสาร "${file.name}" เรียบร้อยแล้ว`);
   } else {
     delete appState.attachedFiles[idx];
     fname.textContent = '—';
     fname.classList.remove('attached');
     if (clearBtn) clearBtn.style.display = 'none';
+    if (attachBtn) attachBtn.style.display = '';
   }
 }
 
@@ -664,9 +669,12 @@ function clearFileAttach(idx) {
   const fileInput = document.getElementById(`file-${idx}`);
   const fname     = document.getElementById(`fname-${idx}`);
   const clearBtn  = document.getElementById(`clear-${idx}`);
+  const rowEl     = document.getElementById(`docrow-${idx}`);
+  const attachBtn = rowEl?.querySelector('.doc-row-btn button');
   if (fileInput) fileInput.value = '';
   if (fname)     { fname.textContent = '—'; fname.classList.remove('attached'); }
   if (clearBtn)  clearBtn.style.display = 'none';
+  if (attachBtn) attachBtn.style.display = ''; // เอาปุ่ม "แนบไฟล์" กลับมาให้แนบใหม่ได้
   delete appState.attachedFiles[idx];
   showToast('ยกเลิกการแนบไฟล์เรียบร้อยแล้ว');
 }
