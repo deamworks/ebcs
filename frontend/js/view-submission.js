@@ -74,10 +74,7 @@ function renderReadOnlySubmission(data, opts = {}) {
   setText('disp-period',   (s.period_start && s.period_end) ? `${_vsIsoToBE(s.period_start)} – ${_vsIsoToBE(s.period_end)}` : null);
   setText('disp-due-date', _vsIsoToBE(s.due_date));
 
-  // [FIX] เดิมโชว์แบนเนอร์เหลือง "ยืนยันแล้ว...ไม่สามารถแก้ไขข้อมูลได้" แม้อยู่
-  // ในโหมด "แอดมินแก้ไข" (opts.editable) ที่แก้ไขได้จริง — ขึ้นพร้อมกันแล้ว
-  // ข้อความขัดแย้งกันเอง (บอกทั้งแก้ไม่ได้และมีปุ่มบันทึกการแก้ไขให้กด)
-  if (!opts.skipBanner && !opts.editable) {
+  if (!opts.skipBanner) {
     _vsRenderStatusBanner(s, opts.statusLabel, opts.onClose);
   }
 
@@ -160,16 +157,14 @@ function renderReadOnlySubmission(data, opts = {}) {
     console.error('[renderReadOnlySubmission]', err);
   }
 
-  // [FIX] แอดมินแก้ไขข้อมูลในใบยื่นที่ยังไม่ได้จ่ายเงิน (draft/pending_payment)
-  // ได้เหมือนหน้ากรอกของผู้ประกอบการ — เดิมล็อกอ่านอย่างเดียวทุกสถานะ ทั้งที่
-  // paid เท่านั้นที่ควรห้ามแก้ (มีใบเสร็จอ้างอิงยอดเดิมไปแล้ว)
-  // opts.skipLock ใช้ตอนผู้ประกอบการเปิด draft ของตัวเองมาทำต่อ (resumeDraftSubmission
-  // ใน index.js) — อยากให้แก้ไขได้ปกติทุกอย่างเหมือนกรอกใหม่ ไม่ต้องล็อกหรือโชว์
-  // แบนเนอร์ "ยืนยันแล้ว" เพราะยังเป็นแค่ร่าง
+  // [FIX] แอดมินแก้ไขตัวเลขในใบยื่นแบบของผู้ประกอบการตรงๆ ไม่ได้อีกต่อไป —
+  // ทำให้ตัวเลขไม่ตรงกับใบ ชส.01/ชส.02 ที่ผู้ประกอบการพิมพ์ไปแล้วก่อนหน้า ถ้า
+  // ข้อมูลผิดต้องใช้ "ตีกลับเป็นร่าง" (rejectSubmissionToDraft ใน admin.js) ให้
+  // ผู้ประกอบการแก้ไขและยืนยันใหม่เองแทน — เหลือแค่โหมดดูอย่างเดียวกับโหมด
+  // แก้ไขของผู้ประกอบการเอง (skipLock ตอน resume draft ของตัวเอง) เท่านั้น
   if (opts.skipLock) {
-    // ไม่ทำอะไร — ปล่อยให้แก้ไขได้ปกติทุกช่อง
-  } else if (opts.editable) {
-    _vsUnlockForAdminEdit(data);
+    // ไม่ทำอะไร — ปล่อยให้แก้ไขได้ปกติทุกช่อง (ใช้ตอนผู้ประกอบการทำร่างของ
+    // ตัวเองต่อผ่าน resumeDraftSubmission() ใน index.js)
   } else {
     _vsLockReadOnly();
   }
@@ -241,26 +236,6 @@ function _vsLockReadOnly() {
       saveBtn.setAttribute('onclick', `${close}()`);
     }
   });
-}
-
-/** โหมดแอดมินแก้ไข — ปล่อยให้กรอกรายได้/ค่าลดหย่อน/ผู้สอบบัญชีได้ตามปกติ
- *  (เหมือนหน้าผู้ประกอบการ) แต่ยังล็อกช่องโครงสร้าง (เลขผู้เสียภาษี วันที่
- *  ใบอนุญาต ฯลฯ) กับปุ่ม/ช่องอัปโหลดเอกสารที่ไม่ได้อยู่ในขอบเขตนี้ */
-function _vsUnlockForAdminEdit(data) {
-  document.body.classList.add('vs-admin-edit');
-  const confirmBtn = document.getElementById('btn-confirm-submit');
-  if (confirmBtn) confirmBtn.style.display = 'none';
-  document.querySelectorAll('input[type="file"]').forEach(el => {
-    const row = el.closest('.doc-upload-row') || el.parentElement;
-    if (row) row.style.display = 'none';
-  });
-
-  const bar = document.createElement('div');
-  bar.style.cssText = 'background:#e8f4fd;border:1px solid #90caf9;color:#0d47a1;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;';
-  bar.innerHTML = `<span>โหมดแอดมินแก้ไข — แก้ไขรายได้/ค่าลดหย่อน/ผู้สอบบัญชีได้ อย่าลืมกด "บันทึกการแก้ไข" หลังแก้เสร็จ</span>
-    <button type="button" class="btn btn-primary btn-sm" id="btn-admin-save-submission" onclick="saveAdminSubmissionEdit('${data.submission?.id || ''}')">บันทึกการแก้ไข</button>`;
-  const main = document.querySelector('.main') || document.body;
-  main.insertBefore(bar, main.firstChild);
 }
 
 function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
