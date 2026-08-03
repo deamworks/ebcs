@@ -192,7 +192,10 @@ function _vsLockReadOnly() {
     el.disabled = true;
   });
   // ปุ่มที่กดแล้วเปลี่ยนสถานะ/ส่งข้อมูลซ้ำ — ต้องซ่อนทั้งหมดในโหมดดูอย่างเดียว
-  ['btn-confirm-submit', 'btn-confirm-fund-payment'].forEach(id => {
+  // รวมถึงปุ่ม "บันทึกร่าง" (แก้ไขอะไรไม่ได้แล้ว ไม่มีอะไรให้บันทึก) และลิงก์
+  // "หน้าหลัก" ในแถบนำทาง (ซ้ำซ้อนกับปุ่ม "กลับหน้าหลัก" ในแบนเนอร์สถานะด้านบน
+  // อยู่แล้ว จาก _vsRenderStatusBanner)
+  ['btn-confirm-submit', 'btn-confirm-fund-payment', 'btn-save-draft', 'nav-home-link'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = 'none';
   });
