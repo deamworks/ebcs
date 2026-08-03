@@ -586,6 +586,30 @@
         </div>
       </div>
 
+      <!-- ══ Reject-to-Draft Modal (ตีกลับใบยื่นแบบเป็นร่าง พร้อมเหตุผลไม่บังคับ) ══ -->
+      <div class="adm-modal-overlay" id="reject-draft-modal">
+        <div class="adm-modal-box">
+          <div class="adm-modal-hd">
+            <span>ตีกลับใบยื่นแบบเป็นร่าง</span>
+            <button class="adm-modal-close" onclick="closeRejectDraftModal()">×</button>
+          </div>
+          <div class="adm-modal-body">
+            <input type="hidden" id="rd-submission-id">
+            <p style="font-size:13px;color:#444;margin:0 0 12px;">ผู้ประกอบการจะต้องแก้ไขและยืนยันนำส่งใหม่อีกครั้ง</p>
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>เหตุผลที่ตีกลับ (ถ้ามี ไม่บังคับ)</label>
+                <textarea class="adm-form-input" id="rd-reason" rows="3" placeholder="ระบุเหตุผล..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="adm-modal-ft">
+            <button class="adm-btn" onclick="closeRejectDraftModal()">ยกเลิก</button>
+            <button class="adm-btn adm-btn-danger" onclick="confirmRejectSubmissionToDraft()">ยืนยันตีกลับเป็นร่าง</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ Operator Account Edit Modal (แก้ไขอีเมลรับ OTP) ══ -->
       <div class="adm-modal-overlay" id="oa-modal">
         <div class="adm-modal-box">

@@ -421,9 +421,23 @@ function renderSubmissionStatusCell(s) {
 
 // ── ตีกลับใบยื่นแบบเป็นร่าง (ให้ผู้ประกอบการแก้ไข/ยืนยันใหม่เอง แทนแอดมิน
 // แก้ตัวเลขตรงๆ ซึ่งจะทำให้เลขไม่ตรงกับใบที่ผู้ประกอบการพิมพ์ไปแล้ว) ─────────
-async function rejectSubmissionToDraft(submissionId) {
-  const reason = prompt('เหตุผลที่ตีกลับ (ถ้ามี ไม่บังคับ):') || '';
-  if (!confirm('ตีกลับใบยื่นนี้เป็นร่าง? ผู้ประกอบการจะต้องแก้ไขและยืนยันนำส่งใหม่อีกครั้ง')) return;
+function rejectSubmissionToDraft(submissionId) {
+  const idEl     = document.getElementById('rd-submission-id');
+  const reasonEl = document.getElementById('rd-reason');
+  if (idEl)     idEl.value = submissionId;
+  if (reasonEl) reasonEl.value = '';
+  document.getElementById('reject-draft-modal')?.classList.add('open');
+}
+
+function closeRejectDraftModal() {
+  document.getElementById('reject-draft-modal')?.classList.remove('open');
+}
+
+async function confirmRejectSubmissionToDraft() {
+  const submissionId = document.getElementById('rd-submission-id')?.value;
+  const reason        = document.getElementById('rd-reason')?.value || '';
+  if (!submissionId) return;
+  closeRejectDraftModal();
   try {
     await api.post(`/admin/submissions/${submissionId}/reject-to-draft`, { reason });
   } catch (e) {
