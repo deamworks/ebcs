@@ -18,7 +18,7 @@ from functools import wraps
 from ..db import get_db
 from ..services.integration_service import send_to_datacenter, send_to_sap
 from ..services.import_service import _get_next_ref_no
-from .admin import save_audit_log
+from .admin import save_audit_log, now_bangkok
 
 operator_bp = Blueprint("operator", __name__)
 
@@ -529,19 +529,25 @@ def create_submission():
             # 1. สร้างใบยื่นหลัก
             # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
             submission_id = new_uuid()
+            # [FIX] ระบุ created_at เอง (เวลาไทยจริง) แทนพึ่ง DEFAULT CURRENT_TIMESTAMP
+            # ของ MySQL — เขตเวลาของ DB server ไม่ใช่ Asia/Bangkok (ดูโน้ตเดียวกัน
+            # ที่ save_audit_log ใน admin.py) ทำให้ "บันทึกล่าสุด" ในตารางร่าง
+            # หน้าแรกของผู้ประกอบการคลาดเคลื่อนจากเวลาที่บันทึกจริงหลายชั่วโมง
             cur.execute("""
                 INSERT INTO submissions (
                     id, tax_id, ref_no, fiscal_year,
                     operator_name, period_start, period_end, due_date,
                     status, total_income, total_income_financial, deduction_amount,
                     fund_amount, vat_amount, extra_amount, net_amount,
-                    auditor_name, auditor_license, auditor_office, audited_date
+                    auditor_name, auditor_license, auditor_office, audited_date,
+                    created_at
                 ) VALUES (
                     %s, %s, %s, %s,
                     %s, %s, %s, %s,
                     'draft', %s, %s, %s,
                     %s, %s, %s, %s,
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s,
+                    %s
                 )
             """, (
                 submission_id,
@@ -563,6 +569,7 @@ def create_submission():
                 auditor_license,
                 auditor_office,
                 audited_date,
+                now_bangkok(),
             ))
 
             # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
