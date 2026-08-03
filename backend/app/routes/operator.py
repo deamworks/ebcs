@@ -1044,7 +1044,12 @@ def upload_attachment(submission_id):
     if submission["status"] != "draft":
         return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ใบยื่นแบบนี้ไม่สามารถแนบไฟล์เพิ่มได้"}}), 400
 
-    doc_type    = request.form.get("doc_type", "")[:50]
+    # [FIX] เดิมตัดที่ [:50] ทั้งที่ชื่อรายการเอกสารบางรายการ (เช่น ชส.04, ใบ
+    # แสดงสถานะร่วมประกอบกิจการฯ) ยาวเกิน 50 ตัวอักษร ทำให้ doc_type ที่บันทึก
+    # ไม่ตรงกับชื่อเต็มที่ frontend ใช้จับคู่แสดงผล ไฟล์แนบสองรายการนี้เลยดู
+    # เหมือน "หาย" ทุกครั้งที่บันทึกร่าง/ทำร่างต่อ (ต้องคู่กับ migration 016
+    # ที่ขยายคอลัมน์ document_attachments.doc_type เป็น VARCHAR(255) ด้วย)
+    doc_type    = request.form.get("doc_type", "")[:255]
     dest_dir    = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
     os.makedirs(dest_dir, exist_ok=True)
     stored_name = f"{uuid.uuid4()}{ext}"
