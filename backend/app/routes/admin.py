@@ -10,7 +10,6 @@
 import io
 import json
 import os
-import uuid
 from datetime import datetime, date, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -31,8 +30,6 @@ from ..services.import_service import (
     parse_operator_account_excel, import_operator_accounts,
     EMAIL_RE, _get_next_ref_no,
 )
-from ..services.integration_service import INTEGRATION_MODE
-
 admin_bp = Blueprint("admin", __name__)
 
 
@@ -1986,71 +1983,6 @@ def create_receipt():
         }
     }), 201
 
-
-# ════════════════════════════════════════════════════════
-# 5.5.1 จำลองแจ้งชำระจากธนาคาร (Mock) — ใช้ตอนยังไม่มี Data Center/SAP จริง
-# แสดงรูปร่าง flow เต็ม: ธนาคารแจ้ง → Data Center → SAP → ออกใบเสร็จอัตโนมัติ
-# ════════════════════════════════════════════════════════
-
-@admin_bp.route("/submissions/<submission_id>/simulate-payment", methods=["POST"])
-@jwt_required()
-@require_admin
-def simulate_payment(submission_id):
-    if INTEGRATION_MODE != "mock":
-        return jsonify({
-            "success": False,
-            "error": {"code": "NOT_MOCK_MODE", "message": "ปุ่มนี้ใช้ได้เฉพาะโหมด mock เท่านั้น"}
-        }), 400
-
-    admin_email = get_jwt_identity()
-
-    with get_db() as db:
-        with db.cursor() as cur:
-            cur.execute(
-                "SELECT id, status, operator_name, net_amount FROM submissions WHERE id = %s",
-                (submission_id,)
-            )
-            submission = cur.fetchone()
-
-            if not submission:
-                return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
-            if submission["status"] != "pending_payment":
-                return jsonify({
-                    "success": False,
-                    "error": {"code": "INVALID_STATUS", "message": "ใบยื่นนี้ไม่ได้อยู่ในสถานะรอชำระเงิน"}
-                }), 400
-
-            try:
-                cur.execute("""
-                    INSERT INTO receipt (submission_id, receipt_no, amount, received_at, recorded_by)
-                    VALUES (%s, %s, %s, NOW(), %s)
-                """, (
-                    submission_id,
-                    f"MOCK-RCP-{uuid.uuid4().hex[:8].upper()}",
-                    float(submission["net_amount"] or 0),
-                    "ระบบจำลอง (Mock)"
-                ))
-            except Exception as e:
-                if "Duplicate entry" in str(e):
-                    return jsonify({"success": False, "error": {"code": "DUPLICATE", "message": "บันทึกรับเงินไปแล้ว"}}), 400
-                raise
-
-            cur.execute("UPDATE submissions SET sap_status = 'confirmed' WHERE id = %s", (submission_id,))
-
-        save_audit_log(
-            db, admin_email,
-            "จำลองแจ้งชำระจากธนาคาร (Mock)",
-            "receipt",
-            submission_id,
-            {"mode": "mock", "amount": float(submission["net_amount"] or 0)},
-            record_label=submission.get("operator_name")
-        )
-        db.commit()
-
-    return jsonify({
-        "success": True,
-        "data": {"message": "จำลองการแจ้งชำระสำเร็จ สถานะใบยื่นเปลี่ยนเป็น paid แล้ว"}
-    }), 200
 
 
 # ════════════════════════════════════════════════════════
