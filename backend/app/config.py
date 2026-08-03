@@ -32,7 +32,7 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_FROM     = os.environ.get("MAIL_FROM", "noreply@nbtc.go.th")
-    MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "สำนักงาน กสทช. - ระบบ e-BCS")
+    MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "สำนักงาน กสทช. - ระบบ NBTC Filing")
 
     # ── Upload ────────────────────────────────────────────
     UPLOAD_FOLDER      = "/app/uploads"

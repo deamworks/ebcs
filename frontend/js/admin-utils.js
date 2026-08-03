@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════
-// js/admin-utils.js — e-BCS Admin Panel: utilities, modals, import/export,
+// js/admin-utils.js — NBTC Filing Admin Panel: utilities, modals, import/export,
 //                     and the full submission detail view
 //
 // Loaded before admin.js (see admin.html script order), but every function
