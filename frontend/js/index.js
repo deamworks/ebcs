@@ -260,7 +260,9 @@ async function viewExistingSubmission() {
       renderReadOnlySubmission(detail, {
         downloadBase: '/operator',
         statusLabel: statusTh[detail.status] || detail.status,
-        onClose: () => window.location.reload(),
+        // [FIX] เดิมมีปุ่ม "กลับหน้าหลัก" ในแบนเนอร์นี้ด้วย (onClose) แต่ซ้ำซ้อน
+        // กับลิงก์ "หน้าหลัก" ที่มีอยู่แล้วในแถบนำทางด้านบน ตัดออกไม่ส่ง onClose
+        // เข้าไปอีก เหลือแค่ทางเดียว
       });
     }
   } catch (e) {
