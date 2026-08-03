@@ -951,6 +951,53 @@ def download_own_attachment(attachment_id):
 
 
 # ════════════════════════════════════════════════════════
+# 4.6b2 ลบไฟล์แนบของใบยื่นตัวเอง (เฉพาะร่างที่ยังไม่ยืนยัน)
+# DELETE /api/operator/attachments/<id>
+# ใช้ตอนกดปุ่มลบ (X) ไฟล์ที่เคยแนบไว้แล้ว ระหว่างทำร่างต่อ (resume draft) —
+# ถ้าไม่ลบที่นี่ด้วย ไฟล์เดิมจะถูก carry-forward กลับมาอีกตอนบันทึกร่างรอบถัดไป
+# (ดู create_submission()) ทั้งที่ผู้ใช้ตั้งใจเอาออกแล้วจากหน้าจอ
+# ════════════════════════════════════════════════════════
+
+@operator_bp.route("/attachments/<attachment_id>", methods=["DELETE"])
+@jwt_required()
+@require_operator
+def delete_own_attachment(attachment_id):
+    tax_id = get_jwt_identity()
+
+    with get_db() as db:
+        with db.cursor() as cur:
+            cur.execute("""
+                SELECT da.storage_path, s.status
+                FROM   document_attachments da
+                JOIN   submissions s ON s.id = da.submission_id
+                WHERE  da.id = %s AND s.tax_id = %s
+            """, (attachment_id, tax_id))
+            att = cur.fetchone()
+
+            if not att:
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "ไม่พบไฟล์แนบ"}
+                }), 404
+            if att["status"] != "draft":
+                return jsonify({
+                    "success": False,
+                    "error": {"code": "INVALID_STATUS", "message": "ลบไฟล์แนบได้เฉพาะร่างที่ยังไม่ยืนยันเท่านั้น"}
+                }), 400
+
+            cur.execute("DELETE FROM document_attachments WHERE id = %s", (attachment_id,))
+        db.commit()
+
+    try:
+        if att["storage_path"] and os.path.exists(att["storage_path"]):
+            os.remove(att["storage_path"])
+    except OSError:
+        pass
+
+    return jsonify({"success": True, "data": {"message": "ลบไฟล์แนบสำเร็จ"}}), 200
+
+
+# ════════════════════════════════════════════════════════
 # 4.6c อัปโหลดไฟล์แนบเอกสาร (Step 6)
 # POST /api/operator/submissions/<submission_id>/attachments
 # แนบได้เฉพาะใบยื่นที่ยังเป็น draft ของตัวเอง

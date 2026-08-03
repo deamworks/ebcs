@@ -150,7 +150,7 @@ function renderReadOnlySubmission(data, opts = {}) {
 
     if (typeof generateRows === 'function') generateRows();
     if (typeof goToStep === 'function') goToStep(1);
-    if (!opts.skipAttachments) _vsRenderAttachments(attachments, downloadBase);
+    if (!opts.skipAttachments) _vsRenderAttachments(attachments, downloadBase, !!opts.skipLock);
   } catch (err) {
     console.error('[renderReadOnlySubmission]', err);
   }
@@ -258,9 +258,13 @@ function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
 }
 
 /** เติมชื่อไฟล์ที่แนบไว้จริงลงในตารางเอกสารแนบ (Step 6) ตัวเดิม โดยคงหน้าตา
- *  ตารางไว้ทุกอย่าง — เปลี่ยนแค่ปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" สำหรับรายการที่
- *  มีไฟล์แนบไว้แล้ว และซ่อนปุ่มลบ (X) เพราะแก้ไขข้อมูลไม่ได้ในโหมดนี้ */
-function _vsRenderAttachments(attachments, downloadBase) {
+ *  ตารางไว้ทุกอย่าง
+ *  - โหมดดูอย่างเดียว (editable=false): เปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร"
+ *    สำหรับรายการที่มีไฟล์แนบไว้แล้ว และซ่อนปุ่มลบ (X) เพราะแก้ไขไม่ได้
+ *  - โหมดแก้ไข/ทำร่างต่อ (editable=true — resumeDraftSubmission ใน index.js):
+ *    โชว์ชื่อไฟล์ที่เคยแนบไว้ + เปิดปุ่มลบ (X) ให้ลบออกจากฐานข้อมูลจริงได้
+ *    ส่วนปุ่ม "แนบไฟล์" ปล่อยให้ทำงานปกติ (แนบทับได้ผ่าน handleFileAttach เดิม) */
+function _vsRenderAttachments(attachments, downloadBase, editable) {
   const rows = document.querySelectorAll('#doc-upload-list .doc-row');
   if (!rows.length) return;
   rows.forEach(row => {
@@ -269,11 +273,22 @@ function _vsRenderAttachments(attachments, downloadBase) {
     const fnameEl  = document.getElementById(`fname-${idx}`);
     const btn      = row.querySelector('.doc-row-btn button');
     const clearBtn = document.getElementById(`clear-${idx}`);
-    if (clearBtn) clearBtn.style.display = 'none';
 
     const label = nameEl ? nameEl.textContent.trim() : '';
     const att   = attachments.find(a => (a.doc_type || '').trim() === label);
 
+    if (editable) {
+      if (att) {
+        if (fnameEl) { fnameEl.textContent = att.file_name || 'เอกสารแนบ'; fnameEl.classList.add('attached'); }
+        if (clearBtn) {
+          clearBtn.style.display = 'inline-flex';
+          clearBtn.onclick = () => _vsRemoveExistingAttachment(downloadBase, idx, att.id);
+        }
+      }
+      return;
+    }
+
+    if (clearBtn) clearBtn.style.display = 'none';
     if (att) {
       if (fnameEl) { fnameEl.textContent = att.file_name || 'เอกสารแนบ'; fnameEl.classList.add('attached'); }
       if (btn) {
@@ -290,4 +305,21 @@ function _vsRenderAttachments(attachments, downloadBase) {
       }
     }
   });
+}
+
+/** ลบไฟล์แนบที่เคยบันทึกไว้แล้วในฐานข้อมูลจริง (ใช้ตอนทำร่างต่อ — ต่างจาก
+ *  clearFileAttach() เดิมที่แค่ล้างไฟล์ที่เพิ่งเลือกในเครื่อง ยังไม่เคยอัปโหลด) */
+async function _vsRemoveExistingAttachment(downloadBase, idx, attachmentId) {
+  if (!confirm('ลบไฟล์แนบนี้?')) return;
+  try {
+    await api.delete(`${downloadBase}/attachments/${attachmentId}`);
+    const fnameEl  = document.getElementById(`fname-${idx}`);
+    const clearBtn = document.getElementById(`clear-${idx}`);
+    if (fnameEl)  { fnameEl.textContent = '—'; fnameEl.classList.remove('attached'); }
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (typeof showToast === 'function') showToast('ลบไฟล์แนบเรียบร้อยแล้ว');
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('ลบไฟล์แนบไม่สำเร็จ: ' + (e.message || ''), 'error');
+    else alert('ลบไฟล์แนบไม่สำเร็จ');
+  }
 }
