@@ -573,7 +573,8 @@ def delete_submissions():
     ลบใบยื่นหลายรายการพร้อมกัน
     Request: DELETE /api/admin/submissions
     Body:    { "ids": ["uuid1", "uuid2"] }
-    CASCADE จะลบ licenses, incomes, attachments ที่เชื่อมอยู่ด้วย
+    CASCADE จะลบ licenses, incomes, attachments (แถว DB) ที่เชื่อมอยู่ด้วย —
+    แต่ไม่ลบไฟล์แนบจริงที่ /uploads ให้ ต้องลบเองก่อน (ดูด้านล่าง)
     """
 
     admin_email = get_jwt_identity()
@@ -597,12 +598,28 @@ def delete_submissions():
             )
             old_by_id = {row["id"]: row for row in cur.fetchall()}
 
+            # [FIX] เดิมลบแค่แถว DB เฉยๆ ไม่ได้ลบไฟล์แนบจริงที่ /uploads เลย
+            # (CASCADE ลบแค่ metadata ในตาราง document_attachments) ทำให้ไฟล์
+            # กำพร้าค้างบนดิสก์ตลอดไปทุกครั้งที่แอดมินลบใบยื่นแบบที่มีไฟล์แนบ
+            cur.execute(
+                f"SELECT storage_path FROM document_attachments WHERE submission_id IN ({placeholders})",
+                ids
+            )
+            old_files = [row["storage_path"] for row in cur.fetchall()]
+
             # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
             for sid in ids:
                 cur.execute(
                     "DELETE FROM submissions WHERE id = %s",
                     (sid,)
                 )
+
+        for path in old_files:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass  # ไฟล์ลบไม่ได้ก็ปล่อยผ่าน ไม่ให้การลบใบยื่นแบบล้มเหลว
 
         # Audit Log — บันทึกทีละรายการ ระบุปีบัญชีและชื่อบริษัทที่ถูกลบ
         for sid in ids:
