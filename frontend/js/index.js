@@ -418,7 +418,9 @@ async function loadDraftList() {
 
 // ── resumeDraftSubmission — โหลดร่างที่บันทึกไว้ในระบบ (ไม่ใช่ localStorage)
 // กลับเข้ามาแก้ไขต่อได้ตามปกติ ใช้ hydration เดียวกับหน้าดูอย่างเดียว แต่ไม่ล็อก
-// อะไรเลยเพราะยังเป็นแค่ร่าง (ไฟล์แนบต้องเลือกใหม่เสมอ — ดูหมายเหตุใน saveDraftToServer) ──
+// อะไรเลยเพราะยังเป็นแค่ร่าง — ไฟล์แนบที่เคยบันทึกไว้แล้ว (carry-forward ฝั่ง
+// backend ใน create_submission) จะโชว์ใน Step 6 ให้เห็นเลย ไม่ต้องแนบใหม่
+// (skipAttachments: false ให้ _vsRenderAttachments โชว์ชื่อไฟล์เดิม + ปุ่มลบ) ──
 async function resumeDraftSubmission(id) {
   try {
     const detail = await api.get(`/operator/submissions/${id}`);
@@ -426,10 +428,10 @@ async function resumeDraftSubmission(id) {
     renderReadOnlySubmission(detail, {
       downloadBase:    '/operator',
       skipBanner:      true,
-      skipAttachments: true,
+      skipAttachments: false,
       skipLock:        true,
     });
-    showToast('โหลดร่างที่บันทึกไว้เรียบร้อยแล้ว (ต้องแนบไฟล์เอกสารใหม่อีกครั้งใน Step 6)');
+    showToast('โหลดร่างที่บันทึกไว้เรียบร้อยแล้ว');
   } catch (err) {
     console.error('[resumeDraftSubmission]', err);
     showToast('โหลดร่างไม่สำเร็จ: ' + (err.message || ''));
