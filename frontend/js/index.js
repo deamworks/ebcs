@@ -453,7 +453,37 @@ async function saveDraftToServer() {
     if (result?.success === false) {
       throw new Error(result?.error?.message || result?.message || 'บันทึกร่างไม่สำเร็จ');
     }
-    showToast('บันทึกร่างเรียบร้อยแล้ว (ไฟล์แนบต้องเลือกใหม่ทุกครั้งที่กลับมาทำต่อ)');
+
+    // รองรับทั้ง { success, data: { submission_id } } และ { submission_id } flat
+    const submissionId = (result?.success === true && result?.data)
+      ? result.data.submission_id
+      : result?.submission_id;
+
+    // [FIX] อัปโหลดไฟล์แนบที่เพิ่งเลือกไว้ (ยังไม่เคยส่งขึ้น server) ไปพร้อมกับ
+    // ร่างด้วย — เดิมไม่อัปโหลดเลยตอนบันทึกร่าง ทำให้ไฟล์หายทุกครั้ง (ไฟล์เดิม
+    // ที่เคยแนบไว้แล้วจาก draft ก่อนหน้าถูก carry-forward ให้แล้วฝั่ง backend
+    // ไม่ต้องอัปโหลดซ้ำ อัปโหลดเฉพาะไฟล์ใหม่ที่ผู้ใช้เพิ่งเลือกในรอบนี้)
+    const attachmentErrors = [];
+    if (submissionId) {
+      const attachedEntries = Object.entries(appState.attachedFiles || {});
+      for (const [idx, entry] of attachedEntries) {
+        try {
+          const formData = new FormData();
+          formData.append('file', entry.file);
+          formData.append('doc_type', entry.label || `เอกสาร ${idx}`);
+          await api.upload(`/operator/submissions/${submissionId}/attachments`, formData);
+        } catch (err) {
+          attachmentErrors.push({ idx, label: entry.label, error: err });
+        }
+      }
+    }
+
+    if (attachmentErrors.length) {
+      const names = attachmentErrors.map(e => e.label).join(', ');
+      showToast(`บันทึกร่างสำเร็จ แต่แนบไฟล์บางส่วนไม่สำเร็จ: ${names} กรุณาลองแนบใหม่`);
+    } else {
+      showToast('บันทึกร่างเรียบร้อยแล้ว');
+    }
   } catch (err) {
     console.error('[saveDraftToServer]', err);
     showToast('บันทึกร่างไม่สำเร็จ: ' + (err.message || ''));
