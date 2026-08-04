@@ -173,7 +173,7 @@
       <div class="adm-page active" id="page-submissions">
         <div class="adm-stat-grid">
           <div class="adm-stat"><div class="adm-stat-label">รายการยื่นแบบทั้งหมด</div><div class="adm-stat-value" id="sub-st-total">—</div></div>
-          <div class="adm-stat"><div class="adm-stat-label">รอแนบ</div><div class="adm-stat-value" id="sub-st-attach" style="color:#d97706">—</div></div>
+          <div class="adm-stat"><div class="adm-stat-label">ร่าง</div><div class="adm-stat-value" id="sub-st-attach" style="color:#d97706">—</div></div>
           <div class="adm-stat"><div class="adm-stat-label">รอชำระ</div><div class="adm-stat-value" id="sub-st-pending" style="color:#dc2626">—</div></div>
           <div class="adm-stat"><div class="adm-stat-label">ชำระแล้ว</div><div class="adm-stat-value" id="sub-st-paid" style="color:#2e86ab">—</div></div>
         </div>
@@ -237,7 +237,6 @@
             <div class="adm-filter-row">
               <span class="adm-filter-label">สถานะการชำระเงิน</span>
               <div class="adm-filter-cbs">
-                <label class="adm-cb-item"><input type="checkbox" class="filter-cb-paystatus" value="pending_attach" onchange="renderTable()"> รอแนบ</label>
                 <label class="adm-cb-item"><input type="checkbox" class="filter-cb-paystatus" value="pending_payment" onchange="renderTable()"> รอชำระเงิน</label>
                 <label class="adm-cb-item"><input type="checkbox" class="filter-cb-paystatus" value="paid" onchange="renderTable()"> ชำระเงินแล้ว</label>
               </div>
@@ -432,7 +431,6 @@
             <div class="adm-filter-row">
               <span class="adm-filter-label">สถานะการชำระเงิน</span>
               <div class="adm-filter-cbs">
-                <label class="adm-cb-item"><input type="checkbox" class="tp-cb-paystatus" value="pending_attach" onchange="renderTaxpayerTable()"> รอแนบ</label>
                 <label class="adm-cb-item"><input type="checkbox" class="tp-cb-paystatus" value="pending_payment" onchange="renderTaxpayerTable()"> รอชำระเงิน</label>
                 <label class="adm-cb-item"><input type="checkbox" class="tp-cb-paystatus" value="paid" onchange="renderTaxpayerTable()"> ชำระเงินแล้ว</label>
               </div>
@@ -827,7 +825,6 @@
             <div class="exp-row">
               <label class="exp-label">สถานะการชำระเงิน</label>
               <div class="adm-filter-cbs">
-                <label class="adm-cb-item"><input type="checkbox" class="exp-cb-paystatus" value="รอแนบ"> รอแนบ</label>
                 <label class="adm-cb-item"><input type="checkbox" class="exp-cb-paystatus" value="รอชำระเงิน"> รอชำระเงิน</label>
                 <label class="adm-cb-item"><input type="checkbox" class="exp-cb-paystatus" value="ชำระเงินแล้ว"> ชำระเงินแล้ว</label>
               </div>

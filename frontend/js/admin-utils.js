@@ -422,10 +422,10 @@ async function handleExportSubmit() {
 
   if (reportType === '3') {
     // [FIX] สถานะการชำระเงินไม่เคยถูกส่งไปกรองเลย — เชื่อมกับสถานะจริงที่ระบบ
-    // มี (draft/pending_attach/pending_payment/paid) ส่วนตัวเลือกอื่น (รอบันทึก,
+    // มี (draft/pending_payment/paid) ส่วนตัวเลือกอื่น (รอบันทึก,
     // สอบทานแล้ว, เห็นชอบแล้ว, END) ยังไม่มีสถานะแบบนั้นในระบบจริง เลือกแล้วจะไม่มีข้อมูลตรงกัน
     const payStatusMap = {
-      'ร่าง': 'draft', 'รอแนบ': 'pending_attach',
+      'ร่าง': 'draft',
       'รอชำระเงิน': 'pending_payment', 'ชำระเงินแล้ว': 'paid',
     };
     const statuses = [...document.querySelectorAll('.exp-cb-paystatus:checked')].map(el => el.value);

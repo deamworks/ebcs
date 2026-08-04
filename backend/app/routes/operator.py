@@ -886,12 +886,9 @@ def get_submission(submission_id):
             cur.execute("SELECT id FROM receipt WHERE submission_id = %s LIMIT 1", (submission_id,))
             receipt = cur.fetchone()
 
-    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับ pending_attach ของหน้าแอดมิน
     actual_status = submission["status"]
     if receipt and actual_status == "pending_payment":
         actual_status = "paid"
-    elif actual_status == "pending_payment" and len(attachments) < 3:
-        actual_status = "pending_attach"
 
     for key in ["period_start", "period_end", "due_date", "submitted_at", "created_at"]:
         if submission.get(key):
