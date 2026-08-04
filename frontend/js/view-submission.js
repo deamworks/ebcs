@@ -244,7 +244,7 @@ function _vsLockReadOnly() {
 }
 
 function _vsRenderStatusBanner(s, statusLabelOverride, onClose) {
-  const statusTh = { draft: 'ร่าง', pending_attach: 'รอแนบ', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
+  const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const label = statusLabelOverride || statusTh[s.status] || s.status || '';
   const bar = document.createElement('div');
   bar.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:10px 16px;border-radius:8px;margin:0 0 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;';

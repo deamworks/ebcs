@@ -246,11 +246,7 @@ def get_submissions():
         conditions.append("s.fiscal_year = %s")
         params.append(year)
 
-    # pending_attach ไม่ใช่ค่าจริงใน status enum — กรองจาก HAVING ของ attachment count แทน
-    having_pending_attach = False
-    if status == "pending_attach":
-        having_pending_attach = True
-    elif status:
+    if status:
         conditions.append("s.status = %s")
         params.append(status)
 
@@ -268,7 +264,6 @@ def get_submissions():
         with db.cursor() as cur:
 
             # ── ดึงรายการ (แบ่งหน้า) ─────────────────
-            # required_ok: ยื่นแบบแล้วต้องมีเอกสารแนบครบ 3 อย่างบังคับ ไม่งั้นเป็น pending_attach
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
@@ -276,7 +271,6 @@ def get_submissions():
                     s.net_amount, s.submitted_at, s.created_at,
                     COUNT(da.id) AS attachment_count,
                     CASE WHEN r.id IS NOT NULL THEN 'paid'
-                         WHEN s.status = 'pending_payment' AND COUNT(da.id) < 3 THEN 'pending_attach'
                          ELSE s.status END AS status
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
@@ -285,7 +279,6 @@ def get_submissions():
                 GROUP BY s.id, s.tax_id, s.operator_name, s.fiscal_year, s.ref_no,
                          s.due_date, s.net_amount, s.submitted_at, s.created_at,
                          r.id, s.status
-                {"HAVING status = 'pending_attach'" if having_pending_attach else ""}
                 ORDER BY s.created_at DESC
                 LIMIT %s OFFSET %s
             """, params + [per_page, offset])
@@ -294,16 +287,10 @@ def get_submissions():
             # ── นับทั้งหมดสำหรับ pagination ─────────
             cur.execute(f"""
                 SELECT COUNT(*) AS total FROM (
-                    SELECT s.id,
-                           CASE WHEN r.id IS NOT NULL THEN 'paid'
-                                WHEN s.status = 'pending_payment' AND COUNT(da.id) < 3 THEN 'pending_attach'
-                                ELSE s.status END AS status
+                    SELECT s.id
                     FROM submissions s
                     LEFT JOIN receipt r ON r.submission_id = s.id
-                    LEFT JOIN document_attachments da ON da.submission_id = s.id
                     {where}
-                    GROUP BY s.id, r.id, s.status
-                    {"HAVING status = 'pending_attach'" if having_pending_attach else ""}
                 ) t
             """, params)
             total = cur.fetchone()["total"]
@@ -456,10 +443,6 @@ def get_submission_detail(submission_id):
                 (submission_id,)
             )
             receipt = cur.fetchone()
-
-    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับ pending_attach ของหน้ารายการ
-    if submission["actual_status"] == "pending_payment" and len(attachments) < 3:
-        submission["actual_status"] = "pending_attach"
 
     # แปลงวันที่
     for key in ["period_start", "period_end", "due_date",

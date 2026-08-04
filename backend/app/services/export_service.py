@@ -495,29 +495,24 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     ws.row_dimensions[2].height = 80
     set_header_row(ws, headers, row=3)
 
-    # หาสถานะแนบเอกสารจาก submission_id ตรงๆ (แต่ละแถวผูกกับใบยื่นแบบเดียวอยู่แล้ว)
+    # หาสถานะจาก submission_id ตรงๆ (แต่ละแถวผูกกับใบยื่นแบบเดียวอยู่แล้ว)
     submission_ids = list({row["submission_id"] for row in rows})
     submission_status_map = {}
     if submission_ids:
         placeholders = ",".join(["%s"] * len(submission_ids))
         with db.cursor() as cur:
             cur.execute(f"""
-                SELECT s.id, s.status, r.id AS receipt_id,
-                       (SELECT COUNT(*) FROM document_attachments da
-                        WHERE da.submission_id = s.id) AS attachment_count
+                SELECT s.id, s.status, r.id AS receipt_id
                 FROM submissions s
                 LEFT JOIN receipt r ON r.submission_id = s.id
                 WHERE s.id IN ({placeholders})
             """, submission_ids)
             for srow in cur.fetchall():
                 st = "paid" if srow["receipt_id"] else srow["status"]
-                if st == "pending_payment" and (srow["attachment_count"] or 0) < 3:
-                    st = "pending_attach"
                 submission_status_map[srow["id"]] = st
 
     submission_status_labels = {
         "draft":           "ร่าง",
-        "pending_attach":  "รอแนบ",
         "pending_payment": "รอชำระเงิน",
         "paid":            "ชำระแล้ว",
     }
@@ -634,8 +629,8 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
 
     - year: ค่าเดียว (compat เดิม) — ใช้ได้ถ้าไม่ส่ง year_from/year_to
     - year_from/year_to: กรองช่วงปีบัญชี ใช้ค่าใดค่าหนึ่งหรือทั้งคู่ก็ได้
-    - statuses: list ของ raw status ('draft'/'pending_attach'/'pending_payment'/'paid')
-      กรองหลัง derive actual_status แล้ว (ดู pending_attach ด้านล่าง)
+    - statuses: list ของ raw status ('draft'/'pending_payment'/'paid')
+      กรองหลัง derive actual_status แล้ว
     """
     from openpyxl.utils import get_column_letter
 
@@ -665,9 +660,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
                 r.receipt_no, r.received_at, r.amount AS receipt_amount,
                 inv.invoice_no, inv.issued_at, inv.amount AS invoice_amount,
                 (SELECT COUNT(*) FROM licensee_master lm
-                 WHERE lm.tax_id = s.tax_id) AS license_count,
-                (SELECT COUNT(*) FROM document_attachments da
-                 WHERE da.submission_id = s.id) AS attachment_count
+                 WHERE lm.tax_id = s.tax_id) AS license_count
             FROM submissions s
             LEFT JOIN receipt r   ON r.submission_id = s.id
             LEFT JOIN invoice inv ON inv.submission_id = s.id
@@ -676,11 +669,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
             ORDER BY s.fiscal_year DESC, s.operator_name
         """, params)
         rows = cur.fetchall()
-
-    # [FIX] เช็คเอกสารแนบครบ 3 ไหม ให้ตรงกับสถานะ "รอแนบ" ในหน้าแอดมิน
-    for row in rows:
-        if row["actual_status"] == "pending_payment" and (row.get("attachment_count") or 0) < 3:
-            row["actual_status"] = "pending_attach"
 
     if statuses:
         rows = [r for r in rows if r["actual_status"] in statuses]
@@ -873,7 +861,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     # ── row 9+: ข้อมูล ─────────────────────────────────────
     status_map = {
         "draft":           "ร่าง",
-        "pending_attach":  "รอแนบ",
         "pending_payment": "รอชำระเงิน",
         "paid":            "ชำระแล้ว",
     }
