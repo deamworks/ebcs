@@ -67,12 +67,23 @@ function fdSetDate(id, iso) {
   }
 }
 
-/** ล้างค่าช่อง .fd-buddhist-datepicker ผ่าน flatpickr API — คู่กับ fdSetDate() */
+/** ล้างค่าช่อง .fd-buddhist-datepicker ผ่าน flatpickr API — คู่กับ fdSetDate()
+ *  [FIX] fp.clear() เพียงอย่างเดียวจะรีเซ็ตปฏิทินที่กำลังเลื่อนดูอยู่กลับไปที่
+ *  "วันนี้" แบบ ค.ศ. จริงของเครื่อง (ปีปัจจุบันไม่บวก 543) เพราะ trick เลื่อนไป
+ *  ปี พ.ศ. ตอนเริ่มต้น (onReady) ทำครั้งเดียวตอนสร้าง instance เท่านั้น ไม่ได้
+ *  ทำงานซ้ำทุกครั้งที่ clear — ต้อง jumpToDate ไปปี พ.ศ. ปัจจุบันซ้ำเองทุกครั้ง
+ *  ไม่งั้นพอเปิดโหมด "เพิ่ม" ต่อจากโหมด "แก้ไข" (ใช้ input ชุดเดียวกัน) ปฏิทิน
+ *  จะโชว์ปีปัจจุบันแบบ ค.ศ. แทน พ.ศ. */
 function fdClearDate(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  if (el._flatpickr) el._flatpickr.clear();
-  else el.value = '';
+  if (el._flatpickr) {
+    el._flatpickr.clear();
+    const now = new Date();
+    el._flatpickr.jumpToDate(new Date(now.getFullYear() + 543, now.getMonth(), now.getDate()), false);
+  } else {
+    el.value = '';
+  }
 }
 
 /** เริ่ม flatpickr (ปฏิทิน พ.ศ.) ให้ทุกช่อง .fd-buddhist-datepicker ที่ยังไม่ได้ init
