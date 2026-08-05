@@ -658,9 +658,10 @@ function renderLicenseTable() {
 
 function openAddLicenseModal(prefillTaxId) {
   document.getElementById('lic-modal-title').textContent = 'เพิ่มใบอนุญาต';
-  ['lic-ml-id','lic-ml-taxid','lic-ml-name','lic-ml-no','lic-ml-start','lic-ml-end'].forEach(id => {
+  ['lic-ml-id','lic-ml-taxid','lic-ml-name','lic-ml-no'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  if (typeof fdClearDate === 'function') ['lic-ml-start','lic-ml-end'].forEach(fdClearDate);
   if (prefillTaxId) document.getElementById('lic-ml-taxid').value = prefillTaxId;
   document.getElementById('lic-ml-type').value      = 'NETWORK';
   document.getElementById('lic-ml-status').value    = 'active';
@@ -676,8 +677,10 @@ function openEditLicenseModal(id) {
   document.getElementById('lic-ml-name').value    = r.company_name||'';
   document.getElementById('lic-ml-no').value      = r.license_no||'';
   document.getElementById('lic-ml-type').value    = r.licensee_type||'NETWORK';
-  document.getElementById('lic-ml-start').value   = fdISOToThai(r.start_date);
-  document.getElementById('lic-ml-end').value     = fdISOToThai(r.end_date);
+  if (typeof fdSetDate === 'function') {
+    fdSetDate('lic-ml-start', r.start_date);
+    fdSetDate('lic-ml-end',   r.end_date);
+  }
   document.getElementById('lic-ml-status').value  = r.license_status||'active';
   document.getElementById('lic-modal').style.display = 'flex';
 }
@@ -821,7 +824,7 @@ async function deleteLicense(id, no) {
 
     // โหลดข้อมูลตามหน้า
     if (page === 'submissions') { loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
-    if (page === 'licenses')    loadLicenses();
+    if (page === 'licenses')    { loadLicenses(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'operator-accounts') loadOperatorAccounts();
     if (page === 'import-operator-accounts' && typeof resetOperatorAccountImportPage === 'function') resetOperatorAccountImportPage();
     if (page === 'taxpayers')   { loadTaxpayers(); loadLicenses(); loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }

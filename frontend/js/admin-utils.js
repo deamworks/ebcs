@@ -49,6 +49,32 @@ function fdMoney(n) {
   return (parseFloat(n) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** ตั้งค่าช่อง .fd-buddhist-datepicker จากวันที่ ISO ("YYYY-MM-DD") ให้ถูกต้อง —
+ *  ต้องตั้งผ่าน flatpickr API (setDate) เท่านั้น ห้ามเซ็ต el.value ตรงๆ เพราะ
+ *  input ช่องนี้เป็น readonly และผูกกับ instance ของ flatpickr อยู่แล้ว การเซ็ต
+ *  .value ตรงๆ ทำให้ข้อความที่โชว์กับสถานะภายในปฏิทิน (ปีที่กำลังเลื่อนดูอยู่)
+ *  ไม่ตรงกัน พอเปิดปฏิทินขึ้นมาอีกครั้ง (เช่น modal เดียวกันถูกใช้ซ้ำระหว่างโหมด
+ *  "เพิ่ม" กับ "แก้ไข") ปฏิทินจะเลื่อนกลับไปปีปัจจุบันแบบ ค.ศ. แทนที่จะเป็น พ.ศ. */
+function fdSetDate(id, iso) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const thaiStr = fdISOToThai(iso);
+  if (el._flatpickr) {
+    if (thaiStr) el._flatpickr.setDate(thaiStr, true, 'd/m/Y');
+    else el._flatpickr.clear();
+  } else {
+    el.value = thaiStr;
+  }
+}
+
+/** ล้างค่าช่อง .fd-buddhist-datepicker ผ่าน flatpickr API — คู่กับ fdSetDate() */
+function fdClearDate(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el._flatpickr) el._flatpickr.clear();
+  else el.value = '';
+}
+
 /** เริ่ม flatpickr (ปฏิทิน พ.ศ.) ให้ทุกช่อง .fd-buddhist-datepicker ที่ยังไม่ได้ init
  *  เรียกซ้ำได้ปลอดภัย — ข้ามช่องที่ init ไปแล้ว (เช็คจาก el._flatpickr) */
 function initFdBuddhistDatepickers() {
@@ -79,8 +105,9 @@ function initDatepickers() {
 // ในตาราง — โมดัลนี้จึงรองรับเฉพาะการเพิ่มใหม่ (ตรงกับสิ่งที่ปุ่มจริงบน UI ทำ)
 
 function openAddTaxpayerModal() {
-  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due', 'tp-ml-refno']
+  ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-refno']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['tp-ml-pstart', 'tp-ml-pend', 'tp-ml-due'].forEach(fdClearDate);
   document.getElementById('tp-ml-roundtype').value = 'รอบปกติ';
   document.getElementById('tp-ml-subtype').value   = 'ปกติ';
   document.getElementById('tp-ml-taxid').disabled  = false;
@@ -97,9 +124,9 @@ function openEditTaxpayerModal(id) {
   document.getElementById('tp-ml-taxid').disabled = true; // แก้ tax_id ทีหลังไม่ได้ (เป็น key ผูกกับปีบัญชี)
   document.getElementById('tp-ml-name').value     = r.operator_name || '';
   document.getElementById('tp-ml-year').value     = r.fiscal_year || '';
-  document.getElementById('tp-ml-pstart').value   = fdISOToThai(r.period_start);
-  document.getElementById('tp-ml-pend').value     = fdISOToThai(r.period_end);
-  document.getElementById('tp-ml-due').value      = fdISOToThai(r.due_date);
+  fdSetDate('tp-ml-pstart', r.period_start);
+  fdSetDate('tp-ml-pend',   r.period_end);
+  fdSetDate('tp-ml-due',    r.due_date);
   document.getElementById('tp-ml-refno').value    = r.ref_no || '';
   document.getElementById('tp-ml-roundtype').value = r.round_type || 'รอบปกติ';
   document.getElementById('tp-ml-subtype').value  = r.sub_type || 'ปกติ';
