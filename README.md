@@ -30,8 +30,7 @@ frontend/
                      # print.js, calc.js, index.js (entry), admin-*.js
   css/, images/, lib/
 database/
-  schema.sql        # schema เริ่มต้น (รันอัตโนมัติตอนสร้าง MySQL container ครั้งแรก)
-  migrations/        # migration ไฟล์ต่อเนื่อง เรียงเลข
+  schema.sql        # schema ทั้งหมดของระบบ (แหล่งอ้างอิงเดียว รันอัตโนมัติตอนสร้าง MySQL container ครั้งแรก)
 nginx/
   nginx.conf
 docker-compose.yml
@@ -50,7 +49,7 @@ docker compose up -d
 - เว็บแอป: http://localhost
 - phpMyAdmin: http://localhost:8181
 
-`database/schema.sql` จะรันอัตโนมัติตอนสร้าง MySQL volume ครั้งแรกเท่านั้น ถ้า schema มีการเปลี่ยนแปลงหลังจากนั้นต้องรัน migration ใหม่ใน `database/migrations/` เอง (ไม่มีระบบ auto-migrate)
+`database/schema.sql` เป็นแหล่งอ้างอิงเดียวของโครงสร้างฐานข้อมูลทั้งหมด และจะรันอัตโนมัติตอนสร้าง MySQL volume ครั้งแรกเท่านั้น ถ้าจะแก้โครงสร้างฐานข้อมูลของระบบที่รันอยู่แล้ว ต้องแก้ไข `schema.sql` แล้วรันคำสั่ง ALTER ที่จำเป็นด้วยมือกับฐานข้อมูลนั้นเอง (ไม่มีระบบ auto-migrate)
 
 หยุดระบบ: `docker compose down`
 ดู log: `docker compose logs -f`
