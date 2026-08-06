@@ -584,6 +584,38 @@
         </div>
       </div>
 
+      <!-- ══ Rollback Import Batch Modal (ยืนยันย้อนกลับการนำเข้าข้อมูล) ══ -->
+      <div class="adm-modal-overlay" id="rollback-batch-modal">
+        <div class="adm-modal-box">
+          <div class="adm-modal-hd">
+            <span>ย้อนกลับการนำเข้าข้อมูล</span>
+            <button class="adm-modal-close" onclick="closeRollbackBatchModal()">×</button>
+          </div>
+          <div class="adm-modal-body">
+            <input type="hidden" id="rb-batch-id">
+            <p style="font-size:13px;color:#444;margin:0 0 12px;">ระบบจะคืนค่าทุกแถวกลับไปเป็นก่อนการนำเข้าครั้งนี้ ไม่สามารถกู้คืนการย้อนกลับได้</p>
+            <div class="adm-f-grid">
+              <div class="adm-f-row" style="grid-column:1/-1;">
+                <label>ประเภทข้อมูล</label>
+                <div id="rb-import-type" style="font-size:13px;color:#1e2d5e;font-weight:600;"></div>
+              </div>
+              <div class="adm-f-row">
+                <label>นำเข้าโดย</label>
+                <div id="rb-imported-by" style="font-size:13px;color:#1e2d5e;"></div>
+              </div>
+              <div class="adm-f-row">
+                <label>จำนวนรายการ</label>
+                <div id="rb-row-count" style="font-size:13px;color:#1e2d5e;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="adm-modal-ft">
+            <button class="adm-btn" onclick="closeRollbackBatchModal()">ยกเลิก</button>
+            <button class="adm-btn adm-btn-danger" onclick="confirmRollbackImportBatch()">ยืนยันย้อนกลับ</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ Reject-to-Draft Modal (ตีกลับใบยื่นแบบเป็นร่าง พร้อมเหตุผลไม่บังคับ) ══ -->
       <div class="adm-modal-overlay" id="reject-draft-modal">
         <div class="adm-modal-box">

@@ -43,21 +43,31 @@ function renderImportBatchesTable() {
     : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
 }
 
-async function rollbackImportBatch(id, importTypeTh, importedBy, rowCount) {
-  const ok = confirm(
-    `ย้อนกลับการนำเข้าข้อมูล "${importTypeTh}" ?\n\n` +
-    `นำเข้าโดย: ${importedBy}\n` +
-    `จำนวนรายการ: ${rowCount}\n\n` +
-    `ระบบจะคืนค่าทุกแถวกลับไปเป็นก่อนการนำเข้าครั้งนี้ ไม่สามารถกู้คืนการย้อนกลับได้`
-  );
-  if (!ok) return;
+// [FIX] เดิมใช้ confirm() ของเบราว์เซอร์ (message box) เปลี่ยนเป็น modal ของระบบ
+// เอง ให้หน้าตาสอดคล้องกับจุดอื่น เช่น modal ตีกลับใบยื่นแบบเป็นร่าง (PR #171)
+function rollbackImportBatch(id, importTypeTh, importedBy, rowCount) {
+  document.getElementById('rb-batch-id').value      = id;
+  document.getElementById('rb-import-type').textContent  = importTypeTh;
+  document.getElementById('rb-imported-by').textContent  = importedBy || '—';
+  document.getElementById('rb-row-count').textContent    = rowCount;
+  document.getElementById('rollback-batch-modal').style.display = 'flex';
+}
+
+function closeRollbackBatchModal() {
+  document.getElementById('rollback-batch-modal').style.display = 'none';
+}
+
+async function confirmRollbackImportBatch() {
+  const id = document.getElementById('rb-batch-id').value;
+  if (!id) return;
 
   try {
     await api.post(`/admin/import-batches/${id}/rollback`, {});
   } catch (e) {
-    alert('ย้อนกลับผิดพลาด: ' + (e.message || ''));
+    showToast('ย้อนกลับผิดพลาด: ' + (e.message || ''), true);
     return;
   }
+  closeRollbackBatchModal();
   showToast('ย้อนกลับการนำเข้าข้อมูลสำเร็จ');
   await loadImportBatches();
 }
