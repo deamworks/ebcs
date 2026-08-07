@@ -638,10 +638,9 @@ function handleFileAttach(idx, input) {
       return;
     }
 
-    // ── เก็บ File object จริงไว้ใน appState เพื่อใช้อัปโหลดตอนยืนยันนำส่ง ──
-    // [FIX] ดอกจัน (*) ที่ต่อท้ายชื่อเอกสารบังคับใน .doc-row-name เป็นแค่ตัวช่วย
-    // แสดงผล ไม่ใช่ส่วนหนึ่งของ doc_type ที่ส่งขึ้น server ต้องตัดออกก่อน ไม่งั้น
-    // เอกสารที่เพิ่งอัปโหลดใหม่จะถูกบันทึก doc_type ไม่ตรงกับที่หน้าจออื่นใช้จับคู่
+    // เก็บ File object ไว้ใน appState เพื่ออัปโหลดตอนยืนยันนำส่ง
+    // [FIX] ดอกจัน (*) ท้ายชื่อเอกสารบังคับใน .doc-row-name เป็นแค่ตัวช่วยแสดงผล ไม่ใช่ส่วนหนึ่งของ
+    // doc_type — ต้องตัดออกก่อนส่ง server ไม่งั้น doc_type จะไม่ตรงกับที่หน้าจออื่นใช้จับคู่
     const labelEl = rowEl?.querySelector('.doc-row-name');
     appState.attachedFiles[idx] = {
       file,
@@ -651,10 +650,8 @@ function handleFileAttach(idx, input) {
     fname.textContent = file.name;
     fname.classList.add('attached');
     if (clearBtn) clearBtn.style.display = 'inline-flex';
-    // [FIX] แนบไฟล์แล้วเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" แทนการซ่อนไปเลย
-    // ให้เปิดดูไฟล์ที่เพิ่งเลือกได้ทันที (ไฟล์อยู่ในเครื่อง ยังไม่อัปโหลด จึงใช้
-    // URL.createObjectURL ตรงๆ ไม่ต้องเรียก server) ต้องกดลบ (X) ก่อนถึงจะ
-    // แนบไฟล์ใหม่ทับได้
+    // [FIX] แนบไฟล์แล้วเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" (ใช้ URL.createObjectURL เพราะไฟล์
+    // ยังอยู่ในเครื่อง ไม่ต้องเรียก server) ให้เปิดดูได้ทันที ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ทับได้
     if (attachBtn) {
       attachBtn.textContent = 'ดูเอกสาร';
       attachBtn.onclick = () => _previewLocalFile(file);
@@ -927,10 +924,8 @@ function printDepositSlip() {
   // บาร์โค้ด: |{เลขผู้เสียภาษี กสทช.}{Ref1}{Ref2}{จำนวนเงินหน่วยสตางค์}
   const barcodeContent = `|${nbtcOrgId}${ref1}${ref2}${amountCents}`;
 
-  // [FIX] QR Code: เดิมใช้ข้อความดิบชุดเดียวกับบาร์โค้ด ซึ่งไม่ใช่ฟอร์แมต Thai QR
-  // Payment มาตรฐาน แอปธนาคารจะอ่านไม่ออกเลย — เปลี่ยนเป็นฟอร์แมต EMV QR (Bill
-  // Payment) จริงตามสเปก ธปท./EMVCo แทน (nbtcOrgId ต้องเป็น Biller ID ที่
-  // ลงทะเบียนกับธนาคารจริงแล้วเท่านั้น การ "จ่ายสำเร็จ" ถึงจะทำได้จริง)
+  // [FIX] เดิมใช้ข้อความดิบเดียวกับบาร์โค้ด ไม่ใช่ฟอร์แมต Thai QR Payment แอปธนาคารอ่านไม่ออก
+  // เปลี่ยนเป็น EMV QR (Bill Payment) ตามสเปก ธปท./EMVCo แทน (nbtcOrgId ต้องเป็น Biller ID จริง)
   const qrContent = buildThaiQRBillPayment({
     billerId: nbtcOrgId,
     ref1,

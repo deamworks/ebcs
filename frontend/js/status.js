@@ -24,8 +24,7 @@ function setText(id, val) {
 
 // ── Status config ─────────────────────────────────────
 const STATUS_CONFIG = {
-  // [FIX] backend ส่งค่าจริงเป็น 'pending_payment' (ตาม ENUM ใน submissions.status)
-  // ไม่ใช่ 'draft' — เพิ่ม key ให้ตรงกัน คงข้อความ/ไอคอนเดิมไว้
+  // [FIX] backend ส่งค่าจริงเป็น 'pending_payment' ไม่ใช่ 'draft' — เพิ่ม key ให้ตรงกัน
   pending_payment: {
     cls: 'draft', label: 'รอการชำระเงิน',
     sub: 'ยื่นแบบแล้ว กรุณาชำระเงินภายในกำหนด',
@@ -116,9 +115,7 @@ function showSubmitted(data) {
   setText('infoSubmittedAt', isoToBE(data.submitted_at || data.created_at));
 
   // ── Amounts ────────────────────────────────────────
-  // [FIX] สถานะร่างยังกรอกข้อมูลไม่เสร็จ ยอดที่คำนวณได้ตอนนี้ไม่นิ่ง (อาจ
-  // เปลี่ยนไปอีกก่อนยืนยันนำส่งจริง) ไม่ควรโชว์การ์ดยอดเงินให้เข้าใจผิดว่าเป็น
-  // ยอดสุดท้าย — ซ่อนทั้งการ์ดไว้จนกว่าจะยืนยันนำส่งแล้ว (pending_payment/paid)
+  // [FIX] สถานะร่างยอดยังไม่นิ่ง (เปลี่ยนได้ก่อนยืนยันจริง) — ซ่อนการ์ดยอดเงินจนกว่าจะยืนยันแล้ว
   const amountCard = document.getElementById('amountCard');
   if (amountCard) amountCard.style.display = (statusKey === 'draft') ? 'none' : 'block';
 

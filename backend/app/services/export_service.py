@@ -112,9 +112,8 @@ def set_header_row(ws, headers, row=1, fill_color=None, col_styles=None):
             this_font_color = style_font or HEADER_FG
 
         cell = ws.cell(row=row, column=col, value=text)
-        # strip FF prefix จาก ARGB → RGB (openpyxl Font รับ 6 หลัก)
+        # openpyxl Font รับ RGB 6 หลัก ต้อง strip FF prefix ออกจาก ARGB
         fc = this_font_color or "000000"
-        # ใช้ ARGB 8 หลักตรงๆ — openpyxl ต้องการ FF นำหน้า
         cell.font      = Font(name=FONT_NAME, size=11, bold=True, color=fc)
         cell.fill      = hfill(this_fill)
         cell.alignment = Alignment(horizontal="center", vertical="center",
@@ -319,7 +318,6 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
         ("ตัวย่อ2",                            10),
     ]
 
-    # ── title รายงาน 2 ผู้ประกอบการ ────────────────────────
     # ปีที่รับมาเป็น พ.ศ. อยู่แล้ว ไม่บวก 543 ซ้ำ; รองรับช่วงปีด้วย
     if year_from and year_to:
         year_be_tp = f"{year_from} - {year_to}"
@@ -348,7 +346,6 @@ def export_taxpayer_report(db, year=None, year_from=None, year_to=None, report_d
 
     for i, row in enumerate(rows, start=1):
         r = i + 3
-        # 5 คอลัมน์แรกมีข้อมูลจริง ที่เหลือยังว่าง
         data = [
             i,
             row["tax_id"],
@@ -464,7 +461,6 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
         ("จำนวนเงินรายปีนำส่งเข้ากองทุนสุทธิ", 18),
     ]
 
-    # ── title รายงาน 3 ใบอนุญาต ────────────────────────────
     # row2: 3 บรรทัดใน cell เดียว — left, size=11, ไม่ bold
     if year_from and year_to:
         yr_range = f"{year_from}–{year_to}"
@@ -495,7 +491,6 @@ def export_licensee_report(db, year=None, year_from=None, year_to=None, status=N
     ws.row_dimensions[2].height = 80
     set_header_row(ws, headers, row=3)
 
-    # หาสถานะจาก submission_id ตรงๆ (แต่ละแถวผูกกับใบยื่นแบบเดียวอยู่แล้ว)
     submission_ids = list({row["submission_id"] for row in rows})
     submission_status_map = {}
     if submission_ids:
@@ -634,7 +629,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     """
     from openpyxl.utils import get_column_letter
 
-    # ── Query ──────────────────────────────────────────────
     conditions, params = ["1=1"], []
     if year_from:
         conditions.append("s.fiscal_year >= %s")
@@ -673,7 +667,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     if statuses:
         rows = [r for r in rows if r["actual_status"] in statuses]
 
-    # ── Workbook ────────────────────────────────────────────
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "รายงานชำระเงินกองทุน"
@@ -694,7 +687,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
         year_be = year or ""
     round_str = "ปกติ, อื่นๆ"
 
-    # ── ตัวช่วย style ────────────────────────────────────────
     THIN = Side(style="thin")
     BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 
@@ -722,7 +714,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
         for row in range(r1, r2 + 1):
             for col in range(c1, c2 + 1):
                 c = ws.cell(row=row, column=col)
-                # border ทุก cell
                 left_side   = THIN if col == c1 else Side(style=None)
                 right_side  = THIN if col == c2 else Side(style=None)
                 top_side    = THIN if row == r1 else Side(style=None)
@@ -733,20 +724,15 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
                 c.font = Font(name=FONT_NAME, size=11, bold=True, color="FF000000")
                 c.alignment = Alignment(horizontal="center", vertical="center",
                                         wrap_text=True)
-        # ใส่ข้อความที่ cell แรก
         if text is not None:
             ws.cell(r1, c1).value = text
 
-    # ── set col widths ───────────────────────────────────────
     for col, w in _COL_WIDTHS.items():
         ws.column_dimensions[get_column_letter(col)].width = w
 
-    # ── row 1: ว่าง ─────────────────────────────────────────
     ws.row_dimensions[1].height = 8
 
-    # ── row 2-6: หัวรายงาน (size=14, bold, center, no fill)
-    #  merge A:I เหมือนต้นฉบับ ──────────────────────────────
-    # row2-6: หัวรายงาน — center, size=14, bold, merge A:BO (ทุกแถว)
+    # row2-6: หัวรายงาน — center, size=14, bold, merge A:BO ทุกแถว
     titles_r2_r6 = [
         "กองทุนวิจัยและพัฒนากิจการกระจายเสียง กิจการโทรทัศน์ และกิจการโทรคมนาคมเพื่อประโยชน์สาธารณะ",
         "รายงานข้อมูลการชำระเงินกองทุนประจำปี",
@@ -761,8 +747,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
         c.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[r].height = 21
 
-    # ── row 7: header หลัก ──────────────────────────────────
-    # col 1-25: merge row7:row8 ทีละ col ไม่มีพื้น
+    # row 7: header หลัก — col 1-25 merge row7:row8 ทีละ col ไม่มีพื้น
     single_headers = [
         (1,  "ลำดับ"),
         (2,  "ปีบัญชี"),
@@ -858,7 +843,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     ws.row_dimensions[7].height = 30
     ws.row_dimensions[8].height = 36
 
-    # ── row 9+: ข้อมูล ─────────────────────────────────────
     status_map = {
         "draft":           "ร่าง",
         "pending_payment": "รอชำระเงิน",
@@ -895,7 +879,6 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
         net_inv     = inv_amount + float(row.get("vat_amount") or 0) + float(row.get("extra_amount") or 0)
         rcp_amount  = float(row.get("receipt_amount") or 0)
 
-        # 67 ค่า
         values = [
             i,                                                   # 1
             fiscal_be,                                           # 2
@@ -967,7 +950,7 @@ def export_payment_report(db, year=None, year_from=None, year_to=None, statuses=
     ws.freeze_panes = "A9"
     return make_output(wb)
 
-# ── alias เพื่อ backward compatible กับโค้ดเดิม ──────────
+# alias เพื่อ backward compatible กับโค้ดเดิม
 def export_license_report(db, year=None, status=None):
     """alias → export_licensee_report"""
     return export_licensee_report(db, year=year, status=status)

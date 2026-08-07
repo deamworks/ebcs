@@ -2,12 +2,8 @@
 // js/admin-utils.js — NBTC Filing Admin Panel: utilities, modals, import/export,
 //                     and the full submission detail view
 //
-// Loaded before admin.js (see admin.html script order), but every function
-// here only runs from event handlers (onclick/DOMContentLoaded), so by the
-// time anything actually executes both files are fully loaded — safe to
-// reference admin.js globals (allSubmissions, showToast, writeAuditLog,
-// loadSubmissions, loadLicenses, loadTaxpayers, currentAdminEmail,
-// activeSubmissionId, ...) from here.
+// โหลดก่อน admin.js แต่ฟังก์ชันในนี้ทำงานผ่าน event handler เท่านั้น
+// พอถูกเรียกจริงทั้งสองไฟล์โหลดครบแล้ว จึงอ้างตัวแปร global ของ admin.js ได้ปลอดภัย
 // ════════════════════════════════════════════════════
 
 // ════════════════════ Small utilities ════════════════════
@@ -112,8 +108,7 @@ function initDatepickers() {
 
 
 // ════════════════════ Taxpayer Modal (เพิ่มผู้ประกอบการ) ════════════════════
-// หมายเหตุ: หน้าตารางผู้ประกอบการมีแค่ปุ่ม "+ เพิ่มผู้ประกอบการ" ไม่มีปุ่มแก้ไข
-// ในตาราง — โมดัลนี้จึงรองรับเฉพาะการเพิ่มใหม่ (ตรงกับสิ่งที่ปุ่มจริงบน UI ทำ)
+// หมายเหตุ: ตารางผู้ประกอบการมีแค่ปุ่มเพิ่ม ไม่มีแก้ไข โมดัลนี้จึงรองรับแค่เพิ่มใหม่
 
 function openAddTaxpayerModal() {
   ['tp-ml-id', 'tp-ml-taxid', 'tp-ml-name', 'tp-ml-year', 'tp-ml-refno']
@@ -436,8 +431,7 @@ async function handleExportSubmit() {
   };
   const path = endpoints[reportType];
 
-  // [FIX] เดิม backend รองรับ year เดี่ยว ใช้แค่ "ถึง" ทิ้งค่า "จาก" ไปเฉยๆ —
-  // ตอนนี้ส่งเป็นช่วงปีจริง (year_from/year_to) ให้ backend กรองแบบ BETWEEN
+  // [FIX] เดิมทิ้งค่า "จาก" ไป ใช้แค่ "ถึง" — ตอนนี้ส่งช่วงปีจริง (year_from/year_to) ให้กรองแบบ BETWEEN
   const yearFrom = document.getElementById('exp-year-from')?.value.trim();
   const yearTo   = document.getElementById('exp-year-to')?.value.trim();
 
@@ -459,9 +453,7 @@ async function handleExportSubmit() {
   }
 
   if (reportType === '3') {
-    // [FIX] สถานะการชำระเงินไม่เคยถูกส่งไปกรองเลย — เชื่อมกับสถานะจริงที่ระบบ
-    // มี (draft/pending_payment/paid) ส่วนตัวเลือกอื่น (รอบันทึก,
-    // สอบทานแล้ว, เห็นชอบแล้ว, END) ยังไม่มีสถานะแบบนั้นในระบบจริง เลือกแล้วจะไม่มีข้อมูลตรงกัน
+    // [FIX] เดิมสถานะการชำระเงินไม่ถูกส่งไปกรองเลย — เชื่อมกับสถานะจริงที่มี (draft/pending_payment/paid) เท่านั้น
     const payStatusMap = {
       'ร่าง': 'draft',
       'รอชำระเงิน': 'pending_payment', 'ชำระเงินแล้ว': 'paid',

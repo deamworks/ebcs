@@ -13,7 +13,6 @@
 <body>
 
 
-  <!-- Toast -->
   <div class="toast" id="toast">
     <div class="toast-icon">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -21,7 +20,6 @@
     <span id="toastMsg"></span>
   </div>
 
-  <!-- Alert Modal -->
   <div class="modal-overlay app-alert-overlay" id="appAlertModal">
     <div class="modal-box" style="max-width:420px;width:100%;font-family:'Sarabun';">
       <div class="modal-header" id="appAlertHeader">
@@ -35,7 +33,6 @@
     </div>
   </div>
 
-  <!-- Top Nav -->
   <nav class="topnav">
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="topnav-brand">
@@ -52,7 +49,6 @@
     </div>
   </nav>
 
-  <!-- Breadcrumb -->
   <div class="breadcrumb-bar">
     <div style="display:flex;align-items:center;gap:6px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e2d5e" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -63,10 +59,9 @@
   <div class="page-wrap">
     <main class="main">
 
-      <!-- ════ PHASE 1 ════ -->
+      <!-- PHASE 1 -->
       <div id="phase1" class="phase-enter">
         <div class="start-card">
-          <!-- Card Header -->
           <div class="start-card-header">
             <div class="start-card-header-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -78,17 +73,14 @@
           </div>
 
           <div class="start-card-body">
-            <!-- Ref No: จัดสไตล์แบบ form-field เดียวกับฟิลด์อื่น ขนาดเท่าช่องอื่น (ไม่เต็มความกว้าง) -->
             <div class="form-field" style="border-bottom:1px solid #f0f0f0;max-width:calc(50% - 20px);">
               <label class="form-field-label">รหัสอ้างอิง</label>
               <input class="form-field-input" id="ph1-ref" type="text" value="—" readonly
                 style="font-weight:700;color:#1e2d5e;letter-spacing:.08em;">
             </div>
 
-            <!-- Form Grid -->
             <div class="form-grid">
 
-              <!-- Left column -->
               <div>
                 <div class="form-field">
                   <label class="form-field-label">เลขประจำตัวผู้เสียภาษี</label>
@@ -113,7 +105,6 @@
                 </div>
               </div>
 
-              <!-- Right column -->
               <div>
                 <div class="form-field">
                   <label class="form-field-label">รอบปีบัญชี (พ.ศ.)</label>
@@ -155,7 +146,7 @@
         </div>
       </div>
 
-      <!-- PHASE 2: กรอกข้อมูลหลัก 6 ขั้นตอน (Step 1-6) — ซ่อนไว้ก่อน ui.js จะแสดงหลัง startProcess() สำเร็จ -->
+      <!-- PHASE 2: Step 1-6 — ซ่อนไว้ก่อน แสดงหลัง startProcess() สำเร็จ -->
       <div id="phase2" style="display:none;">
         <div class="info-bar">
           <div class="info-bar-header">
@@ -175,12 +166,11 @@
           </div>
         </div>
 
-        <!-- phase2-card: รวม header ฟ้า + stepper + step content (Step 1-6) ให้เป็น
-             แผ่นเดียวกัน ปิดที่ท้าย stepContent6 ด้านล่าง -->
+        <!-- phase2-card ครอบ header+stepper+step content ทั้งหมด ปิดท้ายที่ stepContent6 -->
         <div class="phase2-card">
         <div class="section-header"><div class="section-header-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>ชำระกองทุนประจำปี — กสทช.</div>
         
-        <!-- Stepper: แถบแสดงขั้นตอน 1-6 คลิกแต่ละ step เพื่อกระโดดไป Step นั้นผ่าน goToStep(n) -->
+        <!-- คลิกแต่ละ step เพื่อกระโดดไป Step นั้นผ่าน goToStep(n) -->
         <div class="stepper-outer">
           <div class="stepper" id="mainStepper">
             <div class="step active" data-step="1"><div class="step-circle">1</div><div class="step-label">กรอกรายได้</div></div>
@@ -192,7 +182,7 @@
           </div>
         </div>
 
-        <!-- STEP 1: กรอกรายได้ตามใบอนุญาต — ตรรกะหลักอยู่ใน step1-income.js และ license.js -->
+        <!-- STEP 1: ตรรกะหลักอยู่ใน step1-income.js และ license.js -->
         <div id="stepContent1" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -203,7 +193,6 @@
               </div>
             </div>
             <div class="step-card-body">
-            <!-- รายได้รวมตามงบการเงิน -->
             <div class="income-summary-row">
               <div class="income-summary-box editable">
                 <div>
@@ -228,7 +217,6 @@
               <span style="font-size:14px;font-weight:600;color:#1e2d5e;">จำนวนใบอนุญาต:</span><input type="number" id="license-count" min="0" value="1" readonly style="width:32px;border:none;outline:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;color:#1e2d5e;text-align:right;"><span style="font-size:14px;font-weight:600;color:#1e2d5e;">ใบ</span>
             </div>
 
-            <!-- Banner เตือนยอด -->
             <div id="step1-mismatch-banner" style="display:none; padding:10px 14px; margin:8px 0 4px; background:#ffebee; border:1.5px solid #e53e3e; border-radius:6px; color:#b91c1c; font-size:13px; line-height:1.65; align-items:flex-start; gap:8px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;">
                 <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -238,7 +226,6 @@
             </div>
             <hr class="divider">
 
-            <!-- ตารางใบอนุญาต -->
             <div class="table-wrap">
               <table>
                 <thead>
@@ -251,7 +238,7 @@
             </div>
             </div><!-- /step-card-body -->
 
-            <!-- ปุ่มนำทาง: "ย้อนกลับ" กลับไป Phase 1 (goBack() ใน ui.js) "ถัดไป" ไป Step 2  -->
+            <!-- ย้อนกลับ = กลับไป Phase 1 ผ่าน goBack() -->
             <div class="bottom-action">
               <button type="button" class="btn btn-secondary btn-sm" onclick="goBack()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>ย้อนกลับ
@@ -263,7 +250,7 @@
           </div>
         </div>
 
-        <!-- STEP 2: รายได้อื่นที่ไม่นำมาคำนวณ — ตรรกะอยู่ใน step2-other.js -->
+        <!-- STEP 2: ตรรกะอยู่ใน step2-other.js -->
         <div id="stepContent2" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -283,18 +270,14 @@
                     <th style="width:8%; text-align: center !important;">หน่วย</th>
                   </tr>
                 </thead>
-                <!-- รายการมาตรฐาน 5 รายการ (o1-o5): แต่ละช่อง input เรียก
-                     calcOtherTotal() (step2-other.js) ทุกครั้งที่พิมพ์ เพื่อ
-                     รวมยอดใหม่ลงในแถวสุดท้าย "รวมรายได้อื่น..." ทันที -->
+                <!-- o1-o5: แต่ละช่องเรียก calcOtherTotal() ทุกครั้งที่พิมพ์เพื่ออัปเดตยอดรวม -->
                 <tbody>
                   <tr><td class="main-page-indent">1. รายได้ทางตรงจากรัฐที่ให้แก่ผู้รับใบอนุญาต</td><td style="text-align:center;"><input class="income-input text-right-input" id="o1" placeholder="0.00" oninput="calcOtherTotal()"></td><td class="unit-baht">บาท</td></tr>
                   <tr><td class="main-page-indent">2. รายได้จากการหาประโยชน์จากทรัพย์สินทางปัญญา</td><td style="text-align:center;"><input class="income-input text-right-input" id="o2" placeholder="0.00" oninput="calcOtherTotal()"></td><td class="unit-baht">บาท</td></tr>
                   <tr><td class="main-page-indent">3. ดอกผลที่เกิดจากเงินหรือทรัพย์สิน</td><td style="text-align:center;"><input class="income-input text-right-input" id="o3" placeholder="0.00" oninput="calcOtherTotal()"></td><td class="unit-baht">บาท</td></tr>
                   <tr><td class="main-page-indent">4. รายได้จากการให้บริการสตูดิโอหรืออุปกรณ์อื่น</td><td style="text-align:center;"><input class="income-input text-right-input" id="o4" placeholder="0.00" oninput="calcOtherTotal()"></td><td class="unit-baht">บาท</td></tr>
                   <tr><td class="main-page-indent">5. รายได้จากการผลิตรายการวิทยุหรือโทรทัศน์</td><td style="text-align:center;"><input class="income-input text-right-input" id="o5" placeholder="0.00" oninput="calcOtherTotal()"></td><td class="unit-baht">บาท</td></tr>
-                  <!-- รายการที่ 6 "รายได้อื่นๆ": ปุ่ม "+ เพิ่มรายการ" เรียก
-                       addCustomOtherIncomeRow() เพื่อสร้างแถวกรอกเองเพิ่ม
-                       (ชื่อรายการ + จำนวนเงิน) ใส่ลงใน tbody ถัดไปด้านล่าง -->
+                  <!-- ปุ่ม "+ เพิ่มรายการ" เรียก addCustomOtherIncomeRow() เพิ่มแถวลง tbody ถัดไป -->
                   <tr style="background: #fcfcfc;">
                     <td class="main-page-indent" style="display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: #1e2d5e; border: none; padding-top: 10px; padding-bottom: 10px;">
                       <span>6. รายได้อื่นๆ</span>
@@ -303,11 +286,8 @@
                     <td style="border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;"></td><td></td>
                   </tr>
                 </tbody>
-                <!-- container สำหรับแถวรายได้อื่นที่ผู้ใช้เพิ่มเอง (เริ่มต้นว่าง) -->
                 <tbody id="custom-other-income-container"></tbody>
-                <!-- แถวสรุปยอดรวม: readonly คำนวณจาก o1-o5 + รายการที่เพิ่มเอง
-                     ทั้งหมด อัปเดตอัตโนมัติทุกครั้งที่มีการพิมพ์ตัวเลขที่ไหน
-                     ก็ตามในตารางนี้ -->
+                <!-- แถวรวม: readonly คำนวณจาก o1-o5 + รายการที่เพิ่มเอง -->
                 <tbody>
                   <tr style="background:#f5f7fa; border-top: 2px solid #c8d0db;">
                     <td style="font-weight:700; color:#1e2d5e; text-align: left !important; padding-left: 20px !important;">รวมรายได้อื่นที่ไม่นำมาคำนวณทั้งหมด</td>
@@ -325,7 +305,7 @@
           </div>
         </div>
 
-        <!-- STEP 3: ค่าลดหย่อน — ตรรกะอยู่ใน step3-deduct.js, กรอกผ่าน #deductModal -->
+        <!-- STEP 3: ตรรกะอยู่ใน step3-deduct.js, กรอกผ่าน #deductModal -->
         <div id="stepContent3" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -336,18 +316,13 @@
               </div>
             </div>
             <div class="step-card-body">
-            <!-- ยอดรวมค่าลดหย่อนสะสมทุกใบอนุญาต: readonly คำนวณรวมจากทุก
-                 แถวในตารางด้านล่าง อัปเดตทุกครั้งที่บันทึกค่าลดหย่อนใน Modal -->
+            <!-- readonly รวมจากทุกแถว อัปเดตเมื่อบันทึกค่าลดหย่อนใน Modal -->
             <div class="form-row" style="margin-bottom:14px;">
               <span class="form-label" style="font-weight:600;">รวมค่าลดหย่อนสิทธิสะสม</span>
               <input type="text" class="form-input" id="totalDeduction" placeholder="0.00" readonly style="background:#f5f5f5;width:180px;"/>
               <span class="form-unit">บาท</span>
             </div>
-            <!-- ตาราง: tbody ว่างไว้ตั้งใจ สร้างแถวด้วย generateDeductRows()
-                 (เรียกอัตโนมัติทุกครั้งที่เข้า Step นี้ ผูกไว้ใน goToStep()
-                 ของไฟล์ ui.js) แต่ละแถวแสดงรายได้จากการประกอบกิจการ (อ้างอิง
-                 จาก Step 1) คู่กับปุ่มเปิด Modal กรอกค่าลดหย่อน และผลลัพธ์
-                 ค่าลดหย่อนที่คำนวณได้ -->
+            <!-- tbody ว่างไว้ตั้งใจ: generateDeductRows() (ใน ui.js) สร้างแถวให้ทุกครั้งที่เข้า Step นี้ -->
             <div class="table-wrap">
               <table>
                 <thead>
@@ -366,7 +341,7 @@
           </div>
         </div>
 
-        <!-- STEP 4: ข้อมูลผู้สอบบัญชี — ใช้แสดงในใบรายงาน ชส.01/ชส.02 -->
+        <!-- STEP 4: ใช้แสดงในใบรายงาน ชส.01/ชส.02 -->
         <div id="stepContent4" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -391,7 +366,7 @@
           </div>
         </div>
 
-        <!-- STEP 5: สรุปยอด (readonly ทั้งหมด) — คำนวณโดย step5-summary.js → renderStep5AndSummary() -->
+        <!-- STEP 5: readonly ทั้งหมด คำนวณโดย step5-summary.js → renderStep5AndSummary() -->
         <div id="stepContent5" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -417,20 +392,18 @@
             <hr style="border:none;border-top:1px solid #ccc;margin:16px 0;">
 
             <div style="max-width:1000px;margin:0 auto 14px;">
-              <!-- ยอดสุทธิรวม:-->
               <div class="s5-net-row">
                 <div><div class="s5-net-label">จำนวนเงินรายปีสุทธิที่ต้องนำส่งเข้ากองทุน</div><div style="font-size:var(--fs-xs);color:rgba(255,255,255,0.5);margin-top:2px;">Annual Fund Contribution (Net)</div></div>
                 <div style="text-align:right;"><input type="text" id="s5-net" readonly style="background:transparent;border:none;outline:none;font-size:var(--fs-2xl);font-weight:700;color:#fff;text-align:right;font-family:'Sarabun',sans-serif;width:220px;"><div style="font-size:var(--fs-xs);color:rgba(255,255,255,0.6);margin-top:2px;">บาท (THB)</div></div>
               </div>
             </div>
-            <!-- Banner เตือนเงินเพิ่ม (ค่าปรับชำระล่าช้า) -->
+            <!-- เตือนเงินเพิ่ม (ค่าปรับชำระล่าช้า) -->
             <div id="penalty-alert-banner" style="display:none; padding:10px 14px; margin:0 0 10px; background:#fff3e0; border:1px solid #d97706; border-radius:6px; color:#bf360c; font-size:13px; line-height:1.6; align-items:flex-start; gap:8px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <span></span>
             </div>
             <div style="font-size:11px;color:#777;text-align:right;margin-bottom:4px;">หน่วย : บาท</div>
 
-            <!-- ตารางสรุปยอดแยกตามใบอนุญาต -->
             <div class="table-wrap" style="overflow-x:auto;">
               <table style="min-width:900px;">
                 <thead>
@@ -441,7 +414,6 @@
                 <tbody id="summary-table-body"></tbody>
               </table>
             </div>
-            <!-- ปุ่มพิมพ์เอกสารทางการ -->
             <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
               <button type="button" class="btn btn-secondary btn-sm" style="font-size:12px;background:#f5f7fa;color:#1e2d5e;border:1px solid #c8d0db;" onclick="printCS01()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>พิมพ์ ชส.01</button>
               <button type="button" class="btn btn-secondary btn-sm" style="font-size:12px;background:#f0fdf4;color:#16a34a;border:1px solid #a5d6a7;" onclick="printAllCS02()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>พิมพ์ ชส.02</button>
@@ -454,7 +426,7 @@
         </div><!-- /step-card -->
         </div><!-- /stepContent5 -->
 
-        <!-- STEP 6: แนบเอกสาร 6 รายการ + ปุ่มยืนยันไป Phase 3 — อัปโหลดจริงเกิดใน index.js -->
+        <!-- STEP 6: แนบเอกสาร + ปุ่มยืนยันไป Phase 3 — อัปโหลดจริงเกิดใน index.js -->
         <div id="stepContent6" style="display:none;">
           <div class="step-card">
             <div class="step-card-header">
@@ -466,20 +438,17 @@
             </div>
             <div class="step-card-body">
             <div style="font-size:14px;font-weight:700;color:#1e2d5e;margin-bottom:4px;">เอกสารการแนบ</div>
-            <!-- กล่องเตือนข้อกำหนดไฟล์ -->
             <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:5px;padding:8px 12px;font-size:12px;color:#7b5800;margin-bottom:14px;display:flex;align-items:flex-start;gap:7px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <span>ข้อควรระวัง: กรุณาอัปโหลดเอกสารที่มี Resolution ระหว่าง <strong>150 – 200 dpi</strong> *** ประเภท pdf ไฟล์ ขนาดไม่เกินไฟล์ละ 5 MB</span>
             </div>
 
             <div id="doc-upload-list" style="display:flex;flex-direction:column;gap:0;">
-              <!-- หัวตารางรายการเอกสาร -->
 <div class="doc-upload-header">
                 <div>รายการเอกสารแนบ</div>
                 <div style="padding-left:1px;">ชื่อไฟล์</div>
               </div>
 
-              <!-- แถวเอกสารแนบ -->
               <div class="doc-row" id="docrow-1">
                 <div class="doc-row-name">งบดุลการเงิน <span style="color:#e53e3e;">*</span></div>
                 <div class="doc-row-btn">
@@ -492,7 +461,7 @@
                 </button>
               </div>
 
-              <!-- แถวที่ 2-6: pattern เดียวกับแถวที่ 1 ทุกอย่าง เปลี่ยนแค่ชื่อ เอกสารกับเลข id  -->
+              <!-- แถวที่ 2-6: pattern เดียวกับแถวที่ 1 เปลี่ยนแค่ชื่อเอกสารกับเลข id -->
               <div class="doc-row" id="docrow-2">
                 <div class="doc-row-name">แบบรายงานการนำส่งเงิน (แบบที่ 1) <span style="color:#e53e3e;font-size:10.5px;">(ชส.01)</span> <span style="color:#e53e3e;">*</span></div>
                 <div class="doc-row-btn">
@@ -553,7 +522,6 @@
                 </button>
               </div>
             </div>
-            <!-- ปุ่มสุดท้ายของ Phase 2: "ยืนยันข้อมูลการชำระเงินกองทุน" -->
             </div><!-- /step-card-body -->
 
             <div class="bottom-action" style="margin-top:0;border-top:1px solid #f0f0f0;padding-top:14px;">
@@ -577,10 +545,9 @@
         </div><!-- /phase2-card -->
       </div>
 
-      <!-- PHASE 3: ตรวจทานก่อนยืนยันส่งจริง — บันทึกจริงเกิดที่ปุ่ม "ยืนยันการนำส่งข้อมูล" -->
+      <!-- PHASE 3: ตรวจทานก่อนส่งจริง — บันทึกจริงเกิดที่ปุ่ม "ยืนยันการนำส่งข้อมูล" -->
       <div id="phase3" style="display:none;">
         <div class="form-section" style="padding:20px 22px;">
-          <!-- หัวข้อพร้อมไอคอนเครื่องหมายถูกสีเขียว -->
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
             <div style="background:#e8f5e9;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2C3D8F" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -590,7 +557,6 @@
               <div style="font-size:12px;color:#666;margin-top:2px;">กรุณาตรวจสอบข้อมูลด้านล่างก่อนดำเนินการชำระเงิน</div>
             </div>
           </div>
-          <!-- สรุปข้อมูลผู้ชำระเงิน -->
           <div style="background:#f5f7fb;border:1px solid #c5d3e8;border-radius:7px;padding:14px 18px;margin-bottom:14px;">
             <div style="font-size:12px;font-weight:700;color:#2C3D8F;margin-bottom:10px;">ข้อมูลผู้ชำระเงิน</div>
             <div class="s5-grid" style="gap:6px 30px;margin-bottom:0;font-size:12.5px;">
@@ -601,7 +567,6 @@
               <div style="display:flex;gap:8px;"><span style="color:#666;min-width:140px;">วันครบกำหนดชำระ</span><span id="p3-due" style="font-weight:600;color:#c62828;"></span></div>
             </div>
           </div>
-          <!-- กล่องยอดเงินสุทธิ -->
           <div style="background:#1e2d5e;border-radius:7px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
             <div style="color:#fff;">
               <div style="font-size:12px;opacity:.85;">ยอดเงินนำส่งกองทุนวิจัยและพัฒนาฯ (สุทธิ)</div>
@@ -612,14 +577,12 @@
               <div style="font-size:11px;color:#bbdefb;margin-top:2px;">บาท (THB)</div>
             </div>
           </div>
-          <!-- ตารางรายการใบอนุญาตทั้งหมด -->
           <div style="border:1px solid #c5d3e8;border-radius:6px;overflow:hidden;margin-bottom:16px;">
             <div style="display:grid;grid-template-columns:40px 1fr 130px 120px 130px;font-size:11.5px;font-weight:700;background:#1e2d5e;color:#fff;padding:8px 10px;border-bottom:1px solid #16233f;">
               <div>ลำดับ</div><div>เลขที่ใบอนุญาต</div><div>ประเภท</div><div style="text-align:center;">สถานะ</div><div style="text-align:right;">รายได้</div>
             </div>
             <div id="p3-license-rows"></div>
           </div>
-          <!-- ปุ่มหลัก: "ย้อนกลับ" -->
           <div class="bottom-action" style="margin-top:6px;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="backToPhase2()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>ย้อนกลับ
@@ -645,7 +608,6 @@
           </div>
           <div style="font-size:20px;font-weight:700;color:#1a237e;margin-bottom:8px;">นำส่งข้อมูลสำเร็จ</div>
           <div style="font-size:13px;color:#666;margin-bottom:28px;">ระบบได้บันทึกข้อมูลการนำส่งเงินรายปีเข้ากองทุน กสทช. เรียบร้อยแล้ว</div>
-          <!-- การ์ดรหัสอ้างอิง -->
           <div style="display:flex;justify-content:center;align-items:stretch;gap:18px;margin-bottom:32px;flex-wrap:wrap;">
             <div style="display:flex;flex-direction:column;justify-content:center;background:#f5f7fb;border:1.5px solid #c5d3e8;border-radius:8px;padding:16px 32px;">
               <div style="font-size:11.5px;color:#666;margin-bottom:5px;">รหัสอ้างอิง</div>
@@ -657,7 +619,6 @@
               <div style="display:flex;gap:10px;"><span style="color:#666;min-width:130px;">ยอดเงินนำส่งสุทธิ</span><span id="p4-net-amount" style="font-weight:700;color:#2C3D8F;"></span></div>
             </div>
           </div>
-          <!-- ปุ่มจบงาน -->
           <div style="display:flex;gap:12px;justify-content:center;">
             <button type="button" class="btn btn-secondary" style="padding:10px 24px;font-size:13.5px;" onclick="closePhase4()">ปิดหน้านี้</button>
             <button type="button" class="btn btn-primary" style="background:#2C3D8F;padding:10px 24px;font-size:13.5px;font-weight:600;" onclick="goToPhase4Home()">กลับหน้าหลัก</button>
@@ -678,7 +639,7 @@
         <div style="border: 1px solid #ced4da; border-radius: 8px; padding: 20px 24px; background: #fff; margin-bottom: 24px; position: relative;">
           <span style="position: absolute; top: -10px; left: 15px; background: #fff; padding: 0 8px; font-size: 13px; color: #495057; font-weight: 600;">ข้อมูลใบอนุญาตในปัจจุบัน</span>
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
-            <!-- ข้อมูลใบอนุญาตทั้งหมดในกล่องนี้เป็น readonly -->
+            <!-- กล่องนี้ readonly ทั้งหมด -->
             <div style="display: flex; align-items: center; gap: 15px;">
               <span style="width: 120px; font-size: 13px; color: #333; text-align: right;">ผู้ได้รับใบอนุญาต</span>
               <input type="text" class="form-input" id="m-licensee" style="flex: 1; background: #f5f5f5;" readonly />
@@ -708,17 +669,16 @@
         <div style="text-align: left; color: #1e2d5e; font-size: 13.5px; font-weight: 500; margin-bottom: 12px; padding-left: 5px;">
           รายได้ตามประเภทของรายได้จากการประกอบกิจการกระจายเสียงหรือโทรทัศน์ที่นำมาคำนวณการนำส่งเงินรายปีเข้ากองทุนวิจัยและพัฒนาฯ
         </div>
-        <!-- ตัวเลือกหลัก: "มีรายได้" / "ไม่มีรายได้" -->
         <div class="radio-group" style="margin: 0 0 20px 0; display: flex; gap: 30px; align-items: center; padding-left: 5px;">
           <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px;"><input type="radio" name="hasIncome" value="yes" onchange="toggleIncomeForm('yes')"> มีรายได้ประกอบกิจการ</label>
           <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px;"><input type="radio" name="hasIncome" value="no" onchange="toggleIncomeForm('no')"> ไม่มีรายได้ประกอบกิจการ</label>
         </div>
-        <!-- กล่องคำชี้แจง: โชว์เฉพาะตอนเลือก "ไม่มีรายได้" -->
+        <!-- โชว์เฉพาะตอนเลือก "ไม่มีรายได้" -->
         <div id="noIncomeNote" style="display:none; background:#fff8e1; border:1px solid #ffe082; padding:15px; border-radius:6px; margin-bottom:20px;">
           <div style="font-weight:600; color:#d97706; margin-bottom:8px;">คำชี้แจงกรณีไม่มีรายได้ตามใบอนุญาต:</div>
           <input type="text" id="noIncomeReason" placeholder="โปรดระบุเหตุผลคำชี้แจงที่ไม่มีรายได้..." style="width:100%; border:1px solid #c8d0db; padding:10px 12px; border-radius:4px; font-family:'Sarabun';" />
         </div>
-        <!-- ฟอร์มกรอกรายได้แบบละเอียด:"มีรายได้ " -->
+        <!-- โชว์เฉพาะตอนเลือก "มีรายได้" -->
         <div id="incomeFormWrap" style="display: none;">
           <div style="border: 1px solid #c8d0db; border-radius: 6px; overflow: hidden;">
             <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
@@ -730,23 +690,19 @@
                 </tr>
               </thead>
               <tbody class="modal-tbl-body">
-                <!-- หมวด 1: รายได้จากการให้บริการ (5 รายการย่อย f1_1-f1_5) -->
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">1. รายได้จากการให้บริการ</td></tr>
                 <tr><td class="td-indent">1.1 รายได้จากหน่วยงานของรัฐ หรือองค์กรอื่น เพื่อสนับสนุนสถานี ทางตรงและทางอ้อม</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f1_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">1.2 รายได้จากการให้เช่าใช้โครงข่ายกระจายเสียงและโทรทัศน์ทั้งทางสายและไร้สาย</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f1_2" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">1.3 รายได้จากช่องรายการพิเศษ (premium) หรือบริการเสริมอื่นๆ</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f1_3" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">1.4 รายได้จากการให้เช่าโครงสร้างพื้นฐาน สิ่งอำนวยความสะดวก และส่วนประกอบที่จำเป็น</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f1_4" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">1.5 รายได้หรือสินทรัพย์ที่เป็นต่างตอบแทนอื่นใดในการให้บริการ</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f1_5" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 2: ค่าสมาชิก (รายการเดียว f2_1) -->
+
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">2. ค่าสมาชิก</td></tr>
                 <tr><td class="td-indent">รายได้ค่าสมาชิกรายปีสะสม</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f2_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 3: รายได้โฆษณา (รายการเดียว f3_1) -->
+
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">3. รายได้จากการโฆษณาทั้งทางตรงและทางอ้อม</td></tr>
                 <tr><td class="td-indent">รายได้รวมโฆษณาประชาสัมพันธ์เชิงพาณิชย์</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f3_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 4: รายได้อื่นที่เกี่ยวเนื่อง (7 รายการย่อย f4_1-f4_7) -->
+
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">4. รายได้อื่นที่เกี่ยวเนื่องกับการให้บริการของผู้รับใบอนุญาต</td></tr>
                 <tr><td class="td-indent">4.1 รายได้จากการแบ่งเวลาให้ดำเนินรายการ</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f4_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">4.2 รายได้หรือสินทรัพย์จากการร่วมธุรกิจที่เกี่ยวข้องกับขอบเขตบริการที่ได้รับอนุญาต</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f4_2" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
@@ -755,16 +711,13 @@
                 <tr><td class="td-indent">4.5 รายได้จากการขาย ติดตั้ง หรือบำรุงรักษา ในอุปกรณ์รับสัญญาณและอุปกรณ์เกี่ยวเนื่องต่างๆ ทางตรง และทางอ้อม</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f4_5" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">4.6 รายได้จากค่าธรรมเนียม ค่าปรับ ในบริการที่ได้รับอนุญาต</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f4_6" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
                 <tr><td class="td-indent">4.7 รายได้จากการขายข้อมูล</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f4_7" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 5: รายได้จากการบริจาค (รายการเดียว f5_1) -->
+
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">5. รายได้/สินทรัพย์ จากการบริจาค การอุดหนุนการให้บริการโดยตรงของสถานี</td></tr>
                 <tr><td class="td-indent">รายได้รวมจากการรับบริจาคบริจาคอุดหนุนสถานี</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f5_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 6: เงินอุดหนุนจากกองทุนฯ (รายการเดียว f6_1) -->
+
                 <tr style="background: #eef1fb;"><td colspan="3" class="td-header">6. รายได้จากการอุดหนุนจากกองทุนวิจัยและพัฒนาฯ เพื่อประโยชน์สาธารณะ</td></tr>
                 <tr><td class="td-indent">รายได้รวมทุนสนับสนุนทุนการศึกษาอุดหนุนกองทุนฯ</td><td class="td-center"><input type="text" class="input-val modal-calc-input text-right-input" id="f6_1" oninput="calcModalTotal()"></td><td class="td-center" style="color:#888;">บาท</td></tr>
-                
-                <!-- หมวด 7: รายได้อื่นที่กำหนดเอง -->
+
                 <tr style="background: #f0fdf4; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
                   <td colspan="3" style="padding: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 15px;">
@@ -775,7 +728,6 @@
                 </tr>
               </tbody>
               <tbody class="modal-tbl-body" id="custom-income-container"></tbody>
-              <!-- แถวสรุปยอดรวม -->
               <tbody class="modal-tbl-body">
                 <tr style="background: #f5f8ff; border-top: 2px solid #c8d0db;">
                   <td style="text-align: right !important; font-weight: 700; color: #1e2d5e; padding: 15px 25px; font-size: 14.5px;">รายได้รวมจากการประกอบกิจการกระจายเสียงหรือโทรทัศน์สำหรับใบอนุญาตนี้</td>
@@ -787,7 +739,6 @@
           </div>
         </div>
       </div>
-      <!-- ปุ่มท้าย Modal: "ยกเลิก" -->
       <div class="modal-footer" style="padding: 15px 20px; background: #fafafa; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
         <button type="button" id="btn-cancel-income-modal" class="btn" style="background: #9e9e9e; color: #fff; padding: 7px 20px; border-radius: 4px; font-size: 13px;" onclick="closeIncomeModal()">ยกเลิก</button>
         <button type="button" id="btn-save-income-modal" class="btn" style="background: #1e2d5e; color: #fff; padding: 7px 20px; border-radius: 4px; font-size: 13px; font-weight: 600;" onclick="saveIncomeData()">บันทึกข้อมูล</button>
@@ -795,7 +746,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ค่าลดหย่อน — โครงสร้างคล้าย #incomeModal ผูกกับใบอนุญาตที่กำลังแก้ไข (activeDeductRowIdx ในไฟล์ step3-deduct.js) -->
+  <!-- โครงสร้างคล้าย #incomeModal ผูกกับใบอนุญาตที่แก้ไข (activeDeductRowIdx ใน step3-deduct.js) -->
   <div class="modal-overlay" id="deductModal">
     <div class="modal-box" style="max-width: 920px; width: 100%; font-family: 'Sarabun';">
       <div class="modal-header" style="background: #1e2d5e; color: #fff; padding: 12px 20px;">
@@ -803,8 +754,7 @@
         <button type="button" class="modal-close" onclick="closeDeductModal()" style="color: #fff; opacity: 0.8; font-size: 20px;">×</button>
       </div>
       <div class="modal-body" style="padding: 24px; background: #f8f9fa; max-height: 75vh; overflow-y: auto;">
-        <!-- กล่องข้อมูลใบอนุญาต readonly เหมือน Modal กรอกรายได้ข้างบน
-             ต่างกันที่มีช่อง "สถานะใบอนุญาต" แทน "ประเภทกิจการ" -->
+        <!-- readonly เหมือน Modal กรอกรายได้ ต่างที่มี "สถานะใบอนุญาต" แทน "ประเภทกิจการ" -->
         <div style="border: 1px solid #ced4da; border-radius: 8px; padding: 20px 24px; background: #fff; margin-bottom: 24px; position: relative;">
           <span style="position: absolute; top: -10px; left: 15px; background: #fff; padding: 0 8px; font-size: 13px; color: #495057; font-weight: 600;">ข้อมูลใบอนุญาตในปัจจุบัน</span>
           <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
@@ -836,7 +786,6 @@
         </div>
         <div style="border: 1px solid #ced4da; border-radius: 8px; padding: 20px 24px; background: #fff; position: relative;">
           <span style="position: absolute; top: -10px; left: 15px; background: #fff; padding: 0 8px; font-size: 13px; color: #495057; font-weight: 600;">ค่าลดหย่อน (สูงสุดไม่เกินรายได้จากการประกอบกิจการ)</span>
-          <!-- เลือกวิธีคำนวณ: "ตามค่าใช้จ่ายจริง" หรือ "ตามอัตราที่กำหนด" -->
           <div style="display: flex; align-items: center; gap: 20px; margin: 10px 0 15px 0; font-size: 13px;">
             <span style="color: #333;">ประเภทค่าใช้จ่าย</span>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="radio" name="dm-expense-type" value="actual" style="accent-color: #1e2d5e;" /> ตามค่าใช้จ่ายที่เกิดขึ้นจริง</label>
@@ -847,13 +796,12 @@
             <span style="font-size: 11px; color: #6c757d;">หน่วย : บาท</span>
           </div>
 
-          <!-- แจ้งเตือนแบบ real-time ใน step3-deduct.js -->
           <div id="deduct-income-warning" class="inline-warning-banner" style="display: none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="deduct-income-warning-text"></span>
           </div>
 
-          <!-- ช่องทาง Analog: toggleDeductSection('analog') เปิด/ปิดช่องกรอก, liveCalcDeductIncome() คำนวณรายได้อัตโนมัติ, ค่าลดหย่อน = 60% ของรายได้ -->
+          <!-- toggleDeductSection('analog') เปิด/ปิดช่องกรอก, liveCalcDeductIncome() คำนวณอัตโนมัติ -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
             <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-analog" checked onchange="toggleDeductSection('analog')" />
@@ -875,7 +823,6 @@
             </div>
           </div>
 
-          <!-- ช่องทาง Digital -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
             <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-digital" onchange="toggleDeductSection('digital')" />
@@ -897,7 +844,6 @@
             </div>
           </div>
 
-          <!-- ช่องทาง IPTV -->
           <div style="border: 1px solid #ced4da; border-radius: 6px; overflow: hidden;">
             <div style="background: #1e2d5e; color: #fff; padding: 8px 15px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
               <input type="checkbox" id="dm-ch-iptv" onchange="toggleDeductSection('iptv')" />
@@ -920,7 +866,6 @@
           </div>
         </div>
       </div>
-      <!-- ปุ่มท้าย Modal -->
       <div class="modal-footer" style="padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 10px;">
         <button type="button" id="btn-cancel-deduct-modal" class="btn" style="background: #6c757d; color: #fff; padding: 7px 20px; border-radius: 4px; font-size: 13px;" onclick="closeDeductModal()">ยกเลิก</button>
         <button type="button" id="btn-save-deduct-modal" class="btn" style="background: #1e2d5e; color: #fff; padding: 7px 20px; border-radius: 4px; font-size: 13px; font-weight: 500;" onclick="saveDeductData()">บันทึก</button>

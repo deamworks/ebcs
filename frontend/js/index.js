@@ -103,16 +103,13 @@ async function autoFillFromAuth() {
   if (msgEl) msgEl.textContent = '';
 
   try {
-    // [FIX] ไม่ส่ง tax_id ใน query — backend ดึงจาก JWT เอง
-    // ถ้ามี year ใน field แล้ว ส่งไปด้วย (ไม่งั้น backend จะใช้ปีล่าสุดอัตโนมัติ)
+    // [FIX] ไม่ส่ง tax_id ใน query (backend ดึงจาก JWT เอง) ส่ง year ไปด้วยถ้ามี ไม่งั้น backend ใช้ปีล่าสุด
     const yearEl  = document.getElementById('ph1-year');
     const yearVal = yearEl?.value?.trim();
     const yearQs  = yearVal ? `?year=${yearVal}` : '';
     const res = await api.get(`/operator/autofill${yearQs}`);
 
-    // รองรับทั้ง 2 รูปแบบ response:
-    //   แบบ A (ใหม่): { success: true, data: { operator_name, ... } }
-    //   แบบ B (เก่า): { operator_name, fiscal_year, ... }  (flat)
+    // รองรับทั้ง response แบบ A (ใหม่: { success, data:{...} }) และแบบ B (เก่า: flat)
     let info;
     if (res?.success === true && res?.data) {
       info = res.data;                     // แบบ A
@@ -123,9 +120,7 @@ async function autoFillFromAuth() {
       throw new Error(res?.error?.message || res?.message || 'ดึงข้อมูลไม่สำเร็จ');
     }
 
-    // [FIX] จำสถานะใบยื่นของปีนี้ไว้เงียบๆ (ใช้กันซ้ำตอนกด "เริ่มนำส่ง" ใน
-    // startProcess() เท่านั้น) — ไม่ต้องเด้งข้อความเตือนหรือปุ่มแยกตรงนี้
-    // เปลี่ยนปีในช่อง "รอบปีบัญชี" เมื่อไหร่ก็ดึงข้อมูลปีนั้นมาแสดงตามปกติ
+    // [FIX] จำสถานะใบยื่นของปีนี้ไว้เงียบๆ ใช้กันซ้ำตอนกด "เริ่มนำส่ง" ใน startProcess() เท่านั้น
     appState._lockedSubmission =
       (info.existing_submission && info.existing_submission.status !== 'draft')
         ? info.existing_submission
@@ -144,10 +139,8 @@ async function autoFillFromAuth() {
     _setDate(document.getElementById('ph1-period-end'),   isoToBE(info.period_end));
     _setDate(document.getElementById('ph1-due-date'),     isoToBE(info.due_date));
 
-    // [FIX] เปลี่ยนปีบัญชี (เช่น จาก 2568 เป็น 2569 ในหน้าเดียวโดยไม่รีเฟรช) ต้อง
-    // ล้างข้อมูลที่กรอกไว้ของปีเก่าออกทั้งหมด ยกเว้นช่อง "สถานี/รายการ" ที่ให้จำไว้
-    // (เดิม rowsData ค้างอยู่ใน memory ข้ามปี ทำให้รายได้/ค่าลดหย่อนของปีก่อน
-    // ติดมาด้วยตอนเปลี่ยนปี ทั้งที่ loadLicenses แก้แค่เลขที่/ประเภท/วันที่ใบอนุญาต)
+    // [FIX] เดิม rowsData ค้างข้ามปีในหน่วยความจำ ทำให้รายได้/ค่าลดหย่อนปีก่อนติดมาตอนเปลี่ยนปี
+    // เปลี่ยนปีบัญชีต้องล้างข้อมูลปีเก่าทั้งหมด ยกเว้นช่อง "สถานี/รายการ" ที่ให้จำไว้
     const _newYear = String(info.fiscal_year || '');
     if (appState.year && appState.year !== _newYear) {
       const preservedStations = {};
@@ -169,10 +162,7 @@ async function autoFillFromAuth() {
       appState.customOtherIncome = [];
       appState._draftLoaded     = false;
 
-      // [FIX] ล้าง DOM ของช่อง "รายได้รวมตามงบการเงิน" ด้วย ไม่ใช่แค่ appState —
-      // เดิมค่าที่พิมพ์ไว้ในช่องนี้ตอนปีก่อนยังค้างอยู่บนหน้าจอ เพราะโค้ดด้านล่าง
-      // จะเซ็ตค่าใหม่ให้ก็ต่อเมื่อมี draft ของปีใหม่เท่านั้น (ปีใหม่ที่ยังไม่เคย
-      // กรอกจะไม่เข้าเงื่อนไขนั้นเลย ช่องเลยโชว์ค่าเก่าค้างไว้)
+      // [FIX] ล้าง DOM ช่อง "รายได้รวมตามงบการเงิน" ด้วย ไม่งั้นค่าปีก่อนค้างจนกว่าจะมี draft ปีใหม่มาทับ
       const _finEl = document.getElementById('total-income-financial');
       if (_finEl) _finEl.value = '';
     }
@@ -198,10 +188,7 @@ async function autoFillFromAuth() {
 
     if (msgEl) msgEl.textContent = '';
 
-     // โหลด draft จาก localStorage — ส่ง taxId และ year ตรงๆ
-     // (คืนค่า income/deduction/ผู้สอบบัญชี ที่กรอกไว้ก่อนหน้า ไม่ว่าจะกดยืนยัน
-     // นำส่งไปแล้วหรือยังแค่กรอกร่างค้างไว้ก็ตาม — ผู้ประกอบการต้องได้ข้อมูลที่
-     // กรอกไว้ของปีนั้นกลับคืนเสมอเวลาออกแล้วเข้าใหม่)
+     // โหลด draft (auto-save) จาก localStorage ด้วย taxId+year — คืนค่าที่กรอกไว้ก่อนหน้าของปีนั้นเสมอ
      await new Promise(r => setTimeout(r, 80));
      if (typeof loadDraft === 'function') {
        const hasDraft = loadDraft(taxId, String(info.fiscal_year));
@@ -220,13 +207,8 @@ async function autoFillFromAuth() {
        }
      }
 
-     // [FIX] ดึงใบอนุญาตจากฐานข้อมูล "หลัง" โหลด draft เสมอ — draft ใน
-     // localStorage เป็น cache เก่าที่อาจไม่ตรงกับข้อมูลจริงในระบบ (เช่น
-     // แอดมินแก้ไข/นำเข้าใบอนุญาตใหม่หลังผู้ประกอบการเคยบันทึก draft ไว้)
-     // loadDraft() เขียนทับ appState.rowsData ทั้งก้อนด้วยข้อมูลเก่านั้น
-     // จึงต้องดึงจาก DB ซ้ำเป็นขั้นตอนสุดท้ายเพื่อให้เลขที่ใบอนุญาต/ประเภท/
-     // วันที่/สถานะ ที่แสดงตรงกับฐานข้อมูลเสมอ (ไม่ทับ income/deduction ที่
-     // เพิ่งโหลดจาก draft เพราะ loadLicenses แก้เฉพาะฟิลด์โครงสร้างใบอนุญาต)
+     // [FIX] ต้องดึงใบอนุญาตจาก DB "หลัง" โหลด draft เสมอ — draft ใน localStorage เป็น cache เก่าที่
+     // loadDraft() เขียนทับ rowsData ทั้งก้อน ต้องดึงซ้ำให้เลขที่/ประเภท/วันที่ใบอนุญาตตรงกับ DB จริง
      await loadLicenses(info.fiscal_year, taxId);
 
      // บันทึก key ให้ถูกต้องทันที
@@ -252,17 +234,14 @@ async function viewExistingSubmission() {
   if (!s) return;
   try {
     const detail = await api.get(`/operator/submissions/${s.id}`);
-    // [FIX] detail.status คือสถานะจริง (คำนวณจากว่ามีใบเสร็จหรือยัง) ต่างจาก
-    // detail.submission.status ซึ่งเป็นค่า raw ในคอลัมน์ — ถ้าไม่ส่ง status
-    // นี้เข้าไป แบนเนอร์จะค้างโชว์ "รอชำระเงิน" แม้แอดมินบันทึกรับชำระแล้ว
+    // [FIX] detail.status คือสถานะจริง (คำนวณจากใบเสร็จ) ต่าง detail.submission.status ที่เป็นค่า raw
+    // ถ้าไม่ส่ง status นี้ แบนเนอร์จะค้างโชว์ "รอชำระเงิน" แม้บันทึกรับชำระแล้ว
     const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
     if (typeof renderReadOnlySubmission === 'function') {
       renderReadOnlySubmission(detail, {
         downloadBase: '/operator',
         statusLabel: statusTh[detail.status] || detail.status,
-        // [FIX] เดิมมีปุ่ม "กลับหน้าหลัก" ในแบนเนอร์นี้ด้วย (onClose) แต่ซ้ำซ้อน
-        // กับลิงก์ "หน้าหลัก" ที่มีอยู่แล้วในแถบนำทางด้านบน ตัดออกไม่ส่ง onClose
-        // เข้าไปอีก เหลือแค่ทางเดียว
+        // [FIX] เดิมมีปุ่ม "กลับหน้าหลัก" ในแบนเนอร์นี้ด้วย ซ้ำกับลิงก์บนแถบนำทาง — ตัด onClose ออก
       });
     }
   } catch (e) {
@@ -279,9 +258,7 @@ function _setField(id, val) {
 async function loadLicenses(year, taxId) {
   const cntEl = document.getElementById('license-count');
   try {
-    // [FIX] ไม่ส่ง tax_id ใน query (backend ดึงจาก JWT)
-    // ส่ง year กลับไปให้ backend กรองด้วยช่วงวันที่ใบอนุญาตเทียบกับรอบบัญชีปีนี้
-    // (ไม่ใช้ fiscal_year ของ licensee_master ที่ไม่น่าเชื่อถือเหมือนก่อนหน้านี้)
+    // [FIX] ไม่ส่ง tax_id (backend ดึงจาก JWT) ส่ง year ให้กรองด้วยช่วงวันที่ใบอนุญาต ไม่ใช้ fiscal_year ของ licensee_master ที่ไม่น่าเชื่อถือ
     const res = await api.get(`/operator/licenses?year=${year}`);
     // รองรับทั้ง { success, data: { licenses } } และ { licenses: [...] } flat
     let licenses;
@@ -322,9 +299,7 @@ async function loadLicenses(year, taxId) {
 
 // [FIX] startProcess ลบออกจากไฟล์นี้ — ซ้ำกับนิยามใน license.js ที่สมบูรณ์กว่า
 
-// ── _buildSubmissionPayload — รวม logic สร้าง payload ใบยื่นแบบไว้ที่เดียว
-// ใช้ร่วมกันทั้งตอนยืนยันนำส่งจริง (saveSubmission) และตอนบันทึกร่างเฉยๆ
-// (saveDraftToServer) เพื่อให้สองทางไม่หลุดไม่ตรงกัน ──
+// _buildSubmissionPayload — รวม logic สร้าง payload ไว้ที่เดียว ใช้ร่วมกันทั้ง saveSubmission และ saveDraftToServer ไม่ให้หลุดไม่ตรงกัน
 function _buildSubmissionPayload() {
   const count = parseInt(document.getElementById('license-count')?.value) || 1;
   const { totals } = calcAllLicenseSummary(count);
@@ -394,9 +369,7 @@ function _buildSubmissionPayload() {
   };
 }
 
-// ── โหลดร่างที่เคยบันทึกไว้ (จาก saveDraftToServer) มาแสดงเป็นข้อความสั้นๆ ในหน้าแรก
-// ให้กด "ทำต่อ" ข้ามเครื่อง/เบราว์เซอร์ได้ — ปกติจะมีแค่ 1 ปีบัญชีที่ค้างอยู่
-// (upsert ต่อปีอยู่แล้ว) แต่รองรับกรณีค้างหลายปีด้วยแสดงเป็นหลายบรรทัด ──
+// โหลดร่างที่เคยบันทึกลง server ไว้ (จาก saveDraftToServer) มาแสดงเป็นข้อความสั้นในหน้าแรก ให้กด "ทำต่อ" ได้ข้ามเครื่อง
 async function loadDraftList() {
   const wrap = document.getElementById('draft-list-wrap');
   if (!wrap) return;
@@ -418,11 +391,8 @@ async function loadDraftList() {
   }
 }
 
-// ── resumeDraftSubmission — โหลดร่างที่บันทึกไว้ในระบบ (ไม่ใช่ localStorage)
-// กลับเข้ามาแก้ไขต่อได้ตามปกติ ใช้ hydration เดียวกับหน้าดูอย่างเดียว แต่ไม่ล็อก
-// อะไรเลยเพราะยังเป็นแค่ร่าง — ไฟล์แนบที่เคยบันทึกไว้แล้ว (carry-forward ฝั่ง
-// backend ใน create_submission) จะโชว์ใน Step 6 ให้เห็นเลย ไม่ต้องแนบใหม่
-// (skipAttachments: false ให้ _vsRenderAttachments โชว์ชื่อไฟล์เดิม + ปุ่มลบ) ──
+// resumeDraftSubmission — โหลดร่างที่บันทึกไว้ในระบบ (ไม่ใช่ localStorage) มาแก้ต่อ ใช้ hydration
+// เดียวกับหน้าดูอย่างเดียวแต่ไม่ล็อก (skipAttachments:false ให้เห็นไฟล์แนบเดิม + ปุ่มลบ)
 async function resumeDraftSubmission(id) {
   try {
     const detail = await api.get(`/operator/submissions/${id}`);
@@ -440,12 +410,9 @@ async function resumeDraftSubmission(id) {
   }
 }
 
-// ── saveDraftToServer — บันทึกร่างลงฐานข้อมูลจริงเฉยๆ (ไม่ล็อกสถานะ ไม่
-// อัปโหลดไฟล์แนบ) กดเองเท่านั้นจากปุ่ม "บันทึกร่าง" — ไม่ใช่ auto-save
-// [FIX] เดิมตั้งชื่อ saveDraft() ชนกับฟังก์ชัน saveDraft() ที่มีอยู่แล้วใน
-// ui.js (auto-save ลง localStorage เฉยๆ เรียกทุกครั้งที่เปลี่ยน step/พิมพ์
-// ในหลายไฟล์) ทำให้ฟังก์ชันนี้ถูกเรียกไปสร้างแถว draft ใหม่ในฐานข้อมูลซ้ำๆ
-// โดยไม่ได้ตั้งใจทุกครั้งที่ผู้ใช้เปลี่ยน step เปลี่ยนชื่อกันชนแล้ว ──
+// saveDraftToServer — บันทึกร่างลง DB จริง กดเองจากปุ่ม "บันทึกร่าง" เท่านั้น ไม่ใช่ auto-save
+// [FIX] เดิมชื่อ saveDraft() ชนกับ saveDraft() ใน ui.js (auto-save ลง localStorage ทุกครั้งที่เปลี่ยน
+// step/พิมพ์) ทำให้ยิงสร้าง draft ใหม่ในฐานข้อมูลซ้ำๆ โดยไม่ตั้งใจ — เปลี่ยนชื่อกันชนแล้ว
 async function saveDraftToServer() {
   if (!appState.year) {
     showToast('กรุณาระบุปีบัญชีก่อนบันทึกร่าง');
@@ -463,10 +430,8 @@ async function saveDraftToServer() {
       ? result.data.submission_id
       : result?.submission_id;
 
-    // [FIX] อัปโหลดไฟล์แนบที่เพิ่งเลือกไว้ (ยังไม่เคยส่งขึ้น server) ไปพร้อมกับ
-    // ร่างด้วย — เดิมไม่อัปโหลดเลยตอนบันทึกร่าง ทำให้ไฟล์หายทุกครั้ง (ไฟล์เดิม
-    // ที่เคยแนบไว้แล้วจาก draft ก่อนหน้าถูก carry-forward ให้แล้วฝั่ง backend
-    // ไม่ต้องอัปโหลดซ้ำ อัปโหลดเฉพาะไฟล์ใหม่ที่ผู้ใช้เพิ่งเลือกในรอบนี้)
+    // [FIX] เดิมไม่อัปโหลดไฟล์แนบตอนบันทึกร่างเลย ทำให้ไฟล์หายทุกครั้ง — ตอนนี้อัปโหลดเฉพาะไฟล์ใหม่
+    // ที่เพิ่งเลือก (ไฟล์เดิมถูก carry-forward ให้แล้วฝั่ง backend ไม่ต้องอัปโหลดซ้ำ)
     const attachmentErrors = [];
     if (submissionId) {
       const attachedEntries = Object.entries(appState.attachedFiles || {});
@@ -525,10 +490,8 @@ async function saveSubmission() {
       }
     }
 
-    // [FIX] เดิมไม่เคยเรียก endpoint นี้เลย — ใบยื่นแบบเลยค้างสถานะ 'draft'
-    // ตลอดไป ทำให้ผู้ประกอบการยื่นซ้ำ/แก้ไขได้ไม่จำกัดแม้กดยืนยันไปแล้ว
-    // ต้องเรียกยืนยันสถานะทันทีหลังบันทึกสำเร็จ ให้ status เปลี่ยนเป็น
-    // pending_payment (ล็อกไม่ให้แก้ไขได้อีกจนกว่าแอดมินจะลบใบยื่นนี้)
+    // [FIX] เดิมไม่เคยเรียก endpoint นี้ ใบยื่นแบบเลยค้างสถานะ 'draft' แก้ไข/ยื่นซ้ำได้ไม่จำกัด
+    // ต้องยืนยันสถานะทันทีให้เปลี่ยนเป็น pending_payment (ล็อกแก้ไขจนกว่าแอดมินจะลบ)
     await api.post(`/operator/submissions/${submissionId}/submit`, {});
 
     // ลบ draft หลัง submit สำเร็จ

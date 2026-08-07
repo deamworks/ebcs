@@ -1,11 +1,8 @@
-/* ════════════════════════════════════════════════════
-   css/base.css — NBTC Filing Design System
-   Design tokens, reset, components ที่ใช้ทุกหน้า
-   ════════════════════════════════════════════════════ */
+/* css/base.css — NBTC Filing Design System — Design tokens, reset, components ที่ใช้ทุกหน้า */
 
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
-/* ── Design Tokens ─────────────────────────────────── */
+/* Design Tokens */
 :root {
   --primary:       #2C3D8F;
   --primary-mid:   #3D52A8;
@@ -40,7 +37,7 @@
   --font: 'Sarabun', sans-serif;
 }
 
-/* ── Reset ─────────────────────────────────────────── */
+/* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
 body {
@@ -52,7 +49,7 @@ body {
 }
 .icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-/* ── Top Navigation ────────────────────────────────── */
+/* Top Navigation */
 .topnav {
   background: var(--primary);
   display: flex; align-items: center; justify-content: space-between;
@@ -94,7 +91,7 @@ body {
 }
 .topnav-right button:hover { background: rgba(255,255,255,0.22); color: #fff; }
 
-/* ── Breadcrumb ────────────────────────────────────── */
+/* Breadcrumb */
 .breadcrumb-bar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -108,11 +105,11 @@ body {
 .unit-info { font-size: 11px; color: var(--text-muted); }
 .unit-info strong { color: var(--text-primary); }
 
-/* ── Page Layout ───────────────────────────────────── */
+/* Page Layout */
 .page-wrap { display: flex; min-height: calc(100vh - 88px); }
 .main { flex: 1; padding: 18px 20px; min-width: 0; overflow-x: hidden; width: 100%; }
 
-/* ── Buttons ───────────────────────────────────────── */
+/* Buttons */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 18px;
@@ -137,7 +134,7 @@ body {
 .btn-lg { padding: 11px 28px; font-size: 14px; }
 .btn-block { width: 100%; justify-content: center; }
 
-/* ── Form Elements ─────────────────────────────────── */
+/* Form Elements */
 .form-section {
   background: var(--surface);
   border: 1px solid var(--border); border-top: none;
@@ -160,8 +157,7 @@ body {
 .form-unit { color: var(--text-muted); font-size: 12.5px; }
 .field-invalid { border-color: var(--danger) !important; background: #FFF5F5 !important; }
 
-/* ── โหมดดูอย่างเดียว (ใบยื่นแบบที่ยืนยันแล้ว) ──────────
-   ทำให้ช่องกรอกทุกช่องดูจางลงชัดเจน สื่อว่าดูได้แต่แก้ไขไม่ได้ */
+/* โหมดดูอย่างเดียว: ทำให้ทุกช่องกรอกดูจางลง สื่อว่าดูได้แต่แก้ไขไม่ได้ */
 .vs-readonly input:disabled,
 .vs-readonly select:disabled,
 .vs-readonly textarea:disabled {
@@ -173,7 +169,7 @@ body {
 }
 hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
-/* ── Section Header ────────────────────────────────── */
+/* Section Header */
 .section-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
   color: #fff; padding: 10px 16px;
@@ -182,7 +178,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; 
   letter-spacing: 0.02em;
 }
 
-/* ── Cards ─────────────────────────────────────────── */
+/* Cards */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -201,7 +197,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; 
 .info-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; }
 .info-label { color: var(--text-secondary); min-width: 120px; font-weight: 500; flex-shrink: 0; }
 
-/* ── Tables ────────────────────────────────────────── */
+/* Tables */
 .table-wrap { overflow-x: auto; margin-top: 8px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 thead tr { background: var(--primary); color: #fff; }
@@ -210,14 +206,14 @@ tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: var(--accent-bg); }
 
-/* ── Badges ────────────────────────────────────────── */
+/* Badges */
 .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; }
 .badge-normal  { background: #E8F5EE; color: var(--success); }
 .badge-warning { background: #FEF3CD; color: var(--warning); }
 .badge-danger  { background: #FCE8E8; color: var(--danger);  }
 .badge-info    { background: var(--accent-bg); color: var(--accent); }
 
-/* ── Modal ─────────────────────────────────────────── */
+/* Modal */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(30,36,60,0.5); z-index: 9000;
@@ -252,7 +248,7 @@ tbody tr:hover td { background: var(--accent-bg); }
   display: flex; justify-content: flex-end; gap: 10px;
 }
 
-/* ── Toast ─────────────────────────────────────────── */
+/* Toast */
 .toast {
   position: fixed; top: 68px; right: 18px; display: none;
   align-items: center; gap: 10px;
@@ -270,7 +266,7 @@ tbody tr:hover td { background: var(--accent-bg); }
   to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* ── Warning Banner ────────────────────────────────── */
+/* Warning Banner */
 .inline-warning-banner {
   display: flex; align-items: flex-start; gap: 8px;
   background: #FEF2F2; border: 1px solid #FCA5A5;
@@ -279,7 +275,7 @@ tbody tr:hover td { background: var(--accent-bg); }
   margin-bottom: 14px; font-size: 12px; line-height: 1.6;
 }
 
-/* ── Stepper ───────────────────────────────────────── */
+/* Stepper */
 .stepper-wrap {
   background: var(--surface);
   border: 1px solid var(--border); border-top: none;
@@ -311,7 +307,7 @@ tbody tr:hover td { background: var(--accent-bg); }
 .step.active .step-label  { color: var(--accent); font-weight: 600; }
 .step.done   .step-label  { color: var(--success); }
 
-/* ── Responsive ────────────────────────────────────── */
+/* Responsive */
 @media (max-width: 1024px) {
   .info-grid { grid-template-columns: 1fr; gap: 8px; }
 }

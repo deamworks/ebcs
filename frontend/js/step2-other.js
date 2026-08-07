@@ -33,9 +33,8 @@ function calcOtherTotal() {
 function addCustomOtherIncomeRow(label = '', value = '') {
   const container = document.getElementById('custom-other-income-container');
   if (!container) return;
-  // [FIX] แถวนี้ถูกสร้างใหม่ตอน restore ค่า step 2 ซึ่งเกิดขึ้นทีหลัง
-  // _vsLockReadOnly() ไปแล้ว — ปุ่ม "ลบ" กับช่องกรอกเลยไม่โดนล็อก ต้องเช็ค
-  // โหมดดูอย่างเดียวตรงนี้เองด้วย
+  // [FIX] แถวนี้ถูกสร้างใหม่ตอน restore ค่า step 2 หลัง _vsLockReadOnly() ทำงานไปแล้ว
+  // ปุ่มลบ/ช่องกรอกเลยไม่โดนล็อกตามอัตโนมัติ ต้องเช็คโหมดดูอย่างเดียวเองตรงนี้
   const isReadOnly = document.body.classList.contains('vs-readonly');
   const rowId = 'other_row_' + Date.now();
   const tr = document.createElement('tr');

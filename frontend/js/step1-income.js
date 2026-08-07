@@ -114,9 +114,8 @@ function calcModalTotal() {
 function addCustomIncomeRow(label = '', value = '') {
   const container = document.getElementById('custom-income-container');
   if (!container) return;
-  // [FIX] แถวนี้ถูกสร้างใหม่ทุกครั้งที่เปิด Modal (ตอน restore customItems) ซึ่ง
-  // เกิดขึ้นทีหลัง _vsLockReadOnly() ไปแล้ว — ปุ่ม "ลบ" กับช่องกรอกเลยไม่โดนล็อก
-  // ต้องเช็คโหมดดูอย่างเดียวตรงนี้เองด้วย
+  // [FIX] แถวนี้ถูกสร้างใหม่ทุกครั้งที่เปิด Modal หลัง _vsLockReadOnly() ทำงานไปแล้ว
+  // ปุ่มลบ/ช่องกรอกเลยไม่โดนล็อกตามอัตโนมัติ ต้องเช็คโหมดดูอย่างเดียวเองตรงนี้
   const isReadOnly = document.body.classList.contains('vs-readonly');
   const rowId = 'custom_row_' + Date.now();
   const tr = document.createElement('tr');

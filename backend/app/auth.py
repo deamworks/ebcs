@@ -46,7 +46,6 @@ def mask_email(email):
     if not email or "@" not in email:
         return email
     local, domain = email.split("@", 1)
-    # แสดงแค่ 2 ตัวแรก ที่เหลือซ่อน
     visible = local[:2] if len(local) >= 2 else local
     return f"{visible}***@{domain}"
 
@@ -143,7 +142,6 @@ def check_taxpayer():
                       "message": "กรุณาส่งข้อมูล JSON"}
         }), 400
 
-    # รับและทำความสะอาด tax_id
     tax_id = str(data.get("tax_id", "")).strip()
     tax_id = tax_id.replace("-", "").replace(" ", "")
 
@@ -156,7 +154,7 @@ def check_taxpayer():
             }
         }), 400
 
-    # ค้นหาใน DB (ใช้ปีล่าสุดอัตโนมัติ)
+    # ใช้ fiscal_year ล่าสุดของ tax_id นี้
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -168,7 +166,7 @@ def check_taxpayer():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # อีเมลรับ OTP มาจาก operator_accounts เท่านั้น (taxpayer_master ไม่เก็บ email แล้ว)
+            # email เก็บที่ operator_accounts เท่านั้น taxpayer_master ไม่มีแล้ว
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -187,7 +185,6 @@ def check_taxpayer():
             }
         }), 404
 
-    # สร้าง list ช่องทางที่มี
     email = operator_account["email"] if operator_account else ""
 
     if not email:
@@ -208,9 +205,7 @@ def check_taxpayer():
         "success": True,
         "data": {
             "operator_name": taxpayer["operator_name"],
-            "channels":      channels
-            # channels มี 1 หรือ 2 ตัวเลือก
-            # Frontend นำไปแสดง radio button ให้เลือก
+            "channels":      channels  # frontend ใช้แสดง radio button เลือกช่องทาง
         }
     }), 200
 
@@ -233,7 +228,6 @@ def request_otp():
     tax_id  = str(data.get("tax_id",  "")).strip().replace("-", "")
     channel = str(data.get("channel", "")).strip().lower()
 
-    # Validate
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         return jsonify({
             "success": False,
@@ -248,7 +242,6 @@ def request_otp():
                       "message": "channel ต้องเป็น email เท่านั้น"}
         }), 400
 
-    # ตรวจ rate limit
     if not check_rate_limit(tax_id):
         return jsonify({
             "success": False,
@@ -261,7 +254,6 @@ def request_otp():
             }
         }), 429
 
-    # ดึงข้อมูลติดต่อ
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -273,7 +265,7 @@ def request_otp():
             """, (tax_id,))
             taxpayer = cur.fetchone()
 
-            # อีเมลรับ OTP มาจาก operator_accounts เท่านั้น (taxpayer_master ไม่เก็บ email แล้ว)
+            # email เก็บที่ operator_accounts เท่านั้น taxpayer_master ไม่มีแล้ว
             cur.execute(
                 "SELECT email FROM operator_accounts WHERE tax_id = %s",
                 (tax_id,)
@@ -296,7 +288,6 @@ def request_otp():
                       "message": "ไม่มีอีเมลในระบบ กรุณาติดต่อเจ้าหน้าที่"}
         }), 400
 
-    # สร้าง OTP และเก็บใน Redis
     otp     = generate_otp()
     otp_key = f"otp:{tax_id}"
     redis_client.setex(otp_key, Config.OTP_EXPIRE_SECONDS, otp)
@@ -304,7 +295,6 @@ def request_otp():
         f"otp_attempts:{tax_id}", Config.OTP_EXPIRE_SECONDS, 0
     )
 
-    # ส่ง OTP ทาง Email
     sent = send_email(
         email, otp,
         operator_name=taxpayer.get("operator_name", "")
@@ -352,7 +342,6 @@ def verify_otp():
                       "message": "กรุณากรอกเลขภาษีและรหัส OTP"}
         }), 400
 
-    # ดึง OTP จาก Redis
     otp_key    = f"otp:{tax_id}"
     stored_otp = redis_client.get(otp_key)
 
@@ -365,7 +354,6 @@ def verify_otp():
             }
         }), 400
 
-    # ตรวจจำนวนครั้งที่กรอกผิด
     attempts_key = f"otp_attempts:{tax_id}"
     attempts     = int(redis_client.get(attempts_key) or 0)
 
@@ -383,7 +371,6 @@ def verify_otp():
             }
         }), 400
 
-    # เปรียบเทียบ OTP
     if otp_input != stored_otp:
         redis_client.incr(attempts_key)
         remaining = Config.OTP_MAX_ATTEMPTS - attempts - 1
@@ -395,11 +382,10 @@ def verify_otp():
             }
         }), 400
 
-    # OTP ถูกต้อง → ลบออก (ใช้ได้ครั้งเดียว)
+    # ใช้แล้วลบทันที กัน OTP ถูก replay
     redis_client.delete(otp_key)
     redis_client.delete(attempts_key)
 
-    # ดึงข้อมูลผู้ประกอบการ (ปีล่าสุดอัตโนมัติ)
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -496,7 +482,7 @@ def admin_login():
             """, (email,))
             admin = cur.fetchone()
 
-    # error ข้อความเดียวกันเสมอ ป้องกัน probe ว่า email ไหนมีในระบบ
+    # ข้อความ error เหมือนกันทุกกรณี กัน probe หา email ที่มีจริง
     if not admin or not admin["is_active"]:
         return jsonify({
             "success": False,
@@ -514,7 +500,6 @@ def admin_login():
                       "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"}
         }), 401
 
-    # อัปเดตเวลา login ล่าสุด
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute(

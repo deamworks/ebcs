@@ -35,9 +35,7 @@ function generateDeductRows() {
       income: 0, deduction: 0, no: '', type: '', station: '',
     };
 
-    // [FIX] ใบยื่นแบบที่ยืนยันแล้ว (โหมดดูอย่างเดียว) — ปุ่มต้องเป็นไอคอนรูปตา
-    // สีเทาจาง สื่อว่าดูค่าลดหย่อนได้เท่านั้น แก้ไขไม่ได้ (ช่องกรอกใน modal
-    // ถูกล็อกไว้แล้วจาก _vsLockReadOnly ใน view-submission.js)
+    // [FIX] โหมดดูอย่างเดียว — ปุ่มต้องเป็นไอคอนรูปตาสีเทา สื่อว่าดูได้อย่างเดียว (ช่องกรอกล็อกโดย _vsLockReadOnly แล้ว)
     const isReadOnly = document.body.classList.contains('vs-readonly');
     const deductBtnClass = isReadOnly ? 'btn-secondary' : 'btn-primary';
     const deductBtnStyle = isReadOnly
@@ -136,9 +134,8 @@ function closeDeductModal() {
 
 /** เปิด/ปิดทั้งแถวของช่องทาง (Analog/Digital/IPTV) เมื่อติ๊ก/ยกเลิก checkbox */
 function toggleDeductSection(ch) {
-  // [FIX] เดิมเปิดใช้งานช่องกรอกของช่องทางที่ติ๊กไว้เสมอ แม้อยู่ในโหมดดูอย่าง
-  // เดียว (vs-readonly) — ทำให้ผู้ใช้แก้ไขค่าลดหย่อนของใบยื่นแบบที่ยืนยันแล้ว
-  // ได้ ต้องบังคับ disabled ไว้เสมอถ้าอยู่ในโหมดนี้ ไม่สนใจว่าติ๊กหรือไม่
+  // [FIX] เดิมเปิดช่องกรอกของช่องทางที่ติ๊กไว้เสมอแม้อยู่โหมดดูอย่างเดียว ทำให้แก้ไขค่าลดหย่อน
+  // ของใบที่ยืนยันแล้วได้ — ต้องบังคับ disabled เสมอถ้าอยู่โหมดนี้ ไม่สนว่าติ๊กหรือไม่
   const isReadOnly = document.body.classList.contains('vs-readonly');
   const isChecked = document.getElementById(`dm-ch-${ch}`)?.checked;
   ['members', 'price', 'income'].forEach(f => {
