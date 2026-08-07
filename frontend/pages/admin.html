@@ -15,7 +15,6 @@
 <!-- LOGIN SCREEN -->
 <div class="admin-shell" id="adminShell" style="display:none;" aria-hidden="true">
 
-  <!-- Sidebar -->
   <nav class="sidebar">
     <div class="sb-brand">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -153,7 +152,6 @@
     </div>
   </nav>
 
-  <!-- Main -->
   <div class="admin-main">
     <div class="admin-topbar">
       <div style="display:flex;align-items:center;gap:12px;">
@@ -169,7 +167,6 @@
     </div>
     <div class="admin-page" id="main-content">
 
-      <!-- ══ PAGE: submissions ══ -->
       <div class="adm-page active" id="page-submissions">
         <div class="adm-stat-grid">
           <div class="adm-stat"><div class="adm-stat-label">รายการยื่นแบบทั้งหมด</div><div class="adm-stat-value" id="sub-st-total">—</div></div>
@@ -177,7 +174,6 @@
           <div class="adm-stat"><div class="adm-stat-label">รอชำระ</div><div class="adm-stat-value" id="sub-st-pending" style="color:#dc2626">—</div></div>
           <div class="adm-stat"><div class="adm-stat-label">ชำระแล้ว</div><div class="adm-stat-value" id="sub-st-paid" style="color:#2e86ab">—</div></div>
         </div>
-        <!-- ค้นหา -->
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -187,7 +183,6 @@
             </button>
           </div>
         </div>
-        <!-- filter -->
         <div class="adm-filter-popover collapsed" id="submissions-filter-card">
           <div class="adm-filter-popover-hd">
             ตัวกรองข้อมูล
@@ -246,7 +241,6 @@
             <span id="tableCount" style="font-size:12px;color:#888;"></span>
           </div>
         </div>
-        <!-- แท็บปีที่ยื่น + ปุ่มการทำงาน: รวมแถวเดียวกัน -->
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
           <div class="year-nav" id="sub-year-tabs"></div>
           <div style="display:flex;gap:8px;">
@@ -257,7 +251,6 @@
             <button class="adm-btn adm-btn-sm adm-btn-danger" onclick="handleAdminBulkDelete()">ลบที่เลือก</button>
           </div>
         </div>
-        <!-- table -->
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="adm-table">
@@ -281,7 +274,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: licenses (จัดการใบอนุญาตแยกต่างหาก) ══ -->
+      <!-- PAGE: licenses — จัดการใบอนุญาตแยกต่างหาก -->
       <div class="adm-page" id="page-licenses">
         <div class="adm-stat-grid">
           <div class="adm-stat"><div class="adm-stat-label">ใบอนุญาตทั้งหมด</div><div class="adm-stat-value" id="lic-st-total">—</div></div>
@@ -290,7 +283,6 @@
           <div class="adm-stat"><div class="adm-stat-label">ไม่ได้ใช้งาน</div><div class="adm-stat-value" id="lic-st-inactive" style="color:#d97706">—</div></div>
         </div>
 
-        <!-- ค้นหา -->
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -331,7 +323,6 @@
           </div>
         </div>
 
-        <!-- table toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span id="lic-count" style="font-size:12px;color:#888;"></span>
           <div style="display:flex;gap:8px;">
@@ -361,7 +352,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: taxpayers (รวม ผู้ประกอบการ + ใบอนุญาต) ══ -->
+      <!-- PAGE: taxpayers — รวมผู้ประกอบการ + ใบอนุญาต -->
       <div class="adm-page" id="page-taxpayers">
         <div class="adm-stat-grid">
           <div class="adm-stat"><div class="adm-stat-label">ผู้ประกอบการทั้งหมด</div><div class="adm-stat-value" id="tp-st-companies">—</div></div>
@@ -370,7 +361,6 @@
           <div class="adm-stat"><div class="adm-stat-label">ไม่ได้ใช้งาน</div><div class="adm-stat-value" id="tp-st-inactive" style="color:#d97706">—</div></div>
         </div>
 
-        <!-- ค้นหา -->
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
             <svg class="adm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -381,7 +371,7 @@
           </div>
         </div>
 
-        <!-- filter — ตรงกับ id/class ที่ clearTaxpayerFilters() ใช้อ้างอิงอยู่แล้ว -->
+        <!-- id/class ในนี้ผูกกับ clearTaxpayerFilters() -->
         <div class="adm-filter-popover collapsed" id="taxpayers-filter-card">
           <div class="adm-filter-popover-hd">
             ตัวกรองข้อมูล
@@ -440,7 +430,6 @@
             <span id="tpFilterCount" style="font-size:12px;color:#888;"></span>
           </div>
         </div>
-        <!-- table toolbar -->
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;">
           <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, () => { loadTaxpayers(); loadLicenses(); })">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="refresh-icon"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -448,8 +437,7 @@
           </button>
           <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="openAddTaxpayerModal()">+ เพิ่มผู้ประกอบการ</button>
         </div>
-        <!-- ระบบแยกปีบัญชีของหน้านี้ถูกเอาออกแล้ว (เดิมมีแท็บ ทุกปี/ปี XXXX)
-             ตอนนี้แสดงข้อมูลผู้ประกอบการรวมทุกปีเสมอ ── -->
+        <!-- ไม่มีแท็บแยกปีแล้ว แสดงรวมทุกปีเสมอ -->
         <div class="adm-card">
           <div style="overflow-x:auto;">
             <table class="adm-table">
@@ -469,7 +457,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: taxpayer-detail (ใบอนุญาตแยกตามปีบัญชี ของบริษัทที่เลือก) ══ -->
+      <!-- PAGE: taxpayer-detail — ใบอนุญาตแยกตามปีบัญชีของบริษัทที่เลือก -->
       <div class="adm-page" id="page-taxpayer-detail">
         <button class="adm-btn adm-btn-sm" style="margin-bottom:14px;" onclick="closeTaxpayerDetail()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -485,7 +473,7 @@
         <div id="tp-detail-body"></div>
       </div>
 
-      <!-- ══ PAGE: import-operator-accounts (นำเข้าบัญชีผู้ประกอบการจาก Excel) ══ -->
+      <!-- PAGE: import-operator-accounts — นำเข้าบัญชีผู้ประกอบการจาก Excel -->
       <div class="adm-page" id="page-import-operator-accounts">
         <div class="adm-card">
           <div class="adm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
@@ -524,7 +512,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: import-batches (ประวัติการนำเข้าข้อมูล + rollback) ══ -->
+      <!-- PAGE: import-batches — ประวัติการนำเข้าข้อมูล + rollback -->
       <div class="adm-page" id="page-import-batches">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
           <button class="adm-btn adm-btn-sm" onclick="spinRefreshIcon(this, loadImportBatches)">
@@ -549,7 +537,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: operator-accounts (บัญชีผู้ประกอบการ — อีเมลรับ OTP) ══ -->
+      <!-- PAGE: operator-accounts — บัญชีผู้ประกอบการ (อีเมลรับ OTP) -->
       <div class="adm-page" id="page-operator-accounts">
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap">
@@ -557,7 +545,6 @@
             <input id="oa-search" type="search" autocomplete="off" data-lpignore="true" data-form-type="other" name="q-oa-search-nofill" data-nofill placeholder="ค้นหาเลขผู้เสียภาษี / ชื่อผู้ประกอบการ" oninput="renderOperatorAccountsTable()">
           </div>
         </div>
-        <!-- table toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
           <span id="oa-count" style="font-size:12px;color:#888;"></span>
           <div style="display:flex;gap:8px;">
@@ -584,7 +571,7 @@
         </div>
       </div>
 
-      <!-- ══ Rollback Import Batch Modal (ยืนยันย้อนกลับการนำเข้าข้อมูล) ══ -->
+      <!-- Modal ยืนยันย้อนกลับการนำเข้าข้อมูล -->
       <div class="adm-modal-overlay" id="rollback-batch-modal">
         <div class="adm-modal-box">
           <div class="adm-modal-hd">
@@ -616,7 +603,7 @@
         </div>
       </div>
 
-      <!-- ══ Reject-to-Draft Modal (ตีกลับใบยื่นแบบเป็นร่าง พร้อมเหตุผลไม่บังคับ) ══ -->
+      <!-- Modal ตีกลับใบยื่นแบบเป็นร่าง พร้อมเหตุผลไม่บังคับ -->
       <div class="adm-modal-overlay" id="reject-draft-modal">
         <div class="adm-modal-box">
           <div class="adm-modal-hd">
@@ -640,7 +627,7 @@
         </div>
       </div>
 
-      <!-- ══ Operator Account Edit Modal (แก้ไขอีเมลรับ OTP) ══ -->
+      <!-- Modal แก้ไขอีเมลรับ OTP -->
       <div class="adm-modal-overlay" id="oa-modal">
         <div class="adm-modal-box">
           <div class="adm-modal-hd">
@@ -667,7 +654,7 @@
         </div>
       </div>
 
-      <!-- ══ Operator Account Add Modal (เพิ่มบัญชีผู้ประกอบการทีละรายการ) ══ -->
+      <!-- Modal เพิ่มบัญชีผู้ประกอบการทีละรายการ -->
       <div class="adm-modal-overlay" id="oa-add-modal">
         <div class="adm-modal-box">
           <div class="adm-modal-hd">
@@ -697,7 +684,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: import-licensee ══ -->
+      <!-- PAGE: import-licensee -->
       <div class="adm-page" id="page-import-licensee">
         <div class="adm-card">
           <div class="adm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
@@ -736,7 +723,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: import-taxpayer ══ -->
+      <!-- PAGE: import-taxpayer -->
       <div class="adm-page" id="page-import-taxpayer">
         <div class="adm-card">
           <div class="adm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
@@ -775,12 +762,11 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: export ══ -->
+      <!-- PAGE: export -->
       <div class="adm-page" id="page-export">
         <div class="adm-card">
           <div style="padding:22px 24px;">
 
-            <!-- แถวที่ 1: รายงาน -->
             <div class="exp-row">
               <label class="exp-label exp-label-req">รายงาน</label>
               <select id="exp-report-type" class="adm-form-input" style="flex:1;">
@@ -791,7 +777,6 @@
               </select>
             </div>
 
-            <!-- แถวที่ 2: ปีบัญชีตั้งแต่-ถึง -->
             <div class="exp-row">
               <label class="exp-label">ปีบัญชีตั้งแต่</label>
               <input id="exp-year-from" class="adm-form-input" style="width:110px" placeholder="เช่น 2568">
@@ -799,7 +784,6 @@
               <input id="exp-year-to" class="adm-form-input" style="width:110px" placeholder="เช่น 2568">
             </div>
 
-            <!-- แถวที่ 3: รอบบัญชี -->
             <div class="exp-row">
               <label class="exp-label">รอบบัญชี</label>
               <div class="adm-filter-cbs">
@@ -808,7 +792,6 @@
               </div>
             </div>
 
-            <!-- แถวที่ 4: ประเภท -->
             <div class="exp-row">
               <label class="exp-label">ประเภท</label>
               <div class="adm-filter-cbs">
@@ -821,7 +804,6 @@
 
             <div class="exp-divider"></div>
 
-            <!-- แถวที่ 5: สถานะใบอนุญาต -->
             <div class="exp-row">
               <label class="exp-label">สถานะใบอนุญาต</label>
               <div class="adm-filter-cbs">
@@ -832,7 +814,6 @@
               </div>
             </div>
 
-            <!-- แถวที่ 6: ประเภทใบอนุญาต -->
             <div class="exp-row">
               <label class="exp-label">ประเภทใบอนุญาต</label>
               <div class="adm-filter-cbs">
@@ -843,7 +824,6 @@
               </div>
             </div>
 
-            <!-- แถวที่ 7: สถานะกิจการ -->
             <div class="exp-row">
               <label class="exp-label">สถานะกิจการ</label>
               <div class="adm-filter-cbs">
@@ -853,7 +833,6 @@
 
             <div class="exp-divider"></div>
 
-            <!-- แถวที่ 8: สถานะการชำระเงิน -->
             <div class="exp-row">
               <label class="exp-label">สถานะการชำระเงิน</label>
               <div class="adm-filter-cbs">
@@ -862,7 +841,6 @@
               </div>
             </div>
 
-            <!-- แถวที่ 9: วันที่ชำระเงินตั้งแต่-ถึง -->
             <div class="exp-row">
               <label class="exp-label">วันที่ชำระเงินตั้งแต่</label>
               <input id="exp-pay-from" class="adm-form-input fd-buddhist-datepicker" style="width:150px" placeholder="วัน/เดือน/ปี" readonly>
@@ -870,7 +848,6 @@
               <input id="exp-pay-to" class="adm-form-input fd-buddhist-datepicker" style="width:150px" placeholder="วัน/เดือน/ปี" readonly>
             </div>
 
-            <!-- ปุ่ม -->
             <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
               <button class="adm-btn adm-btn-primary" onclick="handleExportSubmit()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
@@ -883,7 +860,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: audit ══ -->
+      <!-- PAGE: audit -->
       <div class="adm-page" id="page-audit">
         <div class="adm-search-bar">
           <div class="adm-search-input-wrap adm-search-input-wrap-with-filter">
@@ -929,7 +906,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: จัดการผู้ดูแลระบบ (super_admin เท่านั้น) ══ -->
+      <!-- PAGE: admins — super_admin เท่านั้น -->
       <div class="adm-page" id="page-admins">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
           <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="openAdminModal()">+ เพิ่มผู้ดูแลระบบ</button>
@@ -950,7 +927,7 @@
         </div>
       </div>
 
-      <!-- ══ Admin Add Modal ══ -->
+      <!-- Modal เพิ่มผู้ดูแลระบบ -->
       <div class="adm-modal-overlay" id="admin-modal">
         <div class="adm-modal-box">
           <div class="adm-modal-hd">
@@ -993,7 +970,7 @@
         </div>
       </div>
 
-      <!-- ══ PAGE: โปรไฟล์ (ทุก role) ══ -->
+      <!-- PAGE: profile — ทุก role -->
       <div class="adm-page" id="page-profile">
         <div class="adm-card" style="max-width:560px;margin:0 auto;">
           <div class="adm-card-hd"><span class="adm-card-title">ข้อมูลบัญชี</span></div>
@@ -1064,7 +1041,7 @@
   </div><!-- /admin-main -->
 </div><!-- /admin-shell -->
 
-<!-- ══ License Modal ══ -->
+<!-- Modal เพิ่ม/แก้ไขใบอนุญาต -->
 <div class="adm-modal-overlay" id="lic-modal">
   <div class="adm-modal-box">
     <div class="adm-modal-hd">
@@ -1121,7 +1098,7 @@
   </div>
 </div>
 
-<!-- ══ Taxpayer (ผู้ประกอบการ) Modal ══ -->
+<!-- Modal เพิ่ม/แก้ไขผู้ประกอบการ -->
 <div class="adm-modal-overlay" id="tp-modal">
   <div class="adm-modal-box">
     <div class="adm-modal-hd">

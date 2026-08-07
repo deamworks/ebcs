@@ -146,24 +146,20 @@ def _read_data_rows(file_stream, header_row: int):
 def _parse_taxpayer_row(row, excel_row_num):
     errs = []
 
-    # tax_id
     tax_id = _clean_tax_id(row[1] if len(row) > 1 else None)
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         errs.append(f"เลขที่ผู้เสียภาษี '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
 
-    # operator_name
     operator_name = str(row[2]).strip() if len(row) > 2 and row[2] else ""
     if not operator_name:
         errs.append("ชื่อผู้ประกอบการว่าง")
 
-    # period → period_start, period_end, fiscal_year
     period_raw = str(row[3]).strip() if len(row) > 3 and row[3] else ""
     period_start, period_end = _parse_period(period_raw)
     fiscal_year = _fiscal_year_be(period_end)
     if not fiscal_year:
         errs.append(f"รอบระยะเวลาบัญชี '{period_raw}' อ่านไม่ได้")
 
-    # due_date
     due_date = _to_date(row[4]) if len(row) > 4 and row[4] else None
 
     if errs:
@@ -210,7 +206,6 @@ def _get_next_ref_no(cur, fiscal_year_be: int) -> str:
     year_2digit = str(fiscal_year_be)[-2:]   # 2568 → "68"
     prefix = f"BK{year_2digit}"
 
-    # INSERT ... ON DUPLICATE KEY UPDATE เพื่อ upsert แถว counter
     cur.execute("""
         INSERT INTO ref_no_counters (prefix, last_seq)
         VALUES (%s, 1)
@@ -263,7 +258,7 @@ def import_taxpayers(db, rows):
             updated += 1
         else:
             snapshot.append({"table": "taxpayer_master", "key": key, "old": None})
-            # fiscal_year ใน row เป็น CE → แปลงเป็น BE สำหรับ ref_no
+            # fiscal_year ใน row เป็น CE ต้องแปลงเป็น BE สำหรับ ref_no
             fiscal_year_ce = row["fiscal_year"]
             fiscal_year_be = fiscal_year_ce + 543 if fiscal_year_ce < 2400 else fiscal_year_ce
             ref_no = _get_next_ref_no(cur, fiscal_year_be)
@@ -343,12 +338,10 @@ def _parse_licensee_row(row, excel_row_num):
 
     def _s(i): return str(row[i]).strip() if len(row) > i and row[i] is not None else None
 
-    # tax_id
     tax_id = _clean_tax_id(row[6] if len(row) > 6 else None)
     if not tax_id or not tax_id.isdigit() or len(tax_id) != 13:
         errs.append(f"เลขที่ผู้เสียภาษี '{tax_id}' ต้องเป็นตัวเลข 13 หลัก")
 
-    # license_no
     license_no = _s(9) or ""
     if not license_no:
         errs.append("เลขที่ใบอนุญาตว่าง")
@@ -476,9 +469,8 @@ def import_licensees(db, rows):
             ))
             inserted += 1
 
-        # อัปเดต sub_type/round_type ของ taxpayer_master ทุกปีบัญชีของ tax_id นี้
-        # (เป็นค่าระดับบริษัท ไม่ผูกกับปีในไฟล์ใบอนุญาต — เดิมกรองด้วย fiscal_year
-        # ตรงเป๊ะด้วย ทำให้ถ้าไม่มีแถวปีนั้นพอดี ค่าจะไม่ถูกเติมเลย)
+        # อัปเดต sub_type/round_type ทุกปีบัญชีของ tax_id นี้ (เป็นค่าระดับบริษัท ไม่ผูก
+        # ปีในไฟล์ใบอนุญาต — เดิมกรอง fiscal_year ตรงเป๊ะทำให้บางปีไม่ถูกเติม)
         cur.execute(
             "SELECT * FROM taxpayer_master WHERE tax_id=%s",
             (row["tax_id"],)
@@ -568,12 +560,12 @@ def _parse_operator_account_row(row, excel_row_num, seen_tax_ids, tax_col=0, nam
     elif tax_id in seen_tax_ids:
         errs.append(f"เลขผู้เสียภาษี '{tax_id}' ซ้ำในไฟล์")
 
-    # ชื่อผู้ประกอบการ: อ่านค่าไม่ได้/ว่าง ก็ไม่ block การนำเข้า — เว้นว่างไว้ แอดมินแก้ทีหลังได้
+    # อ่านชื่อผู้ประกอบการไม่ได้ก็ไม่ block — เว้นว่างไว้ แอดมินแก้ทีหลังได้
     operator_name = str(row[name_col]).strip() if len(row) > name_col and row[name_col] is not None else ""
 
-    # อีเมล: อ่านค่าไม่ได้/ว่าง หรือรูปแบบไม่ถูกต้อง (เช่น เป็นเบอร์โทร) ก็ไม่ block เช่นกัน — เว้นว่างไว้
-    # [FIX] บางไฟล์ใส่หลายอีเมลคั่นด้วย , หรือ ; ในช่องเดียว (เช่น admin@x.co.th, admin2@x.co.th)
-    # แต่ระบบส่ง OTP ไปอีเมลเดียวต่อ 1 บัญชีเสมอ — ใช้แค่อีเมลแรกที่เจอ
+    # อีเมลอ่านไม่ได้/ผิดรูปแบบก็ไม่ block เช่นกัน — เว้นว่างไว้
+    # [FIX] บางไฟล์ใส่หลายอีเมลคั่น , หรือ ; ในช่องเดียว แต่ระบบส่ง OTP ได้อีเมลเดียว
+    # ต่อบัญชี — ใช้แค่อีเมลแรกที่เจอ
     email_raw = str(row[email_col]).strip() if len(row) > email_col and row[email_col] is not None else ""
     email_candidate = re.split(r"[,;]", email_raw)[0].strip() if email_raw else ""
     email = email_candidate if EMAIL_RE.match(email_candidate) else ""

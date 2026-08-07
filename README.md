@@ -54,6 +54,101 @@ docker compose up -d
 หยุดระบบ: `docker compose down`
 ดู log: `docker compose logs -f`
 
+## การ Deploy จริง (Production)
+
+ระบบใช้ `docker-compose.yml` ชุดเดียวกับตอน dev (ไม่มี compose file แยกสำหรับ production)
+`backend/Dockerfile` รัน gunicorn (4 workers) อยู่แล้วเป็นค่าเริ่มต้น ก่อนขึ้นจริงต้อง:
+
+1. ตั้งค่าใน `.env` ใหม่ทั้งหมดให้เป็นค่าจริง — ห้ามใช้ค่าตัวอย่างจาก `.env.example` เด็ดขาด
+   (ดูรายละเอียดหัวข้อถัดไป)
+2. ปิดหรือจำกัดการเข้าถึง phpMyAdmin (`port 8181` ใน `docker-compose.yml`) เช่น ลบ service
+   `phpmyadmin` ออก หรือปิดกั้นด้วย firewall — ถ้าเปิดสู่สาธารณะจะเป็นความเสี่ยงด้านความปลอดภัยสูง
+3. ตรวจสอบว่า `MAIL_SERVER` **ไม่ใช่** `mock` และตั้งค่า `MAIL_USERNAME`/`MAIL_PASSWORD` ให้ครบ
+   ไม่งั้นระบบจะไม่ส่งอีเมล OTP จริง (แค่ print ค่า OTP ลง log)
+4. Deploy/อัปเดตระบบ:
+
+```bash
+docker compose up -d --build      # build image ใหม่ + apply ค่า .env ล่าสุด
+docker compose restart <service>  # restart เฉพาะ service ที่ต้องการ (เช่น flask-api)
+```
+
+## ตัวแปรแวดล้อมที่ต้องเปลี่ยนก่อนขึ้นจริง
+
+ค่าใน `.env.example` เป็นค่าตัวอย่างที่ commit ไว้ใน repo (ใครก็เห็นได้) **ต้องเปลี่ยนทุกตัวก่อนขึ้น production**:
+
+| ตัวแปร | เหตุผล |
+|---|---|
+| `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | รหัสผ่านฐานข้อมูล ค่าตัวอย่างรู้กันทั่วไปแล้ว |
+| `FLASK_SECRET_KEY` | ใช้เซ็น session — ถ้าไม่เปลี่ยนแฮกเกอร์ปลอม session ได้ |
+| `JWT_SECRET_KEY` | ใช้เซ็น JWT token — ถ้าไม่เปลี่ยนแฮกเกอร์ปลอม token login ได้ |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | บัญชีอีเมลจริงสำหรับส่ง OTP |
+
+ตัวแปรที่ปรับได้ตามความเหมาะสม ไม่บังคับต้องเปลี่ยน: `OTP_EXPIRE_SECONDS`, `OTP_MAX_ATTEMPTS`,
+`OTP_RATE_LIMIT_PER_MINUTE`, `MAX_UPLOAD_MB`
+
+## Backup / Restore ฐานข้อมูลและไฟล์แนบ
+
+ข้อมูลจริงเก็บอยู่ที่ `./volumes/db` (bind mount) — **ถ้าลบโฟลเดอร์นี้ ข้อมูลหายถาวร**
+ไฟล์แนบของผู้ประกอบการ (เอกสารที่อัปโหลด) เก็บอยู่ที่ `./uploads` (bind mount เดียวกันแบบ
+`flask-api` ใน `docker-compose.yml`) — ต้อง backup คู่กับฐานข้อมูลเสมอ เพราะ path ของไฟล์แนบ
+ผูกกับ record ในตาราง `document_attachments`
+
+Backup ฐานข้อมูล:
+```bash
+docker compose exec mysql mysqldump -u root -p ebcs > backup.sql
+```
+
+Restore ฐานข้อมูล:
+```bash
+docker compose exec -T mysql mysql -u root -p ebcs < backup.sql
+```
+
+Backup ไฟล์แนบ (ทำคู่กับ backup ฐานข้อมูลทุกครั้ง):
+```bash
+tar -czf uploads-backup.tar.gz ./uploads
+```
+
+## Logging และการดู Error
+
+ระบบไม่มีระบบ log แยกต่างหาก — ใช้ log มาตรฐานของแต่ละ container ผ่าน Docker:
+
+```bash
+docker compose logs -f flask-api   # log ฝั่ง backend (error, request, OTP ตอน MAIL_SERVER=mock)
+docker compose logs -f nginx       # log ฝั่ง reverse proxy
+docker compose logs -f mysql       # log ฐานข้อมูล
+```
+
+Log เหล่านี้ไม่ได้ตั้ง rotation ไว้ ถ้าระบบรันนานควรตั้ง `docker compose logs` ให้หมุนเวียนเอง
+(เช่นตั้งค่า `max-size`/`max-file` ใน Docker daemon) ไม่งั้น log จะสะสมจนกินพื้นที่ดิสก์
+
+## แก้ปัญหาเบื้องต้น (Troubleshooting)
+
+- **`flask-api` ขึ้นไม่ได้ / restart วนไม่หยุด**: เช็ค `docker compose logs flask-api` ก่อนเสมอ
+  ส่วนใหญ่เกิดจาก `.env` ตั้งค่าไม่ครบหรือผิด (โดยเฉพาะ `REDIS_URL` ต้องมี `redis://` นำหน้า)
+- **`mysql` ไม่ healthy นาน / `flask-api` รอ MySQL ไม่จบ**: `flask-api` ตั้งไว้ให้รอ MySQL
+  `service_healthy` ก่อนเริ่ม (ดู `docker-compose.yml`) ถ้า MySQL ไม่ผ่าน healthcheck ให้เช็ค
+  `docker compose logs mysql` และตรวจว่า `MYSQL_ROOT_PASSWORD` ตรงกับที่ตั้งไว้ตอนสร้าง volume
+  ครั้งแรก (เปลี่ยนรหัสผ่านทีหลังจะไม่ sync กับข้อมูลใน `./volumes/db` เดิม)
+- **แก้ `.env` แล้วระบบไม่เปลี่ยนพฤติกรรม**: ต้อง `docker compose up -d` ใหม่ (หรือ
+  `docker compose restart <service>`) ค่า env จะไม่ reload อัตโนมัติ
+- **OTP ไม่ส่งอีเมลจริง**: เช็คว่า `MAIL_SERVER` ไม่ใช่ `mock` — ถ้าเป็น `mock` ระบบจะ print
+  ค่า OTP ลง log แทนส่งอีเมลจริง (ตั้งใจไว้สำหรับ dev)
+
+## การอัปเดตโครงสร้างฐานข้อมูล (Schema) บนระบบที่รันอยู่แล้ว
+
+ไม่มีระบบ auto-migrate — `database/schema.sql` รันอัตโนมัติแค่ตอนสร้าง MySQL volume ครั้งแรก
+เท่านั้น ถ้าจะแก้โครงสร้างฐานข้อมูลของระบบที่มีข้อมูลอยู่แล้ว ต้องทำตามลำดับนี้:
+
+1. แก้ `database/schema.sql` ให้ตรงกับโครงสร้างใหม่ที่ต้องการ (เพื่อให้เป็น single source of
+   truth สำหรับคนที่สร้างระบบใหม่ในอนาคต)
+2. เขียนคำสั่ง `ALTER TABLE` ที่จำเป็นแยกต่างหาก แล้วรันกับฐานข้อมูลจริงด้วยมือ เช่น:
+   ```bash
+   docker compose exec mysql mysql -u root -p ebcs -e "ALTER TABLE ..."
+   ```
+3. **Backup ฐานข้อมูลก่อนรัน ALTER เสมอ** (ดูหัวข้อ Backup ด้านบน)
+4. ทดสอบกับข้อมูลจริงหรือ backup ที่ restore มาทดสอบก่อน ไม่รัน ALTER ตรงกับฐานข้อมูล
+   production โดยไม่เคยทดสอบมาก่อน
+
 ## แนวคิดหลักของระบบ (Domain Model)
 
 - **สถานะใบยื่นแบบ (submission status)**: `draft` (ร่าง) → `pending_payment` (รอชำระเงิน) → `paid` (ชำระแล้ว)

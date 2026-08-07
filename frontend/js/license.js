@@ -14,8 +14,7 @@ function formatLicenseNo(inputEl) {
   const raw = inputEl.value;
   const cursorPos = inputEl.selectionStart ?? raw.length;
 
-  // นับจำนวนตัวอักษร/เลข (ไม่นับ "-") ที่อยู่ก่อนตำแหน่ง cursor เดิม
-  // เพื่อใช้คำนวณตำแหน่ง cursor ใหม่หลังจัดรูปแบบ ไม่ให้ cursor กระโดดไปท้ายสุด
+  // นับตัวอักษร/เลข (ไม่นับ "-") ก่อน cursor เดิม ใช้คำนวณตำแหน่ง cursor ใหม่ ไม่ให้กระโดดไปท้ายสุด
   const alnumBeforeCursor = raw.slice(0, cursorPos).replace(/[^a-zA-Z0-9]/g, '').length;
 
   const clean = raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 14);
@@ -71,14 +70,11 @@ async function startProcess(){
     return;
   }
 
-  // [FIX] ตรวจสอบปีบัญชีที่กรอกอยู่ตอนนี้ซ้ำอีกครั้งก่อนเข้าฟอร์ม — เผื่อ
-  // ผู้ประกอบการเปลี่ยนช่อง "รอบปีบัญชี" เป็นปีอื่นหลังโหลดหน้าครั้งแรก
-  // (ปีแรกที่ auto-detect อาจถูกยื่นไปแล้ว แต่ปีที่เพิ่งพิมพ์ใหม่ยังไม่ถูกยื่น
-  // ต้องให้เข้าฟอร์มของปีนั้นได้ตามปกติ — เดิมเช็คแค่ตอนโหลดหน้าครั้งเดียว)
+  // [FIX] เดิมเช็คปีบัญชีแค่ตอนโหลดหน้าครั้งเดียว — ต้องเช็คซ้ำตรงนี้ เผื่อผู้ประกอบการ
+  // เปลี่ยนปีหลังโหลดหน้า (ปีที่เพิ่งพิมพ์ใหม่อาจยังไม่ถูกยื่น ต่างจากปีแรกที่ auto-detect)
   if (typeof autoFillFromAuth === 'function') {
     await autoFillFromAuth();
-    // [FIX] ปีนี้ยืนยันไปแล้ว — เปิดโหมดดูอย่างเดียวให้เห็นใบยื่นแบบจริงเลย
-    // แทนที่จะแค่เตือนด้วย alert แล้วค้างอยู่หน้าฟอร์มเปล่า
+    // [FIX] ปีนี้ยืนยันไปแล้ว — เปิดโหมดดูอย่างเดียวแทนที่จะแค่ alert แล้วค้างหน้าฟอร์มเปล่า
     if (appState._lockedSubmission && typeof viewExistingSubmission === 'function') {
       await viewExistingSubmission();
       return;
@@ -98,9 +94,8 @@ async function startProcess(){
   if (!_ps || !_pe) { alert('กรุณาระบุวันเริ่มต้นและวันสิ้นสุดรอบบัญชีให้ครบถ้วน'); return; }
   appState.period = `${_ps}-${_pe}`;
   
-  // [FIX] วันครบกำหนดชำระ ต้องใช้ค่าจริงจากฐานข้อมูล (autoFillFromAuth
-  // เติมให้แล้วด้านบน) ห้ามคำนวณเอง (เดิมคำนวณ วันสิ้นสุดรอบบัญชี + 150 วัน
-  // ทับค่าจริงเสมอ ทำให้ไม่ตรงกับข้อมูลในระบบเวลาเปลี่ยนปีบัญชี)
+  // [FIX] ต้องใช้วันครบกำหนดจาก DB (autoFillFromAuth เติมไว้แล้ว) ห้ามคำนวณเอง — เดิมคำนวณ
+  // วันสิ้นสุดรอบบัญชี+150 วันทับค่าจริง ทำให้ไม่ตรงกับระบบเวลาเปลี่ยนปีบัญชี
   const dueDateEl = document.getElementById('ph1-due-date');
   appState.dueDate = dueDateEl ? dueDateEl.value.trim() : '';
 

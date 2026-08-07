@@ -1,8 +1,6 @@
-/* ════════════════════════════════════════════════════
-   css/status.css — หน้าสถานะการนำส่ง
-   ════════════════════════════════════════════════════ */
+/* css/status.css — หน้าสถานะการนำส่ง */
 
-/* ── Loading ─── */
+/* Loading */
 .status-loading {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -18,7 +16,7 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Not Submitted Card ─── */
+/* Not Submitted Card */
 .status-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -39,7 +37,7 @@
 .status-title    { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
 .status-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
 
-/* ── Status Banner ─── */
+/* Status Banner */
 .status-banner {
   border-radius: var(--radius-lg);
   padding: 20px 24px;
@@ -62,7 +60,7 @@
 .status-banner-sub   { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 3px; }
 .status-banner-ref   { text-align: right; flex-shrink: 0; }
 
-/* ── Amount Grid ─── */
+/* Amount Grid */
 .amount-grid { display: flex; flex-direction: column; gap: 10px; }
 .amount-row {
   display: flex; align-items: center; gap: 10px;

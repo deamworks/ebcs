@@ -30,7 +30,7 @@ def _shift_date_by_years(d, delta_years):
     try:
         return d.replace(year=d.year + delta_years)
     except ValueError:
-        # 29 ก.พ. ในปีที่เลื่อนไปไม่ใช่ปีอธิกสุรทิน → ใช้ 28 ก.พ. แทน
+        # กัน 29 ก.พ. ตกปีที่ไม่อธิกสุรทิน
         return d.replace(year=d.year + delta_years, day=28)
 
 
@@ -123,10 +123,8 @@ def require_operator(f):
 
 
 # ════════════════════════════════════════════════════════
-# [FIX] Progressive Rate Fund Calculation
-# ────────────────────────────────────────────────────────
-# เดิม: flat 2% — ผิด ไม่ตรงกับ calc.js ฝั่ง frontend
-# แก้:  progressive 7 ขั้นบันได เหมือนกัน RATE_TABLE ใน calc.js
+# [FIX] เดิมคิด flat 2% ผิด ไม่ตรง calc.js ฝั่ง frontend — เปลี่ยนเป็น progressive
+# 7 ขั้นบันได ให้ตรงกับ RATE_TABLE ใน calc.js
 # ════════════════════════════════════════════════════════
 
 RATE_TABLE = [
@@ -175,7 +173,6 @@ def calculate_fund(total_income: float, deduction_amount: float, due_date) -> di
     fund_amount = calc_progressive_fund(net_income)
     vat_amount  = round(fund_amount * VAT_RATE, 2)
 
-    # เงินเพิ่มกรณีชำระล่าช้า
     extra_amount = 0.0
     if due_date and fund_amount > 0:
         today = date.today()
@@ -223,11 +220,8 @@ def autofill():
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ถ้าไม่ระบุปี → ดึงปีที่ยังไม่จ่ายเงินปีแรกสุด (ปีที่ต้องยื่นตอนนี้)
-            # [FIX] เดิมดึง "ปีล่าสุดที่มีแถวอยู่" ตรงๆ ซึ่งวิ่งไปเรื่อยๆ ทุกครั้งที่มี
-            # การเข้าปีถัดไป (เช่นตอนทดสอบ) เพราะแถวปีถัดไปถูกสร้างอัตโนมัติค้างไว้
-            # ทำให้ "ปีล่าสุด" เพี้ยนไปไกลกว่าปีที่ต้องยื่นจริง — เปลี่ยนมาดึงปีแรกสุด
-            # ที่ยังไม่มี submission สถานะ paid แทน (ถ้าทุกปีจ่ายครบแล้วค่อยขยับไปปีถัดจากปีล่าสุด)
+            # [FIX] เดิมดึง "ปีล่าสุดที่มีแถว" ตรงๆ ซึ่งเพี้ยนไปเรื่อยเพราะมีแถวปีถัดไป
+            # ถูกสร้างล่วงหน้าไว้ — เปลี่ยนเป็นดึงปีแรกสุดที่ยังไม่ paid แทน (ปีที่ต้องยื่นจริง)
             if not year:
                 cur.execute("""
                     SELECT tm.fiscal_year FROM taxpayer_master tm
@@ -256,8 +250,7 @@ def autofill():
                             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการในระบบ"}
                         }), 404
 
-            # ดึงข้อมูล taxpayer — ถ้ายังไม่มีแถวของปีนี้ ลองสร้างอัตโนมัติจาก
-            # รอบบัญชีปีล่าสุดที่มีอยู่ (เลื่อนวันที่ไปเป็นปีที่ขอ) แทนการรอแอดมินเพิ่มมือ
+            # ถ้ายังไม่มีแถวของปีนี้ สร้างอัตโนมัติจากรอบบัญชีปีล่าสุด (เลื่อนวันที่) แทนรอแอดมิน
             taxpayer, was_created = _get_or_create_taxpayer_year(cur, tax_id, year)
 
             if not taxpayer:
@@ -266,7 +259,6 @@ def autofill():
                     "error": {"code": "NOT_FOUND", "message": f"ไม่พบข้อมูลผู้ประกอบการสำหรับปี {year}"}
                 }), 404
 
-            # เช็คว่าเคยยื่นปีนี้ไหม
             cur.execute("""
                 SELECT id, status, submitted_at
                 FROM   submissions
@@ -329,12 +321,9 @@ def get_licenses():
         "revoked":   "เพิกถอนใบอนุญาต",
     }
 
-    # [FIX] licensee_master.fiscal_year บันทึกแค่ "ปีของไฟล์ import ล่าสุดที่แก้แถวนี้"
-    # ไม่ใช่ "ใบอนุญาตนี้ใช้ได้เฉพาะปีนี้" กรองด้วยมันทำให้ใบอนุญาตที่มีจริงหายไป (เคย
-    # แก้ไปแล้วให้ไม่กรองเลย) แต่นั่นทำให้ใบอนุญาตที่ยังไม่ถึงวันเริ่ม (เช่นเริ่มปีถัดไป)
-    # โผล่มาในปีที่ยื่นปัจจุบันด้วยทั้งที่ยังไม่ถึงรอบชำระ — วิธีที่ถูกต้องคือกรองด้วยช่วง
-    # วันที่ใบอนุญาตจริง (start_date/end_date) เทียบกับรอบบัญชี (period_start/period_end)
-    # ของปีที่กำลังยื่นจาก taxpayer_master แทนการกรองด้วย fiscal_year ที่ไม่น่าเชื่อถือ
+    # [FIX] licensee_master.fiscal_year คือปีที่ import ล่าสุด ไม่ใช่ปีที่ใบอนุญาตใช้ได้
+    # กรองด้วยมันทำให้ใบที่มีจริงหาย หรือใบที่ยังไม่ถึงรอบโผล่มา — กรองด้วยช่วงวันที่
+    # ใบอนุญาตจริง (start_date/end_date) เทียบรอบบัญชี (period_start/end) แทน
     with get_db() as db:
         with db.cursor() as cur:
             period_start = period_end = None
@@ -362,8 +351,7 @@ def get_licenses():
                     ORDER  BY license_status, license_no
                 """, (tax_id, period_end, period_start))
             else:
-                # ไม่รู้รอบบัญชีของปีนี้ (ยังไม่มีแถว taxpayer_master ตรงปี หรือไม่ได้ส่ง year มา)
-                # แสดงใบอนุญาตทั้งหมดไปก่อน ดีกว่าซ่อนของจริงโดยไม่มีเกณฑ์ที่เชื่อถือได้
+                # ไม่รู้รอบบัญชีปีนี้ — แสดงทั้งหมดไปก่อน ดีกว่าซ่อนของจริงโดยไม่มีเกณฑ์
                 cur.execute("""
                     SELECT id, license_no,
                            licensee_type AS license_type,
@@ -456,7 +444,6 @@ def create_submission():
     deduction_amount = float(data.get("deduction_amount", 0))
     total_income_financial = float(data.get("total_income_financial", 0))
 
-    # auditor เป็น flat fields (ตรงกับที่ Frontend ส่งมา)
     auditor_name    = data.get("auditor_name", "")
     auditor_license = data.get("auditor_license", "")
     auditor_office  = data.get("auditor_office", "")
@@ -468,7 +455,6 @@ def create_submission():
             "error": {"code": "MISSING_FIELDS", "message": "กรุณาระบุปีบัญชี"}
         }), 400
 
-    # ดึง snapshot taxpayer ณ วันที่ยื่น
     with get_db() as db:
         with db.cursor() as cur:
             cur.execute("""
@@ -486,30 +472,24 @@ def create_submission():
             "error": {"code": "NOT_FOUND", "message": "ไม่พบข้อมูลผู้ประกอบการ"}
         }), 404
 
-    # [FIX] คำนวณรายได้รวมจาก licenses (income - deduction ต่อใบ)
+    # [FIX] คำนวณรายได้รวมจาก licenses แบบ (income - deduction) ต่อใบ
     total_income = sum(
         float(lic.get("income", 0))
         for lic in licenses_data
     )
 
-    # [FIX] คำนวณ fund ด้วย progressive rate (ตรงกับ calc.js)
     calculation = calculate_fund(
         total_income     = total_income,
         deduction_amount = deduction_amount,
         due_date         = taxpayer["due_date"]
     )
 
-    # บันทึกลง DB แบบ Transaction
     with get_db() as db:
         with db.cursor() as cur:
 
-            # [FIX] กันยื่นซ้ำ + กันแถว draft ซ้ำซ้อน (มีใบยื่นปีนี้ที่ยืนยันแล้ว
-            # ห้ามสร้างใหม่, draft เก่าลบแล้วสร้างใหม่ได้) — เดิม select/delete
-            # อยู่คนละ transaction กับ insert ด้านล่าง ทำให้ถ้ามีคำขอซ้อนกัน
-            # (เช่นกดปุ่ม "บันทึกร่าง" ถี่ๆ) ทั้งสองคำขอเห็น "ไม่มี draft เดิม"
-            # พร้อมกันได้ แล้วต่างคน insert แถวใหม่ กลายเป็น draft ซ้ำหลายแถว
-            # ต่อปีเดียวกัน — ย้ายมาอยู่ transaction เดียวกับ insert พร้อมใช้
-            # FOR UPDATE ล็อกแถวกันคำขอที่มาพร้อมกันสำหรับ tax_id+ปีเดียวกัน
+            # [FIX] เดิม select/delete draft เดิมอยู่คนละ transaction กับ insert ทำให้
+            # กดบันทึกร่างถี่ๆ สร้าง draft ซ้ำได้ — ย้ายมา transaction เดียวกัน พร้อม
+            # FOR UPDATE ล็อกแถว tax_id+ปีเดียวกันกันชนกัน
             cur.execute("""
                 SELECT id, status FROM submissions
                 WHERE  tax_id = %s AND fiscal_year = %s LIMIT 1 FOR UPDATE
@@ -524,11 +504,8 @@ def create_submission():
                             "message": "ยื่นแบบปีนี้ไปแล้ว ไม่สามารถยื่นซ้ำได้ กรุณาติดต่อเจ้าหน้าที่หากต้องการแก้ไข"
                         }
                     }), 400
-                # [FIX] ดึงไฟล์แนบเดิมของ draft นี้มาก่อนลบแถว — จะ "ย้าย"
-                # (carry-forward) ไปผูกกับแถวใหม่ที่กำลังจะสร้างด้านล่างแทนที่
-                # จะปล่อยให้ CASCADE ลบ metadata ทิ้งไปเฉยๆ (ไฟล์จริงบนดิสก์ไม่
-                # ต้องย้าย ใช้ path เดิมได้เลย) ผู้ใช้จะได้ไม่ต้องแนบไฟล์ใหม่
-                # ทุกครั้งที่บันทึกร่างซ้ำ/ถูกตีกลับแล้วยื่นใหม่
+                # [FIX] ดึงไฟล์แนบเดิมของ draft นี้ก่อนลบแถว เพื่อ carry-forward ไปผูก
+                # กับแถวใหม่ (path เดิมใช้ต่อได้) กันผู้ใช้ต้องแนบไฟล์ใหม่ทุกครั้งที่บันทึกร่างซ้ำ
                 cur.execute("""
                     SELECT doc_type, file_name, storage_path, mime_type, file_size
                     FROM document_attachments WHERE submission_id = %s
@@ -538,13 +515,10 @@ def create_submission():
             else:
                 carried_attachments = []
 
-            # 1. สร้างใบยื่นหลัก
             # [FIX] MySQL ไม่มี RETURNING → gen UUID เองก่อน insert
             submission_id = new_uuid()
-            # [FIX] ระบุ created_at เอง (เวลาไทยจริง) แทนพึ่ง DEFAULT CURRENT_TIMESTAMP
-            # ของ MySQL — เขตเวลาของ DB server ไม่ใช่ Asia/Bangkok (ดูโน้ตเดียวกัน
-            # ที่ save_audit_log ใน admin.py) ทำให้ "บันทึกล่าสุด" ในตารางร่าง
-            # หน้าแรกของผู้ประกอบการคลาดเคลื่อนจากเวลาที่บันทึกจริงหลายชั่วโมง
+            # [FIX] ระบุ created_at เอง (เวลาไทย) แทนพึ่ง DEFAULT ของ MySQL เพราะ
+            # เขตเวลา DB server ไม่ใช่ Asia/Bangkok ทำให้เวลาที่โชว์คลาดเคลื่อน
             cur.execute("""
                 INSERT INTO submissions (
                     id, tax_id, ref_no, fiscal_year,
@@ -584,8 +558,7 @@ def create_submission():
                 now_bangkok(),
             ))
 
-            # 1b. ย้ายไฟล์แนบเดิม (ถ้ามี) มาผูกกับใบยื่นแบบใหม่นี้ — ดู carried_attachments
-            # ด้านบน แถวใหม่ใช้ id ใหม่ แต่ storage_path เดิม (ไฟล์จริงไม่ต้องย้าย)
+            # ย้ายไฟล์แนบเดิม (carried_attachments) มาผูกกับ id ใหม่ storage_path เดิมไม่ต้องย้าย
             for att in carried_attachments:
                 cur.execute("""
                     INSERT INTO document_attachments
@@ -596,9 +569,8 @@ def create_submission():
                     att["file_name"], att["storage_path"], att["mime_type"], att["file_size"],
                 ))
 
-            # 2. บันทึกใบอนุญาตทีละใบ (ตาราง licenses — fee_amount = income)
-            # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่น
-            # ด้วย (เดิมไม่เก็บเลย ทำให้หน้าดูรายละเอียดไม่มีข้อมูลนี้)
+            # [FIX] เก็บ snapshot ประเภท/วันที่/สถานะใบอนุญาต ณ วันที่ยื่นด้วย
+            # (เดิมไม่เก็บ ทำให้หน้าดูรายละเอียดไม่มีข้อมูลนี้)
             for sort_order, lic in enumerate(licenses_data):
                 license_id = new_uuid()
                 cur.execute("""
@@ -621,7 +593,6 @@ def create_submission():
                     float(lic.get("deduction", 0)),
                 ))
 
-                # 3. บันทึกรายได้ย่อยของใบอนุญาตนี้
                 for income_item in lic.get("incomes", []):
                     cur.execute("""
                         INSERT INTO license_incomes (
@@ -636,7 +607,6 @@ def create_submission():
                         bool(income_item.get("is_custom", False)),
                     ))
 
-            # 4. บันทึกรายได้อื่น (Step 2)
             for other in other_incomes:
                 cur.execute("""
                     INSERT INTO other_incomes (
@@ -724,7 +694,7 @@ def update_submission(submission_id):
                 submission_id,
             ))
 
-            # ลบใบอนุญาตเก่า + income เก่า (CASCADE ลบ license_incomes ให้อัตโนมัติ)
+            # ลบใบอนุญาตเก่า (CASCADE ลบ license_incomes ให้เอง)
             cur.execute("DELETE FROM licenses WHERE submission_id = %s", (submission_id,))
             cur.execute("DELETE FROM other_incomes WHERE submission_id = %s", (submission_id,))
 
@@ -799,8 +769,8 @@ def submit_submission(submission_id):
                 WHERE  id = %s
             """, (submission_id,))
 
-            # ส่งข้อมูลไป Data Center (gen QR/Barcode) และ SAP/ZAT (ตั้งหนี้รอรับชำระ)
-            # ปัจจุบันเป็น mock ทั้งคู่ (ดู integration_service.py) — ไม่ block การยื่นแบบถ้าพัง
+            # ส่ง Data Center (gen QR/Barcode) + SAP/ZAT (ตั้งหนี้) — ปัจจุบัน mock ทั้งคู่
+            # ไม่ block การยื่นแบบถ้าพัง (ดู integration_service.py)
             try:
                 dc_result = send_to_datacenter(cur, submission)
                 sap_result = send_to_sap(cur, submission)
@@ -846,8 +816,8 @@ def get_submission(submission_id):
             if not submission:
                 return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "ไม่พบใบยื่นแบบ"}}), 404
 
-            # [FIX] MySQL ไม่มี array_agg/json_build_object/FILTER (PostgreSQL)
-            # ดึง licenses แล้วดึง incomes แยก จับกลุ่มฝั่ง Python แทน
+            # [FIX] MySQL ไม่มี array_agg/FILTER แบบ PostgreSQL — ดึง licenses/incomes
+            # แยกกัน แล้วจับกลุ่มฝั่ง Python แทน
             cur.execute("""
                 SELECT * FROM licenses
                 WHERE  submission_id = %s
@@ -913,8 +883,7 @@ def get_submission(submission_id):
 # ════════════════════════════════════════════════════════
 # 4.6b ดาวน์โหลดไฟล์แนบของใบยื่นตัวเอง
 # GET /api/operator/attachments/<id>/download
-# nginx บล็อกการเข้าถึง /uploads/ ตรงๆ ต้องผ่าน endpoint นี้เท่านั้น
-# เพื่อตรวจว่าไฟล์แนบนี้เป็นของ tax_id ที่ login อยู่จริง
+# nginx บล็อก /uploads/ ตรงๆ ต้องผ่าน endpoint นี้เพื่อตรวจว่าเป็นไฟล์ของ tax_id ที่ login อยู่
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/attachments/<attachment_id>/download", methods=["GET"])
@@ -950,9 +919,7 @@ def download_own_attachment(attachment_id):
 # ════════════════════════════════════════════════════════
 # 4.6b2 ลบไฟล์แนบของใบยื่นตัวเอง (เฉพาะร่างที่ยังไม่ยืนยัน)
 # DELETE /api/operator/attachments/<id>
-# ใช้ตอนกดปุ่มลบ (X) ไฟล์ที่เคยแนบไว้แล้ว ระหว่างทำร่างต่อ (resume draft) —
-# ถ้าไม่ลบที่นี่ด้วย ไฟล์เดิมจะถูก carry-forward กลับมาอีกตอนบันทึกร่างรอบถัดไป
-# (ดู create_submission()) ทั้งที่ผู้ใช้ตั้งใจเอาออกแล้วจากหน้าจอ
+# ถ้าไม่ลบที่นี่ ไฟล์เดิมจะถูก carry-forward กลับมาตอนบันทึกร่างรอบถัดไป (ดู create_submission)
 # ════════════════════════════════════════════════════════
 
 @operator_bp.route("/attachments/<attachment_id>", methods=["DELETE"])
@@ -1041,11 +1008,9 @@ def upload_attachment(submission_id):
     if submission["status"] != "draft":
         return jsonify({"success": False, "error": {"code": "ALREADY_SUBMITTED", "message": "ใบยื่นแบบนี้ไม่สามารถแนบไฟล์เพิ่มได้"}}), 400
 
-    # [FIX] เดิมตัดที่ [:50] ทั้งที่ชื่อรายการเอกสารบางรายการ (เช่น ชส.04, ใบ
-    # แสดงสถานะร่วมประกอบกิจการฯ) ยาวเกิน 50 ตัวอักษร ทำให้ doc_type ที่บันทึก
-    # ไม่ตรงกับชื่อเต็มที่ frontend ใช้จับคู่แสดงผล ไฟล์แนบสองรายการนี้เลยดู
-    # เหมือน "หาย" ทุกครั้งที่บันทึกร่าง/ทำร่างต่อ (ต้องคู่กับ migration 016
-    # ที่ขยายคอลัมน์ document_attachments.doc_type เป็น VARCHAR(255) ด้วย)
+    # [FIX] เดิมตัด doc_type ที่ [:50] ทำให้ชื่อยาว (เช่น ชส.04) ไม่ตรงกับที่ frontend
+    # ใช้จับคู่แสดงผล ไฟล์เลยดูเหมือนหาย — เอาการตัดออก (คู่กับ migration 016 ที่ขยาย
+    # คอลัมน์เป็น VARCHAR(255))
     doc_type    = request.form.get("doc_type", "")[:255]
     dest_dir    = os.path.join(current_app.config["UPLOAD_FOLDER"], submission_id)
     os.makedirs(dest_dir, exist_ok=True)
@@ -1057,11 +1022,9 @@ def upload_attachment(submission_id):
     attachment_id = new_uuid()
     with get_db() as db:
         with db.cursor() as cur:
-            # [FIX] เดิม insert ซ้อนได้เรื่อยๆ ไม่เช็คว่า doc_type นี้เคยแนบไว้
-            # แล้วหรือยัง — ตอนนี้ร่างที่ถูก "ตีกลับ"/บันทึกซ้ำจะพา attachment
-            # เดิมติดไปด้วย (carry-forward ใน create_submission) ถ้าผู้ใช้แนบ
-            # ไฟล์ใหม่ทับรายการเดิมจะกลายเป็นมีสองแถวซ้ำกันสำหรับเอกสารประเภท
-            # เดียวกัน ต้องลบของเก่า (ทั้งแถว DB และไฟล์จริง) ก่อนแนบใหม่เสมอ
+            # [FIX] เดิม insert ซ้ำได้ไม่เช็ค doc_type เดิม — เพราะ attachment เก่าถูก
+            # carry-forward มาด้วย (ดู create_submission) แนบไฟล์ใหม่ทับจึงกลายเป็นสองแถว
+            # ต้องลบของเก่า (DB + ไฟล์จริง) ก่อนแนบใหม่เสมอ
             cur.execute(
                 "SELECT id, storage_path FROM document_attachments WHERE submission_id = %s AND doc_type = %s",
                 (submission_id, doc_type)
@@ -1139,9 +1102,8 @@ def get_my_submissions():
             "net_amount":   float(sub["net_amount"] or 0),
             "submitted_at": date_to_str(sub["submitted_at"]),
             "created_at":   date_to_str(sub["created_at"]),
-            # [FIX] เพิ่ม field แยกเก็บวัน+เวลาเต็ม (ISO) ไว้ให้ frontend แปลง
-            # เป็นวันที่/เวลาแบบไทยเอง — created_at เดิมตัด time ทิ้งหมด (แค่
-            # YYYY-MM-DD) ใช้โชว์ "บันทึกล่าสุด" ในตารางร่างหน้าแรกไม่พอ
+            # [FIX] created_at เดิมตัด time ทิ้ง (แค่ YYYY-MM-DD) ไม่พอโชว์ "บันทึกล่าสุด"
+            # เพิ่ม field แยกเก็บวัน+เวลาเต็ม (ISO) ให้ frontend แปลงเป็นไทยเอง
             "created_at_iso": sub["created_at"].isoformat() if sub["created_at"] else None,
             "can_edit":     sub["actual_status"] == "draft",
         })

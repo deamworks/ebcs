@@ -46,8 +46,7 @@ async function handleLogin() {
   if (btn) { btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...'; }
 
   try {
-    // [FIX] api.post() คืนค่า data ที่ parse แล้ว (ไม่ใช่ raw Response)
-    // และ throw ApiError เองถ้า success:false — ไม่ต้องเรียก .json() ซ้ำ
+    // [FIX] api.post() คืน data ที่ parse แล้วและ throw เองถ้า success:false — ไม่ต้อง .json() ซ้ำ
     const data = await api.post('/auth/admin/login', { email, password });
 
     localStorage.setItem('ebcs_admin_token', data.token);
@@ -74,9 +73,7 @@ function enterDashboard(email, fullName) {
   if (roleEl) roleEl.textContent = (typeof ROLE_TH !== 'undefined' && ROLE_TH[adminRole]) || adminRole || '';
   if (typeof initDatepickers === 'function') initDatepickers();
 
-  // [FIX] fullName ที่ได้ตอน login ถูกฝังไว้ใน JWT claim ตั้งแต่ตอนออก token —
-  // ถ้าชื่อถูกแก้ไขทีหลังโดยไม่ได้ login ใหม่ ชื่อในแถบด้านล่างจะค้างเป็นค่าเก่า
-  // ดึงโปรไฟล์จริงจาก backend มา sync อีกครั้งหลัง refresh/เข้าระบบทุกครั้ง
+  // [FIX] fullName จาก JWT claim อาจค้างถ้าชื่อถูกแก้ทีหลังโดยไม่ login ใหม่ — sync จาก backend ทุกครั้ง
   api.get('/admin/profile').then(data => {
     const p = data.profile || {};
     if (p.full_name) setDisplay(p.full_name);
@@ -100,15 +97,12 @@ function enterDashboard(email, fullName) {
 
   if (typeof restoreSidebarGroupsState === 'function') restoreSidebarGroupsState(lastPage);
 
-  // [FIX] เดิมเปิด adminShell (display:flex) ก่อน แล้วค่อย showPage(lastPage) หลัง
-  // delay 50ms — ทำให้เห็นหน้า "รายการยื่นแบบ" (active ตาม HTML เริ่มต้น) วาบขึ้นมา
-  // ก่อนสลับไปหน้าที่ถูกต้อง ต้อง showPage ให้เสร็จก่อน แล้วค่อยเปิด shell ให้เห็น
+  // [FIX] ต้อง showPage ให้เสร็จก่อนค่อยเปิด shell ไม่งั้นจะเห็นหน้า default วาบขึ้นมาก่อนสลับ
   showPage(lastPage);
   const shell = document.getElementById('adminShell');
   if (shell) shell.style.display = 'flex';
 
-  // เบราว์เซอร์บาง engine เพิกเฉย autocomplete="off" กับช่องค้นหา แล้ว autofill
-  // ค่าที่เคยเซฟไว้กลับมาเองหลังโหลดหน้า — เคลียร์ค่าซ้ำหลัง render เพื่อกันไว้
+  // บางเบราว์เซอร์เพิกเฉย autocomplete="off" แล้ว autofill ช่องค้นหากลับมา — เคลียร์ซ้ำกันไว้
   const clearSearchInputs = () => {
     ['filterSearch', 'lic-search', 'tp-search', 'oa-search', 'audit-search'].forEach(id => {
       const el = document.getElementById(id);
@@ -173,10 +167,7 @@ async function loadAuditLogs() {
     return;
   }
 
-  // [FIX] ก่อนแก้บั๊ก frontend ยิง audit log ซ้ำ (ดู PR #12) แถวสรุปรวม
-  // "ลบรายการยื่นแบบ N รายการ" (record_id/record_label = 'bulk') ถูกบันทึกไว้คู่
-  // กับแถวรายละเอียดต่อรายการเสมอ — ของเก่าที่ค้างอยู่ในฐานข้อมูลยังไงก็ซ้ำ
-  // ซ่อนแถว "bulk" ทิ้งไปเลย เพราะแถวรายละเอียดที่มากับมันให้ข้อมูลครบกว่าอยู่แล้ว
+  // [FIX] แถวสรุปรวม "bulk" ของเก่าซ้ำกับแถวรายละเอียดที่ให้ข้อมูลครบกว่าอยู่แล้ว (ดู PR #12) — ซ่อนทิ้ง
   const rows = (data.logs || []).filter(r => {
     if (r.record_id === 'bulk' || r.record_label === 'bulk') return false;
     if (search && !`${r.admin_email} ${r.action} ${r.table_name}`.toLowerCase().includes(search)) return false;
@@ -184,8 +175,7 @@ async function loadAuditLogs() {
     return true;
   });
 
-  // created_at เป็นเวลาประเทศไทย (Asia/Bangkok) ที่ backend จัดรูปแบบมาแล้วเป็น "YYYY-MM-DD HH:MM:SS"
-  // แสดงผลตรงจาก string โดยไม่ผ่าน Date object เพื่อไม่ให้ browser แปลง timezone ซ้ำ
+  // created_at เป็นเวลาไทยที่ backend จัดรูปแบบมาแล้ว — แสดงตรงจาก string กันแปลง timezone ซ้ำ
   const fmtDT = str => {
     if (!str) return '—';
     const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
@@ -418,8 +408,7 @@ function renderSubmissionStatusCell(s) {
           </span>`;
 }
 
-// ── ตีกลับใบยื่นแบบเป็นร่าง (ให้ผู้ประกอบการแก้ไข/ยืนยันใหม่เอง แทนแอดมิน
-// แก้ตัวเลขตรงๆ ซึ่งจะทำให้เลขไม่ตรงกับใบที่ผู้ประกอบการพิมพ์ไปแล้ว) ─────────
+// ── ตีกลับใบยื่นแบบเป็นร่าง (ให้ผู้ประกอบการแก้เอง แทนแอดมินแก้ตัวเลขตรงๆ) ──
 function rejectSubmissionToDraft(submissionId) {
   const idEl     = document.getElementById('rd-submission-id');
   const reasonEl = document.getElementById('rd-reason');
@@ -556,9 +545,7 @@ async function handleAdminBulkDelete() {
     return;
   }
 
-  // [FIX] backend /admin/submissions DELETE บันทึก audit log แบบละเอียด
-  // (ทีละรายการ พร้อมชื่อบริษัท/ปี) ให้อยู่แล้ว — เดิมโค้ดนี้ยิง audit log
-  // ซ้ำอีกรอบแบบข้อมูลรวมๆ ("bulk") ทำให้เห็นรายการซ้ำในหน้าประวัติ
+  // [FIX] backend บันทึก audit log แบบละเอียดต่อรายการให้แล้ว ไม่ต้องยิงซ้ำแบบ "bulk"
   showToast(`ลบเรียบร้อยแล้ว ✓ (${selectedIds.length} รายการ)`);
   await loadSubmissions();
 }
@@ -759,8 +746,7 @@ async function deleteLicense(id, no) {
     } catch (e) {}
   }
 
-  // เรียกตอน enterDashboard: คืนสถานะเปิด/พับของแต่ละกลุ่มที่จำไว้
-  // ถ้ายังไม่เคยมีสถานะที่จำไว้เลย (ครั้งแรก) ให้เปิดเฉพาะกลุ่มของหน้าที่กำลังแสดงอยู่
+  // คืนสถานะเปิด/พับที่จำไว้ ถ้ายังไม่เคยจำไว้เลยให้เปิดเฉพาะกลุ่มของหน้าปัจจุบัน
   function restoreSidebarGroupsState(activePage) {
     let state = {};
     try { state = JSON.parse(sessionStorage.getItem('ebcs_admin_sb_state') || '{}'); } catch (e) {}
@@ -797,8 +783,7 @@ async function deleteLicense(id, no) {
     document.getElementById('page-' + page)?.classList.add('active');
     document.querySelector(`.sb-item[data-page="${page}"]`)?.classList.add('active');
 
-    // จำหน้าที่เปิดล่าสุดไว้ เพื่อกลับมาหน้าเดิมถ้า refresh browser
-    // (taxpayer-detail ต้องมี activeTaxpayerTaxId ที่หายไปตอน refresh จึงจำเป็น taxpayers แทน)
+    // จำหน้าล่าสุดไว้กลับมาตอน refresh (taxpayer-detail หายไปตอน refresh จึงจำเป็น taxpayers แทน)
     try {
       sessionStorage.setItem('ebcs_admin_last_page', page === 'taxpayer-detail' ? 'taxpayers' : page);
     } catch (e) {}
@@ -806,8 +791,7 @@ async function deleteLicense(id, no) {
     document.getElementById('pageTitle').textContent    = meta.title || page;
     document.getElementById('pageSubtitle').textContent = meta.sub   || '';
 
-    // เคลียร์ช่องค้นหาของหน้านี้ตอนแสดงผลจริง — บางเบราว์เซอร์ autofill ค่าเก่ากลับมา
-    // ตอนที่ input เปลี่ยนจากซ่อนเป็นแสดง (ทำหลัง set 'active' ด้านบนแล้ว)
+    // เคลียร์ช่องค้นหาหลังหน้าแสดงผล — กัน browser autofill ค่าเก่ากลับมาตอน input โผล่
     const SEARCH_INPUT_BY_PAGE = {
       submissions:         'filterSearch',
       licenses:            'lic-search',
@@ -822,7 +806,6 @@ async function deleteLicense(id, no) {
       setTimeout(clearIt, 300);
     }
 
-    // โหลดข้อมูลตามหน้า
     if (page === 'submissions') { loadSubmissions(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'licenses')    { loadLicenses(); if (typeof initFdBuddhistDatepickers === 'function') initFdBuddhistDatepickers(); }
     if (page === 'operator-accounts') loadOperatorAccounts();
@@ -835,9 +818,7 @@ async function deleteLicense(id, no) {
     if (page === 'import-batches' && typeof loadImportBatches === 'function') loadImportBatches();
   }
 
-  // ── ปิด sidebar อัตโนมัติ หลังกดเลือกเมนูจากแถบด้านข้างเสร็จแล้ว
-  //    (แยกจาก showPage() เพราะ showPage() ยังถูกเรียกแบบ programmatic
-  //    ตอน login/เปิดหน้าแรก ซึ่งไม่ควรปิด sidebar ให้เอง) ─────────
+  // ปิด sidebar อัตโนมัติเมื่อเลือกเมนู — แยกจาก showPage() เพราะมันถูกเรียกตอน login ด้วย ไม่ควรปิดเอง
   function navigateFromSidebar(page) {
     showPage(page);
     document.getElementById('adminShell')?.classList.add('sidebar-hidden');
@@ -1048,9 +1029,7 @@ async function deleteLicense(id, no) {
         </td>
       </tr>`;
 
-    // เอา logic แยกกลุ่มตามปีบัญชีออกแล้ว (เดิมวนตาม years แล้วเช็ค overlap ทำให้
-    // ใบอนุญาตใบเดียวกันโผล่ซ้ำได้หลายปีบัญชีถ้าช่วงวันที่คาบเกี่ยวกันหลายปี)
-    // ตอนนี้แสดงใบอนุญาตทั้งหมดของบริษัทนี้เป็นตารางเดียว ไม่แยกกลุ่มปี
+    // [FIX] เดิมแยกกลุ่มตามปีบัญชีทำให้ใบอนุญาตเดียวโผล่ซ้ำหลายปีถ้าช่วงวันที่คาบเกี่ยว — ตอนนี้แสดงตารางเดียวรวม
     const html = `
       <div class="tp-year-block">
         <table class="adm-table">

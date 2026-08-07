@@ -1,18 +1,16 @@
-/* ════════════════════════════════════════════════════
-   css/index.css — หน้ากรอกรายได้ NBTC Filing
-   ════════════════════════════════════════════════════ */
+/* css/index.css — หน้ากรอกรายได้ NBTC Filing */
 :root {
   --fs-xs:  11px; --fs-sm: 12px; --fs-md: 13px;
   --fs-lg:  14px; --fs-xl: 15px; --fs-2xl: 20px;
 }
-/* ── Start Card ─── */
+/* Start Card */
 .start-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); max-width:900px; margin:0 auto; overflow:hidden; }
 .start-card-header { background:linear-gradient(135deg,var(--primary),var(--primary-mid)); padding:16px 22px; display:flex; align-items:center; gap:14px; }
 .start-card-header-icon { background:rgba(255,255,255,.15); border-radius:var(--radius); width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .start-card-header-text h2 { color:#fff; font-size:15px; font-weight:700; margin-bottom:3px; }
 .start-card-header-text p  { color:rgba(255,255,255,.75); font-size:12px; }
 .start-card-body { padding:20px 22px 24px; }
-/* ── Form Fields ─── */
+/* Form Fields */
 .form-field { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
 .form-field:last-child { border-bottom:none; }
 .form-field-label { font-size:12.5px; color:var(--text-secondary); font-weight:500; min-width:160px; flex-shrink:0; }
@@ -20,24 +18,23 @@
 .form-field-input:focus { border-color:var(--accent); }
 .form-field-input[readonly] { background:#f5f5f5; color:#555; }
 
-/* Phase 1: ข้อมูลดึงอัตโนมัติจากระบบ ห้ามแก้ไข (pointer-events กันแม้แต่
-   flatpickr เปิดปฏิทินให้เลือกวันใหม่ หรือ select เปิด dropdown) */
+/* Phase 1: ข้อมูลดึงอัตโนมัติ ห้ามแก้ไข — pointer-events กัน flatpickr/select เปิด */
 .ph1-locked-field { background:#f5f5f5 !important; color:#555 !important; pointer-events:none; cursor:default; }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:8px; }
 .taxid-status { font-size:11.5px; margin-top:4px; display:block; }
 .btn-start { display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,var(--primary),var(--primary-mid)); color:#fff; border:none; border-radius:var(--radius); padding:12px 32px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 14px rgba(44,61,143,.3); transition:all .2s; }
 .btn-start:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(44,61,143,.4); }
 .start-btn-wrap { display:flex; justify-content:flex-end; margin-top:20px; }
-/* ── Phase 2 ─── */
+/* Phase 2 */
 .phase2-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); overflow:hidden; }
-/* ── Step Card ─── */
+/* Step Card */
 .step-card-header { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); background:var(--surface-2); }
 .step-card-num { width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; }
 .step-card-title { font-size:14px; font-weight:700; color:var(--primary); }
 .step-card-subtitle { font-size:11.5px; color:var(--text-secondary); margin-top:2px; }
 .step-card-body { padding:16px 20px; }
 .bottom-action { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-top:1px solid var(--border); background:var(--surface-2); }
-/* ── Income Summary ─── */
+/* Income Summary */
 .income-summary-row { display:flex; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
 .income-summary-box { flex:1; min-width:200px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:var(--radius); padding:12px 14px; }
 .income-summary-box.editable { background:#fff; }
@@ -47,15 +44,12 @@
 .income-summary-box-value input[readonly] { background:#fff; border-color:var(--border-strong); }
 .income-summary-box-unit { font-size:12px; color:var(--text-muted); flex-shrink:0; }
 
-/* ── โหมดดูอย่างเดียว (ใบยื่นแบบที่ยืนยันแล้ว) ──────────
-   สลับกล่องสีเทา: "รายได้รวมตามงบการเงิน" แก้ไขไม่ได้แล้วในโหมดนี้ จึงให้
-   ดูเป็นกล่องสีเทาแทน ส่วน "รายได้รวมตามใบอนุญาต" ที่ไม่เคยแก้ไขได้อยู่แล้ว
-   ให้พื้นหลังเป็นสีขาวตามปกติ ไม่ต้องดูเทาซ้ำ */
+/* โหมดดูอย่างเดียว: สลับสีกล่อง "รายได้รวมตามงบการเงิน" เป็นเทา (แก้ไขไม่ได้แล้ว), ส่วนกล่อง "ตามใบอนุญาต" (ไม่เคยแก้ได้อยู่แล้ว) กลับเป็นขาวปกติ */
 .vs-readonly .income-summary-box.editable { background:var(--accent-bg); border-color:var(--accent-light); }
 .vs-readonly .income-summary-box:not(.editable) { background:#fff; border-color:var(--border-strong); }
 .license-count-badge { display:inline-flex; align-items:center; gap:5px; background:var(--accent-bg); border:1px solid var(--accent-light); border-radius:99px; padding:5px 14px; font-size:14px !important; color:var(--primary); font-weight:600; margin-bottom:12px; gap:2px; }
 .license-count-badge span, .license-count-badge input { font-size:14px !important; }
-/* ── Income/Deduct Tables ─── */
+/* Income/Deduct Tables */
 .income-table-wrap,.table-wrap { overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border); margin-top:8px; }
 .income-table, table { width:100%; border-collapse:collapse; font-size:13px; }
 .income-table thead tr, thead tr { background:var(--primary); color:#fff; }
@@ -71,13 +65,13 @@ tbody tr:hover td { background:var(--accent-bg); }
 .income-input { width:100%; border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:5px 8px; font-family:var(--font); font-size:13px; text-align:right; outline:none; transition:border-color .15s; }
 .income-input:focus { border-color:var(--accent); }
 .income-input[readonly] { background:#f5f7fa; }
-/* ── Step 5 ─── */
+/* Step 5 */
 .s5-row { display:flex; align-items:center; gap:10px; font-size:var(--fs-md); }
 .s5-label { color:var(--text-secondary); flex-shrink:0; }
 .s5-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 28px; }
 .s5-net-row { display:flex; justify-content:space-between; align-items:center; background:var(--primary); border-radius:var(--radius); padding:16px 20px; margin-bottom:14px; }
 .s5-net-label { font-size:14px; font-weight:600; color:#fff; }
-/* ── Doc Upload ─── */
+/* Doc Upload */
 .doc-upload-header { display:grid; grid-template-columns:1fr 100px 1fr; background:var(--primary); color:#fff; font-size:12px; font-weight:600; padding:8px 12px; border-radius:var(--radius-sm) var(--radius-sm) 0 0; }
 .doc-row { display:grid; grid-template-columns:1fr 100px 1fr auto; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; }
 .doc-row:last-child { border-bottom:none; }
@@ -85,27 +79,27 @@ tbody tr:hover td { background:var(--accent-bg); }
 .doc-row-name { color:var(--text-primary); }
 .doc-row-btn  { text-align:center; }
 .doc-row-file { font-size:12px; color:var(--text-muted); word-break:break-all; }
-/* ── Modal ─── */
+/* Modal */
 .modal-tbl-body td { padding:8px 12px; border-bottom:1px solid var(--border); }
 .td-header { background:#f0fdf4; font-weight:700; color:#2C3D8F; padding:8px 15px; text-align:left !important; }
 .td-indent { padding-left:28px !important; }
 .td-center { text-align:center; }
 .input-val { border:1px solid var(--border-strong); border-radius:var(--radius-sm); padding:5px 8px; font-family:var(--font); font-size:13px; width:140px; text-align:right; outline:none; }
 .input-val:focus { border-color:var(--accent); }
-/* ── Phase ─── */
+/* Phase */
 .phase-enter { animation:fadeIn .25s ease-out; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
 .btn-confirm { display:inline-flex; align-items:center; gap:6px; }
 .btn-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; display:none; }
 .btn-spinner.show { display:inline-block; }
 @keyframes spin { to { transform:rotate(360deg); } }
-/* ── Responsive ─── */
+/* Responsive */
 @media(max-width:768px) {
   .form-grid,.s5-grid { grid-template-columns:1fr; }
   .income-summary-row { flex-direction:column; }
 }
 
-/* ── Phase 1 Info Card ─── */
+/* Phase 1 Info Card */
 .ph1-info-card {
   background: var(--accent-bg);
   border: 1px solid var(--accent-light);
@@ -126,11 +120,11 @@ tbody tr:hover td { background:var(--accent-bg); }
 }
 .ph1-info-value { color: var(--text-primary); font-weight: 600; }
 
-/* ── station input text left ─── */
+/* station input text left */
 #license-table-body input[type="text"],
 .table-station-input { text-align: left !important; }
 
-/* ── modal licensee info ─── */
+/* modal licensee info */
 .modal-info-section {
   background: var(--accent-bg);
   border: 1px solid var(--accent-light);
@@ -145,9 +139,9 @@ tbody tr:hover td { background:var(--accent-bg); }
 .modal-info-label { color: var(--text-secondary); min-width: 110px; flex-shrink: 0; }
 
 
-/* ── CSS จาก index.html เดิม (ครบทุก class) ── */
+/* CSS จาก index.html เดิม (ครบทุก class) */
 
-    /* ── Page-specific overrides ─────────────────────────────── */
+    /* Page-specific overrides */
     @keyframes btn-spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
     .btn-spinner {
       display:inline-block;width:14px;height:14px;
@@ -157,7 +151,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     @keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
     .phase-enter { animation:fadeIn .25s ease-out; }
 
-    /* ── Top nav redesign ────────────────────────────────────── */
+    /* Top nav redesign */
     .topnav {
       background: #1e2d5e;
       height: 60px; padding: 0 28px;
@@ -172,19 +166,19 @@ tbody tr:hover td { background:var(--accent-bg); }
     }
     .brand-ebcs .e-dot { color:#2e86ab; }
 
-    /* ── Breadcrumb ──────────────────────────────────────────── */
+    /* Breadcrumb */
     .breadcrumb-bar {
       background:#fff; border-bottom:1px solid #e2e8f0;
       padding:9px 28px; font-size:12px; color:#555;
     }
     .breadcrumb-bar a { color:#1e2d5e; font-weight:500; text-decoration:none; }
 
-    /* ── Main layout ─────────────────────────────────────────── */
+    /* Main layout */
     body { background:#f0f0f0; line-height: 1.7; }
     .page-wrap { display:flex; min-height:calc(100vh - 95px); }
     .main { flex:1; padding:24px 28px; max-width:1040px; margin:0 auto; width:100%; }
 
-    /* ── Phase 1: Start card ─────────────────────────────────── */
+    /* Phase 1: Start card */
     .start-card {
       background:#fff; border-radius:16px;
       border:1px solid #e2e8f0;
@@ -281,7 +275,7 @@ tbody tr:hover td { background:var(--accent-bg); }
       transform:translateY(-1px);
     }
 
-    /* ── Info bar (Phase 2) ──────────────────────────────────── */
+    /* Info bar (Phase 2) */
     .info-bar {
       background:#fff;border:1px solid #e2e8f0;border-radius:12px;
       padding:14px 20px;margin-bottom:16px;
@@ -293,7 +287,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     .info-chip-value { color:#1e2d5e;font-weight:600; }
     .info-chip-divider { width:1px;height:16px;background:#e2e8f0;align-self:center; }
 
-    /* ── Stepper redesign ────────────────────────────────────── */
+    /* Stepper redesign */
     .stepper-outer {
       background:#fff;
       padding:16px 20px 0;margin-bottom:16px;
@@ -315,13 +309,13 @@ tbody tr:hover td { background:var(--accent-bg); }
     .step-label { font-size:11px;color:#888;max-width:76px; }
     .step.active .step-label { color:#1e2d5e;font-weight:600; }
 
-    /* ── Section header redesign ─────────────────────────────── */
+    /* Section header redesign */
     .section-header {
       background:#1e2d5e;
       padding:11px 18px;font-size:13.5px;
     }
 
-    /* ── Form section redesign ───────────────────────────────── */
+    /* Form section redesign */
     .form-section {
       background:#fff;border:1px solid #e2e8f0;
       border-top:none;border-radius:0 0 12px 12px;
@@ -329,7 +323,7 @@ tbody tr:hover td { background:var(--accent-bg); }
       box-shadow:0 4px 16px rgba(44,61,143,0.06);
     }
 
-    /* ── Table redesign ──────────────────────────────────────── */
+    /* Table redesign */
     .table-wrap {
       border-radius:10px;overflow-x:auto;overflow-y:hidden;
       border:1px solid #e2e8f0;
@@ -341,7 +335,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     tbody td { padding:9px 11px; border:1px solid #e2e8f0; }
     tbody tr:hover td { background:#f5f7fa; }
 
-    /* ── Btn tweaks ──────────────────────────────────────────── */
+    /* Btn tweaks */
     .btn-primary {
       background:#2e86ab;
       box-shadow:0 3px 10px rgba(90,139,250,0.3);
@@ -360,18 +354,18 @@ tbody tr:hover td { background:var(--accent-bg); }
       box-shadow:0 3px 10px rgba(30,125,74,0.3)!important;
     }
 
-    /* ── Modal tweaks ────────────────────────────────────────── */
+    /* Modal tweaks */
     .modal-box { border-radius:16px; }
     .modal-header { border-radius:16px 16px 0 0; background:#1e2d5e; }
 
-    /* ── Phase 3 confirm card ────────────────────────────────── */
+    /* Phase 3 confirm card */
     .confirm-amount-card {
       background:#1e2d5e;
       border-radius:12px;padding:18px 22px;margin-bottom:14px;
       display:flex;justify-content:space-between;align-items:center;
     }
 
-    /* ── Phase 4 success ─────────────────────────────────────── */
+    /* Phase 4 success */
     .success-icon-wrap {
       background:#f0fdf4;
       border-radius:50%;width:100px;height:100px;
@@ -380,13 +374,13 @@ tbody tr:hover td { background:var(--accent-bg); }
       box-shadow:0 4px 20px rgba(30,125,74,0.2);
     }
 
-    /* ── Toast ───────────────────────────────────────────────── */
+    /* Toast */
     .toast { border-radius:10px;backdrop-filter:blur(8px); }
 
-    /* ── App alert ───────────────────────────────────────────── */
+    /* App alert */
     .modal-box { border-radius:16px; overflow:hidden; }
 
-    /* ── Income table anno ───────────────────────────────────── */
+    /* Income table anno */
     .step-anno { color:#1e2d5e; }
     .anno-num { background:#2e86ab; }
 
@@ -486,7 +480,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     #penalty-alert-banner  { border-radius:8px !important; font-size:var(--fs-sm) !important; }
     .income-table thead th { font-size:var(--fs-xs); }
     .income-table tbody td { font-size:var(--fs-sm); }
-    /* ── Step 2: เส้นตาราง (grid lines) ───────────────────────── */
+    /* Step 2: เส้นตาราง (grid lines) */
     .income-table-wrap { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
     .income-table thead th,
     .income-table tbody td { border:1px solid #e2e8f0; }
@@ -499,8 +493,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     @media(max-width:900px){.info-bar-grid{grid-template-columns:1fr 1fr;}.auditor-grid{grid-template-columns:1fr;}.p3-info-grid{grid-template-columns:1fr;}}
     @media(max-width:600px){.info-bar-grid{grid-template-columns:1fr;}}
 
-    /* ── Phase 2 card wrapper: รวม header ฟ้า + stepper + step content
-         ให้เป็นแผ่นเดียวกัน (เส้นขอบ/เงาเดียว ไม่มีรอยต่อ) ────────── */
+    /* รวม header + stepper + step content ให้เป็นแผ่นเดียว (เส้นขอบ/เงาเดียว) */
     .phase2-card {
       background: #fff;
       border: 1px solid #e2e8f0;
@@ -510,8 +503,7 @@ tbody tr:hover td { background:var(--accent-bg); }
       box-shadow: 0 4px 20px rgba(44,61,143,0.08);
     }
 
-    /* ── Step card wrapper (อยู่ภายใน .phase2-card แล้ว จึงไม่มี
-         border/shadow/radius ของตัวเอง ป้องกันไม่ให้ดูเป็นคนละแผ่น) ── */
+    /* อยู่ใน .phase2-card แล้ว จึงไม่มี border/shadow/radius ของตัวเอง */
     .step-card {
       background: #fff;
     }
@@ -541,7 +533,7 @@ tbody tr:hover td { background:var(--accent-bg); }
       padding: 22px 22px 20px;
     }
 
-    /* ── Income summary row (step 1 top) ─────────────────────── */
+    /* Income summary row (step 1 top) */
     .income-summary-row {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 12px; margin-bottom: 18px;
@@ -586,7 +578,7 @@ tbody tr:hover td { background:var(--accent-bg); }
       margin-bottom: 12px;
     }
 
-    /* ── Status badge (Step 1 table — text only) ─────────────── */
+    /* Status badge (Step 1 table — text only) */
     .lic-status-badge {
       display: inline-flex; align-items: center; gap: 4px;
       padding: 3px 8px; border-radius: 99px;
@@ -596,7 +588,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     .lic-status-ended    { background:#fffbeb; color:#D97706; }
     .lic-status-cancelled,.lic-status-revoked { background:#fff0f0; color:#e53e3e; }
 
-    /* ── Navigation action bar ───────────────────────────────── */
+    /* Navigation action bar */
     .step-nav {
       display: flex; justify-content: space-between; align-items: center;
       padding: 14px 22px; border-top: 1px solid #f0f0f0;
@@ -631,12 +623,12 @@ tbody tr:hover td { background:var(--accent-bg); }
     }
     .btn-nav-confirm:hover { box-shadow:0 5px 16px rgba(30,125,74,0.4); }
 
-    /* ── info-bar font sizes match section-header ────────────── */
+    /* info-bar font sizes match section-header */
     .info-bar-cell-value { font-size: var(--fs-base) !important; }
     .info-bar-cell-value.highlight { font-size: var(--fs-md) !important; }
     .info-bar-ref { font-size: var(--fs-md) !important; }
 
-    /* ── Step 5 s5 rows ─────────────────────────────────────── */
+    /* Step 5 s5 rows */
     .s5-input-box {
       display:flex; align-items:center; gap:8px;
       background:#f8fbff; border:1px solid #e2e8f0; border-radius:8px;
@@ -649,7 +641,7 @@ tbody tr:hover td { background:var(--accent-bg); }
     }
     .s5-input-unit { font-size:var(--fs-xs); color:#888; flex-shrink:0; }
 
-    /* ── override bottom-action with step-nav ────────────────── */
+    /* override bottom-action with step-nav */
     .step-card .bottom-action {
       margin: 0; padding: 14px 22px;
       border-top: 1px solid #f0f0f0; background: #fafafa;
@@ -666,13 +658,11 @@ tbody tr:hover td { background:var(--accent-bg); }
       background:#fff; color:#555; border:1px solid #e2e8f0;
     }
 
-    /* ── Doc upload modernize ────────────────────────────────── */
+    /* Doc upload modernize */
     #doc-upload-list { border-radius:0 0 12px 12px; overflow:hidden; border:1px solid #e2e8f0; border-top:none; }
     .doc-row { transition: background .12s; }
     .doc-row:last-child { border-radius:0 0 12px 12px; }
-/* ════════════════════════════════════════════════════
-   PATCH — ขยาย container + ชิดซ้าย + thead สีน้ำเงิน
-   ════════════════════════════════════════════════════ */
+/* PATCH — ขยาย container + ชิดซ้าย + thead สีน้ำเงิน */
 
 /* 1. ขยาย main container ให้กว้างขึ้น */
 .main {
@@ -870,10 +860,7 @@ td.td-header {
 
 /* Phase 3 colors managed in step5-summary.js */
 
-/* ════════════════════════════════════════════════════
-   Step 1 + Step 3 table — ทุก td center
-   (override .step-card-body * { text-align:left })
-   ════════════════════════════════════════════════════ */
+/* Step 1 + Step 3 table — ทุก td center — (override .step-card-body * { text-align:left }) */
 
 #license-table-body td,
 #license-table-body th,
@@ -887,7 +874,7 @@ td.td-header {
   text-align: center !important;
 }
 
-/* ── Modal income table additional fixes ── */
+/* Modal income table additional fixes */
 
 /* td-indent ชิดซ้าย */
 .td-indent {

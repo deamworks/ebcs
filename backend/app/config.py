@@ -25,7 +25,7 @@ class Config:
     OTP_RATE_LIMIT_PER_MIN = int(os.environ.get("OTP_RATE_LIMIT_PER_MINUTE", 3))
 
     # ── Email (Exchange/Outlook) ──────────────────────────
-    # MAIL_SERVER = mock → พิมพ์ OTP ลง log แทนส่งจริง
+    # mock = พิมพ์ OTP ลง log แทนส่งอีเมลจริง
     MAIL_SERVER   = os.environ.get("MAIL_SERVER", "mock")
     MAIL_PORT     = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS  = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
