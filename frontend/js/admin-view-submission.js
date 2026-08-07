@@ -33,10 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusTh = { draft: 'ร่าง', pending_payment: 'รอชำระเงิน', paid: 'ชำระแล้ว' };
   const actualStatus = detail.submission?.actual_status || detail.submission?.status;
 
-  // [FIX] แอดมินแก้ไขตัวเลขของผู้ประกอบการตรงๆ ไม่ได้อีกต่อไป (ทำให้ตัวเลข
-  // ไม่ตรงกับใบ ชส.01/ชส.02 ที่ผู้ประกอบการพิมพ์ไปแล้วก่อนหน้า) — ทุกสถานะเปิด
-  // มาเป็นโหมดดูอย่างเดียวเสมอ ถ้าข้อมูลผิดใช้ "ตีกลับเป็นร่าง" ในตารางหลัก
-  // (rejectSubmissionToDraft ใน admin.js) ให้ผู้ประกอบการแก้ไขและยืนยันใหม่เอง
+  // [FIX] แอดมินแก้ตัวเลขตรงๆ ไม่ได้อีกแล้ว (จะไม่ตรงกับ ชส.01/ชส.02 ที่พิมพ์ไปแล้ว)
+  // ทุกสถานะเปิดเป็นโหมดดูอย่างเดียว ผิดต้อง "ตีกลับเป็นร่าง" ให้ผู้ประกอบการแก้เอง
   renderReadOnlySubmission(detail, {
     downloadBase: '/admin',
     statusLabel:  statusTh[actualStatus] || actualStatus,

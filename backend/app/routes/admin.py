@@ -50,15 +50,12 @@ def send_excel_file(output, thai_filename):
     if not thai_filename.lower().endswith(".xlsx"):
         thai_filename += ".xlsx"
 
-    # encode ชื่อภาษาไทยสำหรับ RFC 5987
     encoded_name = quote(thai_filename, encoding="utf-8", safe="")
 
     response = Response(
         output.read(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    # filename= ต้องเป็น ASCII เท่านั้น — ใช้ report.xlsx เป็น fallback
-    # filename*= ใช้ UTF-8 encoded — client ที่รองรับ RFC 5987 จะใช้อันนี้แทน
     response.headers["Content-Disposition"] = (
         "attachment; filename=\"report.xlsx\"; "
         f"filename*=UTF-8''{encoded_name}"
@@ -75,10 +72,8 @@ def date_to_str(d):
 
 def _stringify_row_dates(rows, date_fields):
     """
-    [FIX] Flask/Werkzeug serialize date/datetime object เป็น HTTP-date format
-    (เช่น "Wed, 01 Jan 2025 00:00:00 GMT") ไม่ใช่ ISO string — ฝั่ง frontend
-    (fdISOToThai) คาดหวัง "YYYY-MM-DD" ทำให้วันที่ในตาราง preview การนำเข้า
-    ไม่ขึ้นเลย ต้องแปลงเป็น string ก่อนส่งกลับเสมอ
+    [FIX] Flask serialize date เป็น HTTP-date format แต่ frontend (fdISOToThai)
+    ต้องการ "YYYY-MM-DD" ต้องแปลงเป็น string เองก่อนส่งกลับเสมอ
     """
     for row in rows:
         for field in date_fields:
@@ -229,7 +224,6 @@ def get_submissions():
     - pagination: ข้อมูลการแบ่งหน้า
     """
 
-    # ── รับ query parameters ─────────────────────────
     year       = request.args.get("year", type=int)
     status     = request.args.get("status")
     search     = request.args.get("search", "").strip()
@@ -238,7 +232,6 @@ def get_submissions():
     offset     = (page - 1) * per_page
 
     # ── สร้าง WHERE clause แบบ dynamic ──────────────
-    # สร้างเงื่อนไขตามที่ส่งมา (ไม่ส่งมา = ไม่กรอง)
     conditions = []
     params     = []
 
@@ -251,7 +244,6 @@ def get_submissions():
         params.append(status)
 
     if search:
-        # ค้นหาทั้งชื่อบริษัทและเลขภาษี
         conditions.append(
             "(s.operator_name LIKE %s OR s.tax_id LIKE %s)"
         )
@@ -263,7 +255,6 @@ def get_submissions():
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ── ดึงรายการ (แบ่งหน้า) ─────────────────
             cur.execute(f"""
                 SELECT
                     s.id, s.tax_id, s.operator_name,
@@ -284,7 +275,6 @@ def get_submissions():
             """, params + [per_page, offset])
             items = cur.fetchall()
 
-            # ── นับทั้งหมดสำหรับ pagination ─────────
             cur.execute(f"""
                 SELECT COUNT(*) AS total FROM (
                     SELECT s.id
@@ -295,8 +285,7 @@ def get_submissions():
             """, params)
             total = cur.fetchone()["total"]
 
-            # ── Dashboard Cards (นับแยกแต่ละสถานะ) ──
-            # ถ้ากรองปีอยู่ Dashboard ก็แสดงเฉพาะปีนั้น
+            # Dashboard Cards: นับแยกแต่ละสถานะ กรองตามปีเดียวกับรายการถ้ามี
             dash_where = "WHERE s.fiscal_year = %s" if year else ""
             dash_params = [year] if year else []
 
@@ -356,7 +345,6 @@ def get_submission_detail(submission_id):
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ดึงใบยื่นหลัก
             cur.execute("""
                 SELECT s.*,
                        CASE WHEN r.id IS NOT NULL THEN 'paid'
@@ -374,10 +362,8 @@ def get_submission_detail(submission_id):
                               "message": "ไม่พบใบยื่นแบบ"}
                 }), 404
 
-            # [FIX] ร่าง (draft) ยังเป็นข้อมูลที่ผู้ประกอบการกรอกค้างไว้ ยังไม่
-            # ยืนยันนำส่ง แอดมินไม่ควรเปิดดูได้ — เดิมซ่อนแค่ปุ่ม "ดูข้อมูล" ใน
-            # ตารางฝั่ง frontend เท่านั้น ยังเข้าดูได้ถ้ารู้ id ตรงๆ ปิดที่
-            # backend เพิ่มด้วยกันเข้าถึงตรง
+            # [FIX] draft ยังไม่ยืนยันนำส่ง แอดมินไม่ควรดูได้ — เดิมซ่อนแค่ปุ่มฝั่ง
+            # frontend ยังเข้าถึงตรงด้วย id ได้ ต้องบล็อกที่ backend ด้วย
             if submission["actual_status"] == "draft":
                 return jsonify({
                     "success": False,
@@ -385,8 +371,7 @@ def get_submission_detail(submission_id):
                               "message": "ใบยื่นแบบนี้ยังเป็นร่าง ยังไม่ยืนยันนำส่ง แอดมินยังดูไม่ได้"}
                 }), 403
 
-            # ดึงใบอนุญาตของใบยื่นนี้ (ตาราง licenses ไม่ใช่ licensee_master
-            # ซึ่งเป็นทะเบียนใบอนุญาตกลางของ กสทช. คนละความหมายกัน)
+            # ตาราง licenses (ของใบยื่นนี้) คนละความหมายกับ licensee_master (ทะเบียนกลาง กสทช.)
             cur.execute("""
                 SELECT * FROM licenses
                 WHERE  submission_id = %s
@@ -417,21 +402,18 @@ def get_submission_detail(submission_id):
                 lic["fee_amount"] = float(lic["fee_amount"] or 0)
                 lic["deduction_amount"] = float(lic["deduction_amount"] or 0)
 
-            # ดึงรายได้อื่น
             cur.execute(
                 "SELECT * FROM other_incomes WHERE submission_id = %s",
                 (submission_id,)
             )
             other_incomes = cur.fetchall()
 
-            # ดึงไฟล์แนบ
             cur.execute(
                 "SELECT * FROM document_attachments WHERE submission_id = %s",
                 (submission_id,)
             )
             attachments = cur.fetchall()
 
-            # ดึงใบแจ้งหนี้และใบเสร็จ
             cur.execute(
                 "SELECT * FROM invoice WHERE submission_id = %s LIMIT 1",
                 (submission_id,)
@@ -444,7 +426,6 @@ def get_submission_detail(submission_id):
             )
             receipt = cur.fetchone()
 
-    # แปลงวันที่
     for key in ["period_start", "period_end", "due_date",
                 "submitted_at", "created_at", "updated_at"]:
         if submission.get(key):
@@ -573,7 +554,7 @@ def delete_submissions():
 
     with get_db() as db:
         with db.cursor() as cur:
-            # ดึงข้อมูลก่อนลบ (ชื่อบริษัท/ปีบัญชี) เพื่อบันทึก audit log ให้ละเอียด
+            # ดึงไว้ก่อนลบ เพื่อบันทึก audit log ให้มีชื่อบริษัท/ปีบัญชี
             placeholders = ",".join(["%s"] * len(ids))
             cur.execute(
                 f"SELECT * FROM submissions WHERE id IN ({placeholders})",
@@ -581,16 +562,14 @@ def delete_submissions():
             )
             old_by_id = {row["id"]: row for row in cur.fetchall()}
 
-            # [FIX] เดิมลบแค่แถว DB เฉยๆ ไม่ได้ลบไฟล์แนบจริงที่ /uploads เลย
-            # (CASCADE ลบแค่ metadata ในตาราง document_attachments) ทำให้ไฟล์
-            # กำพร้าค้างบนดิสก์ตลอดไปทุกครั้งที่แอดมินลบใบยื่นแบบที่มีไฟล์แนบ
+            # [FIX] เดิม CASCADE ลบแค่ metadata ไฟล์แนบใน DB ไม่ได้ลบไฟล์จริงใน /uploads
+            # ทำให้ไฟล์กำพร้าค้างดิสก์ ต้องลบไฟล์จริงเองก่อน
             cur.execute(
                 f"SELECT storage_path FROM document_attachments WHERE submission_id IN ({placeholders})",
                 ids
             )
             old_files = [row["storage_path"] for row in cur.fetchall()]
 
-            # ลบทีละ id (CASCADE ลบลูกให้อัตโนมัติ)
             for sid in ids:
                 cur.execute(
                     "DELETE FROM submissions WHERE id = %s",
@@ -604,7 +583,7 @@ def delete_submissions():
             except OSError:
                 pass  # ไฟล์ลบไม่ได้ก็ปล่อยผ่าน ไม่ให้การลบใบยื่นแบบล้มเหลว
 
-        # Audit Log — บันทึกทีละรายการ ระบุปีบัญชีและชื่อบริษัทที่ถูกลบ
+        # บันทึก audit log แยกทีละรายการที่ถูกลบ
         for sid in ids:
             old = old_by_id.get(sid)
             operator_name = old.get("operator_name") if old else None
@@ -784,9 +763,8 @@ def create_taxpayer():
     with get_db() as db:
         with db.cursor() as cur:
             try:
-                # [FIX] เดิมถ้าไม่กรอกเลขอ้างอิงเอง จะถูกบันทึกเป็น NULL ไปเลย
-                # ตอน import ไฟล์ Excel มีการ gen ให้อัตโนมัติอยู่แล้ว (_get_next_ref_no)
-                # แต่เพิ่มทีละรายการผ่านฟอร์มนี้ไม่เคยเรียกใช้ ทำให้ไม่มีเลขอ้างอิง
+                # [FIX] เพิ่มทีละรายการผ่านฟอร์มนี้ไม่เคยเรียก _get_next_ref_no เหมือน
+                # ตอน import Excel ทำให้ ref_no เป็น NULL ถ้าไม่กรอกเอง — gen ให้ด้วย
                 ref_no = data.get("ref_no") or _get_next_ref_no(cur, int(data["fiscal_year"]))
 
                 cur.execute("""
@@ -1008,9 +986,8 @@ def create_licensee():
     with get_db() as db:
         with db.cursor() as cur:
             try:
-                # [FIX] sub_type/round_type ย้ายไปกรอกตอนเพิ่มผู้ประกอบการแทน (ระดับ
-                # บริษัท/รอบบัญชี ไม่ใช่ระดับใบอนุญาต) — ตอนเพิ่มใบอนุญาต ดึงค่าจาก
-                # taxpayer_master ของ tax_id นี้มาใช้แทนการถามซ้ำ ถ้าไม่พบใช้ default
+                # [FIX] sub_type/round_type เป็นระดับบริษัท/รอบบัญชี ไม่ใช่ระดับใบอนุญาต
+                # ย้ายไปกรอกตอนเพิ่มผู้ประกอบการแทน ที่นี่ดึงจาก taxpayer_master แทนถามซ้ำ
                 cur.execute("""
                     SELECT sub_type, round_type FROM taxpayer_master
                     WHERE tax_id = %s ORDER BY fiscal_year DESC LIMIT 1
@@ -1019,7 +996,7 @@ def create_licensee():
                 sub_type   = (taxpayer and taxpayer["sub_type"])   or "ปกติ"
                 round_type = (taxpayer and taxpayer["round_type"]) or "รอบปกติ"
 
-                # นับจำนวนใบอนุญาตทั้งหมดของ tax_id นี้ (รวมใบใหม่) ให้ license_count อัตโนมัติ
+                # นับใบอนุญาตทั้งหมดของ tax_id นี้ใหม่ (รวมใบที่เพิ่งเพิ่ม)
                 cur.execute(
                     "SELECT COUNT(*) AS cnt FROM licensee_master WHERE tax_id = %s",
                     (data["tax_id"],)
@@ -1765,7 +1742,6 @@ def create_receipt():
     with get_db() as db:
         with db.cursor() as cur:
 
-            # ตรวจว่าใบยื่นมีอยู่จริง
             cur.execute(
                 "SELECT id, status, operator_name FROM submissions WHERE id = %s",
                 (data["submission_id"],)
@@ -1900,7 +1876,7 @@ def get_audit_logs():
         else:
             log["created_at"] = date_to_str(log["created_at"])
         log["table_name_th"] = TABLE_NAME_TH.get(log["table_name"], log["table_name"])
-        # changes ใน MySQL เก็บเป็น string แปลงกลับเป็น dict
+        # changes เก็บเป็น string ใน MySQL ต้องแปลงกลับเป็น dict
         if log.get("changes") and isinstance(log["changes"], str):
             try:
                 log["changes"] = json.loads(log["changes"])
@@ -2102,9 +2078,8 @@ def import_operator_accounts_route():
             }
         }), 200
 
-    # [FIX] เดิมถ้ามี error แม้แค่แถวเดียว จะ block ไม่ import อะไรเลยทั้งไฟล์
-    # เปลี่ยนเป็น import เฉพาะแถวที่อ่าน tax_id ได้ (คีย์หลัก) แล้วรายงานจำนวนแถว
-    # ที่ข้ามไปด้วย ชื่อ/อีเมลอ่านไม่ได้ไม่ block แล้ว (ดู _parse_operator_account_row)
+    # [FIX] เดิม error แถวเดียว block ทั้งไฟล์ — เปลี่ยนเป็น import เฉพาะแถวที่มี
+    # tax_id (คีย์หลัก) อ่านได้ แล้วรายงานจำนวนแถวที่ข้าม (ดู _parse_operator_account_row)
     with get_db() as db:
         result = import_operator_accounts(db, rows) if rows else {"inserted": 0, "updated": 0, "snapshot": []}
         save_audit_log(

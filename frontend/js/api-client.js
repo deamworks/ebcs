@@ -22,9 +22,7 @@ class ApiError extends Error {
 const api = (() => {
 
   function _getToken() {
-    // [FIX] เดิมลอง ebcs_token (operator) ก่อนเสมอ — ถ้า browser มี token ทั้งคู่
-    // (เคย login ทั้งฝั่งผู้ประกอบการและแอดมินในเครื่องเดียวกัน) หน้าแอดมินจะหยิบ
-    // token ผิดฝั่งไปเรียก API เสมอ ทำให้โดน 403 ทุก endpoint — เลือกตาม path แทน
+    // [FIX] เดิมลอง ebcs_token (operator) ก่อนเสมอ ถ้ามี token ทั้งคู่หน้าแอดมินจะหยิบผิดฝั่งจน 403 — เลือกตาม path แทน
     const isAdminPage = window.location.pathname.includes('admin');
     return isAdminPage
       ? localStorage.getItem('ebcs_admin_token') || null

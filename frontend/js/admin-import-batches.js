@@ -43,8 +43,7 @@ function renderImportBatchesTable() {
     : '<tr><td colspan="6" style="padding:20px;text-align:center;color:#aaa">ไม่พบข้อมูล</td></tr>';
 }
 
-// [FIX] เดิมใช้ confirm() ของเบราว์เซอร์ (message box) เปลี่ยนเป็น modal ของระบบ
-// เอง ให้หน้าตาสอดคล้องกับจุดอื่น เช่น modal ตีกลับใบยื่นแบบเป็นร่าง (PR #171)
+// [FIX] เปลี่ยนจาก confirm() ของเบราว์เซอร์เป็น modal ให้สอดคล้องกับจุดอื่น (PR #171)
 function rollbackImportBatch(id, importTypeTh, importedBy, rowCount) {
   document.getElementById('rb-batch-id').value      = id;
   document.getElementById('rb-import-type').textContent  = importTypeTh;

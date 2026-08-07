@@ -1,6 +1,4 @@
-/* ════════════════════════════════════════════════════
-   css/admin-login.css — NBTC Filing Admin Login Page
-   ════════════════════════════════════════════════════ */
+/* css/admin-login.css — NBTC Filing Admin Login Page */
 
 body {
       min-height: 100vh;
@@ -112,7 +110,7 @@ body {
       box-shadow: 0 0 0 3px rgba(90,139,250,0.15);
     }
 
-    /* ── ปุ่มแสดง/ซ่อนรหัสผ่าน ─────────────────────────── */
+    /* ปุ่มแสดง/ซ่อนรหัสผ่าน */
     .pwd-field-wrap { position: relative; }
     .pwd-field-wrap input { padding-right: 38px; }
     .pwd-toggle-btn {

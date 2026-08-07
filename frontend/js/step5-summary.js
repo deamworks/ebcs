@@ -27,9 +27,7 @@ function renderStep5AndSummary() {
   for (let i = 1; i <= count; i++) {
     const d    = appState.rowsData[i] || { no: '', income: 0, deduction: 0 };
     const aft  = Math.max(0, d.income - d.deduction);
-    // ปัดทศนิยมเงินกองทุน (fund) เป็น 2 ตำแหน่งทันทีหลังคำนวณ
-    // ก่อนจะเอาไปคิดภาษีมูลค่าเพิ่ม/เงินเพิ่มต่อ — ตรงกับวิธีคำนวณจริงของระบบ PCS
-    // (ถ้าไม่ปัดตรงนี้ก่อน ตัวเลขรวมท้ายสุดจะเพี้ยนไปจากของจริงเล็กน้อย)
+    // ปัดทศนิยม fund เป็น 2 ตำแหน่งก่อนคิด VAT/เงินเพิ่มต่อ ตรงกับวิธีคำนวณจริงของระบบ PCS
     const fund = Math.round(calcProgressiveFund(aft) * 100) / 100;
     const vat  = fund * 0.07;
     
@@ -69,9 +67,7 @@ function renderStep5AndSummary() {
   const totalTr = document.createElement('tr');
   totalTr.style.background = '#e8edf5';
   totalTr.style.fontWeight = '700';
-  //  ยอดสุทธิรวมต้องปัดทศนิยมครั้งเดียวจาก fund+vat+เงินเพิ่ม รวมทุกใบ
-  // (ไม่ใช่บวกค่า net ที่ปัดเศษแล้วของแต่ละใบ) ตามนโยบายปัดเศษใน README
-  // — ป้องกันผลรวมเพี้ยนจากการสะสมเศษปัดเศษทีละใบ (rounding drift)
+  // ยอดสุทธิรวมต้องปัดทศนิยมครั้งเดียวจาก fund+vat+เงินเพิ่มรวมทุกใบ ไม่ใช่บวก net ที่ปัดแล้วทีละใบ (กัน rounding drift)
   const grandTotalNet = Math.round((sumFund + sumVat + sumPenalty) * 100) / 100;
   totalTr.innerHTML = `
     <td style="text-align:center;color:#1a237e;">รวมทั้งสิ้น</td>
@@ -125,18 +121,14 @@ function renderStep5AndSummary() {
  * ประมวลผลหน้า Phase 3 (หน้าสรุปยืนยันตรวจทานก่อนยื่นส่งจริง)
  */
 function confirmFundPayment() {
-  // บังคับแนบเอกสารหลัก 3 อัน (งบดุลการเงิน, ชส.01, ชส.02) ก่อนไปหน้าตรวจทาน
-  // Phase 3 — เช็คตั้งแต่ตรงนี้เลยกันผู้ใช้เข้าไปแล้วโดนเด้งกลับที่ปุ่มยืนยันนำส่ง
+  // บังคับแนบเอกสารหลัก 3 อันก่อนเข้าหน้าตรวจทาน กันผู้ใช้เข้าไปแล้วโดนเด้งกลับที่ปุ่มยืนยันนำส่ง
   const REQUIRED_DOCS = {
     1: 'งบดุลการเงิน',
     2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
     3: 'แบบแสดงรายได้ (ชส.02)',
   };
-  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง ยังไม่
-  // อัปโหลด) อย่างเดียว — ตอน resume draft ที่มีไฟล์แนบอยู่แล้วบน server (โหลด
-  // กลับมาไม่ได้เป็น File object ใหม่ ดูได้อย่างเดียว) เช็คนี้จะมองไม่เห็นเลย
-  // ทั้งที่แนบไว้แล้วจริง ต้องเช็ค appState.existingAttachments ควบคู่ไปด้วย
-  // (ดู _vsRenderAttachments ใน view-submission.js)
+  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง) — resume draft ที่มีไฟล์
+  // แนบอยู่แล้วบน server (ไม่ใช่ File object ใหม่) จะมองไม่เห็น ต้องเช็ค existingAttachments คู่กัน
   const missingDocs = Object.entries(REQUIRED_DOCS)
     .filter(([idx]) => !appState.attachedFiles?.[idx] && !appState.existingAttachments?.[idx])
     .map(([, label]) => label);
@@ -293,18 +285,14 @@ function goToPhase3Next() {
   // กันเหนียว: ถ้าปุ่มถูกปิดอยู่แล้ว (กำลังบันทึกข้อมูลรอบก่อนยังไม่จบ) ห้ามเริ่มซ้ำ
   if (btn && btn.disabled) return;
 
-  // [FIX] บังคับแนบเอกสารหลัก 3 อัน (งบดุลการเงิน, ชส.01, ชส.02) ก่อนยืนยันนำส่ง
-  // เสมอ — ถ้าแนบไม่ครบ ห้ามส่งข้อมูล พากลับไป Step 6 ให้แนบให้ครบก่อน
+  // [FIX] บังคับแนบเอกสารหลัก 3 อันก่อนยืนยันนำส่งเสมอ — แนบไม่ครบพากลับไป Step 6
   const REQUIRED_DOCS = {
     1: 'งบดุลการเงิน',
     2: 'แบบรายงานการนำส่งเงิน (แบบที่ 1) (ชส.01)',
     3: 'แบบแสดงรายได้ (ชส.02)',
   };
-  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง ยังไม่
-  // อัปโหลด) อย่างเดียว — ตอน resume draft ที่มีไฟล์แนบอยู่แล้วบน server (โหลด
-  // กลับมาไม่ได้เป็น File object ใหม่ ดูได้อย่างเดียว) เช็คนี้จะมองไม่เห็นเลย
-  // ทั้งที่แนบไว้แล้วจริง ต้องเช็ค appState.existingAttachments ควบคู่ไปด้วย
-  // (ดู _vsRenderAttachments ใน view-submission.js)
+  // [FIX] เดิมเช็คแค่ appState.attachedFiles (ไฟล์ที่เพิ่งเลือกในเครื่อง) — resume draft ที่มีไฟล์
+  // แนบอยู่แล้วบน server (ไม่ใช่ File object ใหม่) จะมองไม่เห็น ต้องเช็ค existingAttachments คู่กัน
   const missingDocs = Object.entries(REQUIRED_DOCS)
     .filter(([idx]) => !appState.attachedFiles?.[idx] && !appState.existingAttachments?.[idx])
     .map(([, label]) => label);

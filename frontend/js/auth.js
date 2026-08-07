@@ -22,10 +22,8 @@ function togglePwdVisibility(btn) {
   btn.classList.toggle('showing', show);
 }
 
-// ── กันเบราว์เซอร์ autofill ใส่ค่าเก่าในช่องค้นหา (เช่น อีเมลที่ login อยู่) ──
-// input[data-nofill] ผูก animation ว่างไว้กับ pseudo-class :-webkit-autofill
-// (ดู admin.css) พอเบราว์เซอร์ autofill จริงจะ trigger animationstart ทันที
-// ไม่ต้องเดา delay — เคลียร์ค่าทิ้งตรงนั้นเลย
+// กัน browser autofill ใส่ค่าเก่าในช่องค้นหา — input[data-nofill] ผูก animation ไว้กับ
+// :-webkit-autofill (ดู admin.css) พอ autofill จริงจะ trigger animationstart ให้เคลียร์ทันที ไม่ต้องเดา delay
 document.addEventListener('animationstart', e => {
   if (e.animationName === 'admSearchAutofillDetect' && e.target.hasAttribute('data-nofill')) {
     e.target.value = '';

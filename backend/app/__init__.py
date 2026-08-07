@@ -6,18 +6,12 @@ from .config import Config
 
 def create_app():
     """สร้างและตั้งค่า Flask application"""
-    
-    # สร้าง Flask app
     app = Flask(__name__)
-
-    # โหลด config ทั้งหมดจาก Config class (config.py)
     app.config.from_object(Config)
 
-    # เปิด CORS: อนุญาตให้ browser เรียก API ข้าม origin ได้
-    # จำเป็นตอน dev (frontend port 80, API port 5000)
+    # อนุญาต CORS ข้าม origin เพราะตอน dev frontend/API คนละ port
     CORS(app)
 
-    # เปิดระบบ JWT สำหรับ Login / Token
     JWTManager(app)
 
     # Health Check
@@ -28,26 +22,18 @@ def create_app():
             "data": {"status": "ok", "message": "NBTC Filing API Ready!"}
         })
     
-      # ลงทะเบียน Blueprints (Routes) 
-    # Blueprint = กลุ่ม routes ที่แยกไฟล์
-    # เปิด comment ทีละตัวเมื่อเขียนไฟล์นั้นเสร็จ
-
-    # Auth routes: /api/auth/request-otp, /api/auth/verify-otp ฯลฯ
+    # ลงทะเบียน Blueprints ของแต่ละกลุ่ม route
     from .auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
-    # Operator routes: /api/operator/autofill, /api/operator/licenses ฯลฯ
     from .routes.operator import operator_bp
     app.register_blueprint(operator_bp, url_prefix="/api/operator")
 
-    # Admin routes: /api/admin/submissions, /api/admin/taxpayers ฯลฯ
     from .routes.admin import admin_bp
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
-    # Error Handlers
-    # จัดการ error ให้ตอบ JSON ทุกครั้ง (ไม่ตอบ HTML)
-    # เพราะ frontend คาดหวัง JSON เสมอ
-    
+    # Error handler: ตอบ JSON เสมอ เพราะ frontend คาดหวัง JSON ไม่ใช่ HTML
+
     @app.errorhandler(400)
     def bad_request(e):
         """ข้อมูลที่ส่งมาผิดรูปแบบ"""

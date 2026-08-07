@@ -55,10 +55,8 @@ function renderReadOnlySubmission(data, opts = {}) {
   const attachments = data.attachments   || [];
   const downloadBase = opts.downloadBase || '/operator';
 
-  // [FIX] สลับไป Phase 2 + เติมข้อมูลสรุปด้านบนก่อนเป็นอันดับแรกเสมอ — เดิม
-  // ทำหลังลูปประมวลผลใบอนุญาต ถ้าลูปนั้น throw (ข้อมูล incomes ผิดรูป ฯลฯ)
-  // จะค้างอยู่ที่ Phase 1 เปล่าๆ ทั้งที่ป้ายเตือน "โหมดดูอย่างเดียว" ขึ้นไปแล้ว
-  // (แถบเตือนแทรกที่ .main ตรงๆ ไม่ขึ้นกับว่า Phase ไหนถูกซ่อนอยู่)
+  // [FIX] ต้องสลับไป Phase 2 + เติมสรุปก่อนเป็นอันดับแรกเสมอ — เดิมทำหลังลูปใบอนุญาต
+  // ถ้าลูป throw จะค้างที่ Phase 1 เปล่าๆ ทั้งที่แถบ "โหมดดูอย่างเดียว" ขึ้นไปแล้ว
   const p1 = document.getElementById('phase1');
   const p2 = document.getElementById('phase2');
   if (p1) p1.style.display = 'none';
@@ -83,10 +81,9 @@ function renderReadOnlySubmission(data, opts = {}) {
   appState.refNo       = s.ref_no || '';
   appState.year        = String(s.fiscal_year || '');
   appState.dueDate      = _vsIsoToBE(s.due_date);
-  // กัน restoreStepState(1) โหลด draft เก่าจาก localStorage มาทับข้อมูลจริงที่เพิ่ง hydrate
+  // กัน restoreStepState(1) โหลด draft เก่าจาก localStorage (auto-save) มาทับข้อมูลจริงที่เพิ่ง hydrate
   appState._draftLoaded = true;
-  // เคลียร์ก่อน hydrate ใหม่ทุกครั้ง กันข้อมูลไฟล์แนบของใบยื่นแบบก่อนหน้าค้าง
-  // ข้ามมา (เช่นสลับดูร่างคนละปีในหน้าเดียวกันโดยไม่รีเฟรชหน้า)
+  // เคลียร์ไฟล์แนบก่อน hydrate ใหม่ทุกครั้ง กันข้อมูลของใบก่อนหน้าค้างข้ามมา (เช่นสลับดูคนละปี)
   appState.attachedFiles = {};
   appState.existingAttachments = {};
 
@@ -119,8 +116,7 @@ function renderReadOnlySubmission(data, opts = {}) {
     const countEl = document.getElementById('license-count');
     if (countEl) countEl.value = licenses.length || 1;
 
-    // [FIX] "ประเภทรายการ" คือสถานะใบอนุญาต (ปกติ/สิ้นสุด/ยกเลิก/เพิกถอน) —
-    // เดิมใช้ licensee_type (NETWORK/SERVICE ฯลฯ) ผิดความหมาย คนละฟิลด์กัน
+    // [FIX] "ประเภทรายการ" คือสถานะใบอนุญาต (ปกติ/สิ้นสุด/ยกเลิก/เพิกถอน) — เดิมใช้ licensee_type ผิดฟิลด์
     const licStatusTh = { active: 'ปกติ', ended: 'สิ้นสุด', cancelled: 'ยกเลิก', revoked: 'เพิกถอน' };
     setText('disp-type', licStatusTh[licenses[0]?.license_status] || licenses[0]?.license_status);
 
@@ -143,9 +139,7 @@ function renderReadOnlySubmission(data, opts = {}) {
       date:    _vsIsoToBE(s.audited_date),
     };
 
-    // [FIX] "รายได้รวมตามงบการเงิน" (Step 1) เดิมไม่ถูกส่งไป hydrate เลย —
-    // ช่องนี้เลยโชว์ 0.00 เสมอในหน้าดูอย่างเดียว ทั้งที่ backend เก็บค่าไว้แล้ว
-    // (submissions.total_income_financial, ดู migration 006)
+    // [FIX] "รายได้รวมตามงบการเงิน" เดิมไม่ถูกส่งไป hydrate เลย โชว์ 0.00 เสมอ ทั้งที่ backend เก็บไว้แล้ว
     appState.financialIncome = s.total_income_financial != null
       ? Number(s.total_income_financial).toFixed(2)
       : '';
@@ -159,14 +153,11 @@ function renderReadOnlySubmission(data, opts = {}) {
     console.error('[renderReadOnlySubmission]', err);
   }
 
-  // [FIX] แอดมินแก้ไขตัวเลขในใบยื่นแบบของผู้ประกอบการตรงๆ ไม่ได้อีกต่อไป —
-  // ทำให้ตัวเลขไม่ตรงกับใบ ชส.01/ชส.02 ที่ผู้ประกอบการพิมพ์ไปแล้วก่อนหน้า ถ้า
-  // ข้อมูลผิดต้องใช้ "ตีกลับเป็นร่าง" (rejectSubmissionToDraft ใน admin.js) ให้
-  // ผู้ประกอบการแก้ไขและยืนยันใหม่เองแทน — เหลือแค่โหมดดูอย่างเดียวกับโหมด
-  // แก้ไขของผู้ประกอบการเอง (skipLock ตอน resume draft ของตัวเอง) เท่านั้น
+  // [FIX] แอดมินแก้ตัวเลขตรงๆ ไม่ได้อีกแล้ว (จะไม่ตรงกับ ชส.01/ชส.02 ที่พิมพ์ไปแล้ว)
+  // ผิดต้องใช้ "ตีกลับเป็นร่าง" (rejectSubmissionToDraft) ให้ผู้ประกอบการแก้เอง —
+  // เหลือแค่โหมดดูอย่างเดียว กับโหมดแก้ไขร่างของผู้ประกอบการเอง (skipLock) เท่านั้น
   if (opts.skipLock) {
-    // ไม่ทำอะไร — ปล่อยให้แก้ไขได้ปกติทุกช่อง (ใช้ตอนผู้ประกอบการทำร่างของ
-    // ตัวเองต่อผ่าน resumeDraftSubmission() ใน index.js)
+    // ไม่ทำอะไร — ปล่อยแก้ไขได้ปกติ (ตอนผู้ประกอบการทำร่างต่อผ่าน resumeDraftSubmission())
   } else {
     _vsLockReadOnly();
   }
@@ -179,32 +170,25 @@ const _VS_EYE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 function _vsLockReadOnly() {
   document.body.classList.add('vs-readonly');
   document.querySelectorAll('input, select, textarea').forEach(el => {
-    // ช่องที่ readonly อยู่แล้วแต่เดิม (จำนวนใบอนุญาต, รายได้รวมตามใบอนุญาต) —
-    // ไม่ต้องแตะ ปล่อยให้หน้าตาเหมือนเดิมทุกโหมด ไม่ใช่แค่โหมดดูอย่างเดียว
+    // ช่องที่ readonly อยู่แล้วแต่เดิม ไม่ต้องแตะ ให้หน้าตาเหมือนเดิมทุกโหมด
     if (el.hasAttribute('readonly')) return;
     if (el.id === 'total-income-financial') {
-      // [FIX] ฟิลด์นี้ผู้ใช้กรอกเองได้ปกติ — ในโหมดดูอย่างเดียวห้ามแก้ไข แต่ไม่
-      // ต้องการให้ดูจางเหมือนช่องอื่นๆ จึงใช้ readonly แทน disabled (ไม่โดน
-      // CSS .vs-readonly input:disabled ทำให้สีจาง)
+      // [FIX] ฟิลด์นี้กรอกเองได้ปกติ โหมดดูอย่างเดียวห้ามแก้แต่ไม่อยากให้ดูจางเหมือนช่องอื่น
+      // จึงใช้ readonly แทน disabled (ไม่โดน CSS .vs-readonly input:disabled ทำให้สีจาง)
       el.readOnly = true;
       return;
     }
     el.disabled = true;
   });
-  // ปุ่มที่กดแล้วเปลี่ยนสถานะ/ส่งข้อมูลซ้ำ — ต้องซ่อนทั้งหมดในโหมดดูอย่างเดียว
-  // รวมถึงปุ่ม "บันทึกร่าง" (แก้ไขอะไรไม่ได้แล้ว ไม่มีอะไรให้บันทึก) — ลิงก์
-  // "หน้าหลัก" ในแถบนำทางยังคงไว้ตามปกติ (ปุ่ม "กลับหน้าหลัก" ในแบนเนอร์สถานะ
-  // ต่างหากที่ซ้ำซ้อนกับลิงก์นี้ ไม่ใช่ในทางกลับกัน — ดู _vsRenderStatusBanner)
+  // ปุ่มที่กดแล้วเปลี่ยนสถานะ/ส่งซ้ำได้ ต้องซ่อนหมดในโหมดดูอย่างเดียว รวมปุ่ม "บันทึกร่าง"
+  // (ลิงก์ "หน้าหลัก" บนแถบนำทางคงไว้ตามปกติ — ดู _vsRenderStatusBanner ที่มีปุ่มซ้ำซ้อนกัน)
   ['btn-confirm-submit', 'btn-confirm-fund-payment', 'btn-save-draft'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = 'none';
   });
-  // หมายเหตุ: ปุ่ม/แถวอัปโหลดเอกสาร (Step 6) ไม่ต้องซ่อน — _vsRenderAttachments()
-  // จัดการเปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" (มีไฟล์) หรือปิดใช้งาน (ไม่มีไฟล์)
-  // ให้เองแล้วก่อนหน้านี้ ในขณะที่ปุ่มลบ (X) ถูกซ่อนแยกในฟังก์ชันนั้น
+  // หมายเหตุ: ปุ่มอัปโหลดเอกสาร (Step 6) ไม่ต้องซ่อน — _vsRenderAttachments() จัดการเองแล้ว
 
-  // ปุ่ม "+ เพิ่มรายการ" (รายได้ Step 1 / รายได้อื่นๆ Step 2) — ปิดใช้งานเพราะ
-  // เพิ่มข้อมูลใหม่ไม่ได้อยู่แล้วในใบยื่นแบบที่ยืนยันแล้ว
+  // ปุ่ม "+ เพิ่มรายการ" — ปิดใช้งานเพราะเพิ่มข้อมูลใหม่ไม่ได้ในใบที่ยืนยันแล้ว
   ['btn-add-income-row', 'btn-add-other-income-row'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) {
@@ -214,10 +198,8 @@ function _vsLockReadOnly() {
     }
   });
 
-  // ปุ่มไอคอน "กรอกรายได้" ต่อรายการใบอนุญาต (Step 1 — สร้างไว้แล้วก่อนเรียก
-  // ฟังก์ชันนี้) — เปลี่ยนเป็นไอคอนรูปตาสีเทาจาง สื่อว่าเปิดดูได้เท่านั้น
-  // (ช่องกรอกใน modal ถูกล็อกไว้แล้ว) ส่วนปุ่ม "กรอกค่าลดหย่อน" ของ Step 3
-  // ถูกสร้างใหม่ทุกครั้งที่เข้า step นั้น จึงจัดการแยกใน generateDeductRows()
+  // ปุ่ม "กรอกรายได้" ต่อใบอนุญาต — เปลี่ยนเป็นไอคอนตาสีเทา สื่อว่าดูได้อย่างเดียว
+  // (ปุ่ม "กรอกค่าลดหย่อน" Step 3 ถูกสร้างใหม่ทุกครั้งที่เข้า step จึงจัดการแยกใน generateDeductRows())
   document.querySelectorAll('button[onclick^="openIncomeModal"]').forEach(btn => {
     btn.classList.remove('btn-primary');
     btn.classList.add('btn-secondary');
@@ -281,19 +263,15 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
     const btn      = row.querySelector('.doc-row-btn button');
     const clearBtn = document.getElementById(`clear-${idx}`);
 
-    // [FIX] ดอกจัน (*) ที่ต่อท้ายชื่อเอกสารบังคับใน .doc-row-name (เพิ่มเข้ามาทีหลัง
-    // เพื่อบอกว่าบังคับแนบ) ไม่ได้เป็นส่วนหนึ่งของ doc_type ที่เก็บในฐานข้อมูล
-    // ต้องตัดออกก่อนเทียบ ไม่งั้นจะจับคู่ไม่เจอ ทำให้เอกสารที่แนบไว้แล้วหายไป
+    // [FIX] ดอกจัน (*) ท้ายชื่อเอกสารบังคับใน .doc-row-name ไม่ใช่ส่วนหนึ่งของ doc_type ในฐานข้อมูล
+    // ต้องตัดออกก่อนเทียบ ไม่งั้นจะจับคู่ไม่เจอ ทำให้เอกสารที่แนบไว้แล้วดูเหมือนหายไป
     const label = nameEl ? nameEl.textContent.trim().replace(/\s*\*\s*$/, '') : '';
     const att   = attachments.find(a => (a.doc_type || '').trim() === label);
 
     if (editable) {
       if (att) {
-        // [FIX] resumeDraftSubmission() ไม่มี File object จริงให้ appState.
-        // attachedFiles (ไฟล์อยู่บน server แล้ว ดึงกลับมาเป็น File ไม่ได้)
-        // ทำให้ตอนกดยืนยันนำส่ง เช็คเอกสารบังคับ 3 รายการ (step5-summary.js)
-        // มองไม่เห็นว่ามีไฟล์นี้อยู่แล้ว ต้องจดไว้ใน appState.existingAttachments
-        // แยกต่างหาก ให้ตัวเช็คนั้นมองเห็นด้วยว่า "มีไฟล์อยู่แล้วบน server"
+        // [FIX] resumeDraftSubmission() ไม่มี File object จริงให้ appState.attachedFiles (ไฟล์อยู่บน
+        // server แล้ว ดึงเป็น File ไม่ได้) — ต้องจดไว้ใน existingAttachments ให้ step5-summary.js เห็นด้วย
         appState.existingAttachments = appState.existingAttachments || {};
         appState.existingAttachments[idx] = att.id;
 
@@ -302,9 +280,7 @@ function _vsRenderAttachments(attachments, downloadBase, editable) {
           clearBtn.style.display = 'inline-flex';
           clearBtn.onclick = () => _vsRemoveExistingAttachment(downloadBase, idx, att.id);
         }
-        // [FIX] เปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" เมื่อมีไฟล์แนบอยู่แล้ว
-        // (เหมือนพฤติกรรมตอนเพิ่งเลือกไฟล์ใหม่ใน handleFileAttach) กันสับสน
-        // ต้องกดลบ (X) ก่อนถึงจะแนบใหม่ทับได้
+        // [FIX] เปลี่ยนปุ่ม "แนบไฟล์" เป็น "ดูเอกสาร" เมื่อมีไฟล์อยู่แล้ว (เหมือน handleFileAttach) ต้องลบ (X) ก่อนถึงแนบใหม่ทับได้
         if (btn) {
           btn.textContent = 'ดูเอกสาร';
           btn.onclick = () => _vsPreviewAttachment(`${downloadBase}/attachments/${att.id}/download`, att.file_name);
