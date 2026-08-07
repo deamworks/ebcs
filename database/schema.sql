@@ -320,7 +320,7 @@ CREATE TABLE ref_no_counters (
 -- รหัสผ่านจริง: ChangeMe123! (bcrypt rounds=12) — เปลี่ยนทันทีหลัง login ครั้งแรกบน production
 INSERT INTO admin_users (email, password_hash, full_name, role) VALUES
 (
-  'putita.chaleeprom12@gmail.com',
+  '',
   '$2b$12$nGg0SOXe2NJwBaaPhk7souwTkssH/.lZfbkaf3zQEOZ5ehE5UdUs6',
   'ผู้ดูแลระบบ',
   'super_admin'
