@@ -54,6 +54,52 @@ docker compose up -d
 หยุดระบบ: `docker compose down`
 ดู log: `docker compose logs -f`
 
+## การ Deploy จริง (Production)
+
+ระบบใช้ `docker-compose.yml` ชุดเดียวกับตอน dev (ไม่มี compose file แยกสำหรับ production)
+`backend/Dockerfile` รัน gunicorn (4 workers) อยู่แล้วเป็นค่าเริ่มต้น ก่อนขึ้นจริงต้อง:
+
+1. ตั้งค่าใน `.env` ใหม่ทั้งหมดให้เป็นค่าจริง — ห้ามใช้ค่าตัวอย่างจาก `.env.example` เด็ดขาด
+   (ดูรายละเอียดหัวข้อถัดไป)
+2. ปิดหรือจำกัดการเข้าถึง phpMyAdmin (`port 8181` ใน `docker-compose.yml`) เช่น ลบ service
+   `phpmyadmin` ออก หรือปิดกั้นด้วย firewall — ถ้าเปิดสู่สาธารณะจะเป็นความเสี่ยงด้านความปลอดภัยสูง
+3. ตรวจสอบว่า `MAIL_SERVER` **ไม่ใช่** `mock` และตั้งค่า `MAIL_USERNAME`/`MAIL_PASSWORD` ให้ครบ
+   ไม่งั้นระบบจะไม่ส่งอีเมล OTP จริง (แค่ print ค่า OTP ลง log)
+4. Deploy/อัปเดตระบบ:
+
+```bash
+docker compose up -d --build      # build image ใหม่ + apply ค่า .env ล่าสุด
+docker compose restart <service>  # restart เฉพาะ service ที่ต้องการ (เช่น flask-api)
+```
+
+## ตัวแปรแวดล้อมที่ต้องเปลี่ยนก่อนขึ้นจริง
+
+ค่าใน `.env.example` เป็นค่าตัวอย่างที่ commit ไว้ใน repo (ใครก็เห็นได้) **ต้องเปลี่ยนทุกตัวก่อนขึ้น production**:
+
+| ตัวแปร | เหตุผล |
+|---|---|
+| `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | รหัสผ่านฐานข้อมูล ค่าตัวอย่างรู้กันทั่วไปแล้ว |
+| `FLASK_SECRET_KEY` | ใช้เซ็น session — ถ้าไม่เปลี่ยนแฮกเกอร์ปลอม session ได้ |
+| `JWT_SECRET_KEY` | ใช้เซ็น JWT token — ถ้าไม่เปลี่ยนแฮกเกอร์ปลอม token login ได้ |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | บัญชีอีเมลจริงสำหรับส่ง OTP |
+
+ตัวแปรที่ปรับได้ตามความเหมาะสม ไม่บังคับต้องเปลี่ยน: `OTP_EXPIRE_SECONDS`, `OTP_MAX_ATTEMPTS`,
+`OTP_RATE_LIMIT_PER_MINUTE`, `MAX_UPLOAD_MB`
+
+## Backup / Restore ฐานข้อมูล
+
+ข้อมูลจริงเก็บอยู่ที่ `./volumes/db` (bind mount) — **ถ้าลบโฟลเดอร์นี้ ข้อมูลหายถาวร**
+
+Backup:
+```bash
+docker compose exec mysql mysqldump -u root -p ebcs > backup.sql
+```
+
+Restore:
+```bash
+docker compose exec -T mysql mysql -u root -p ebcs < backup.sql
+```
+
 ## แนวคิดหลักของระบบ (Domain Model)
 
 - **สถานะใบยื่นแบบ (submission status)**: `draft` (ร่าง) → `pending_payment` (รอชำระเงิน) → `paid` (ชำระแล้ว)
