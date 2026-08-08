@@ -149,12 +149,12 @@ docker compose restart <service>  # restart เฉพาะ service ที่ต
 
 Backup ฐานข้อมูล:
 ```bash
-docker compose exec mysql mysqldump -u root -p ebcs > backup.sql
+docker compose exec mysql mysqldump -u root -p nbtcfiling > backup.sql
 ```
 
 Restore ฐานข้อมูล:
 ```bash
-docker compose exec -T mysql mysql -u root -p ebcs < backup.sql
+docker compose exec -T mysql mysql -u root -p nbtcfiling < backup.sql
 ```
 
 Backup ไฟล์แนบ (ทำคู่กับ backup ฐานข้อมูลทุกครั้ง):
@@ -197,7 +197,7 @@ Log เหล่านี้ไม่ได้ตั้ง rotation ไว้ �
    truth สำหรับคนที่สร้างระบบใหม่ในอนาคต)
 2. เขียนคำสั่ง `ALTER TABLE` ที่จำเป็นแยกต่างหาก แล้วรันกับฐานข้อมูลจริงด้วยมือ เช่น:
    ```bash
-   docker compose exec mysql mysql -u root -p ebcs -e "ALTER TABLE ..."
+   docker compose exec mysql mysql -u root -p nbtcfiling -e "ALTER TABLE ..."
    ```
 3. **Backup ฐานข้อมูลก่อนรัน ALTER เสมอ** (ดูหัวข้อ Backup ด้านบน)
 4. ทดสอบกับข้อมูลจริงหรือ backup ที่ restore มาทดสอบก่อน ไม่รัน ALTER ตรงกับฐานข้อมูล

@@ -2,8 +2,8 @@
 // js/auth.js — จัดการ Token และ Redirect Guard
 //
 // Token แยกกัน 2 ชุด:
-//   ebcs_token       = JWT ของผู้ประกอบการ (อายุ 2 ชั่วโมง)
-//   ebcs_admin_token = JWT ของเจ้าหน้าที่  (อายุ 8 ชั่วโมง)
+//   nbtc_token       = JWT ของผู้ประกอบการ (อายุ 2 ชั่วโมง)
+//   nbtc_admin_token = JWT ของเจ้าหน้าที่  (อายุ 8 ชั่วโมง)
 //
 // วิธีใช้:
 //   auth.requireOperator();   ← เรียกตอน page load หน้า operator
@@ -33,12 +33,12 @@ document.addEventListener('animationstart', e => {
 const auth = (() => {
 
   // ── Keys ────────────────────────────────────────────
-  const KEY_TOKEN    = 'ebcs_token';
-  const KEY_ADMIN    = 'ebcs_admin_token';
-  const KEY_TAX_ID   = 'ebcs_tax_id';
-  const KEY_NAME     = 'ebcs_operator_name';
-  const KEY_FISCAL   = 'ebcs_fiscal_year';
-  const KEY_ADMIN_EMAIL = 'ebcs_admin_email';
+  const KEY_TOKEN    = 'nbtc_token';
+  const KEY_ADMIN    = 'nbtc_admin_token';
+  const KEY_TAX_ID   = 'nbtc_tax_id';
+  const KEY_NAME     = 'nbtc_operator_name';
+  const KEY_FISCAL   = 'nbtc_fiscal_year';
+  const KEY_ADMIN_EMAIL = 'nbtc_admin_email';
 
   // ── Operator ─────────────────────────────────────────
   function saveOperator(token, info = {}) {

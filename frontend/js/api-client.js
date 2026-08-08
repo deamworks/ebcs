@@ -22,11 +22,11 @@ class ApiError extends Error {
 const api = (() => {
 
   function _getToken() {
-    // [FIX] เดิมลอง ebcs_token (operator) ก่อนเสมอ ถ้ามี token ทั้งคู่หน้าแอดมินจะหยิบผิดฝั่งจน 403 — เลือกตาม path แทน
+    // [FIX] เดิมลอง nbtc_token (operator) ก่อนเสมอ ถ้ามี token ทั้งคู่หน้าแอดมินจะหยิบผิดฝั่งจน 403 — เลือกตาม path แทน
     const isAdminPage = window.location.pathname.includes('admin');
     return isAdminPage
-      ? localStorage.getItem('ebcs_admin_token') || null
-      : localStorage.getItem('ebcs_token') || null;
+      ? localStorage.getItem('nbtc_admin_token') || null
+      : localStorage.getItem('nbtc_token') || null;
   }
 
   function _headers(isFormData = false) {

@@ -63,7 +63,7 @@ body {
   color: rgba(255,255,255,0.75);
   letter-spacing: 0.02em;
 }
-.brand-ebcs {
+.brand-logo {
   background: var(--surface);
   color: var(--primary);
   border-radius: var(--radius-sm);
@@ -72,7 +72,7 @@ body {
   display: flex; align-items: center; gap: 3px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
-.brand-ebcs .e-dot { color: var(--accent); font-weight: 900; }
+.brand-logo .e-dot { color: var(--accent); font-weight: 900; }
 .topnav-right { display: flex; align-items: center; gap: 4px; }
 .topnav-right a {
   color: rgba(255,255,255,0.75); text-decoration: none;

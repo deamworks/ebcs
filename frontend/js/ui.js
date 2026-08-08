@@ -7,14 +7,14 @@
 
 // ════════════════════════════════════════════════════
 // localStorage — บันทึก/โหลด appState อัตโนมัติ
-// key: ebcs_draft_{tax_id}_{fiscal_year}
+// key: nbtc_draft_{tax_id}_{fiscal_year}
 // ════════════════════════════════════════════════════
 
 /** key สำหรับ localStorage ของ user นี้ */
 function _draftKey() {
   const taxId = appState.taxId || appState.taxid || 'unknown';
   const year  = appState.year  || 'unknown';
-  return `ebcs_draft_${taxId}_${year}`;
+  return `nbtc_draft_${taxId}_${year}`;
 }
 
 /** บันทึก appState ลง localStorage */
