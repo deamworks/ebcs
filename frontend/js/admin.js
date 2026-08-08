@@ -49,7 +49,7 @@ async function handleLogin() {
     // [FIX] api.post() คืน data ที่ parse แล้วและ throw เองถ้า success:false — ไม่ต้อง .json() ซ้ำ
     const data = await api.post('/auth/admin/login', { email, password });
 
-    localStorage.setItem('ebcs_admin_token', data.token);
+    localStorage.setItem('nbtc_admin_token', data.token);
     enterDashboard(data.admin.email, data.admin.full_name);
 
   } catch (e) {
@@ -90,7 +90,7 @@ function enterDashboard(email, fullName) {
 
   // กลับไปหน้าเดิมที่เปิดล่าสุด ถ้า refresh browser (ไม่ใช่กลับไปรายการยื่นแบบเสมอ)
   let lastPage = 'submissions';
-  try { lastPage = sessionStorage.getItem('ebcs_admin_last_page') || 'submissions'; } catch (e) {}
+  try { lastPage = sessionStorage.getItem('nbtc_admin_last_page') || 'submissions'; } catch (e) {}
   if (lastPage === 'admins' && !isSuperAdmin) lastPage = 'submissions';
   if (IMPORT_PAGES.includes(lastPage) && !isSuperAdmin) lastPage = 'submissions';
   if (!document.getElementById('page-' + lastPage)) lastPage = 'submissions';
@@ -116,19 +116,19 @@ function enterDashboard(email, fullName) {
 function handleLogout() { auth.logoutAdmin(); }
 
 function checkAdminAuth() {
-  const token = localStorage.getItem('ebcs_admin_token');
+  const token = localStorage.getItem('nbtc_admin_token');
   if (!token) return;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp && payload.exp * 1000 < Date.now()) {
-      localStorage.removeItem('ebcs_admin_token');
+      localStorage.removeItem('nbtc_admin_token');
       return;
     }
     if (payload.role === 'admin') {
       enterDashboard(payload.sub, payload.full_name);
     }
   } catch (e) {
-    localStorage.removeItem('ebcs_admin_token');
+    localStorage.removeItem('nbtc_admin_token');
   }
 }
 
@@ -740,16 +740,16 @@ async function deleteLicense(id, no) {
     const group = headerEl.parentElement;
     group.classList.toggle('collapsed');
     try {
-      const state = JSON.parse(sessionStorage.getItem('ebcs_admin_sb_state') || '{}');
+      const state = JSON.parse(sessionStorage.getItem('nbtc_admin_sb_state') || '{}');
       state[group.dataset.group] = group.classList.contains('collapsed');
-      sessionStorage.setItem('ebcs_admin_sb_state', JSON.stringify(state));
+      sessionStorage.setItem('nbtc_admin_sb_state', JSON.stringify(state));
     } catch (e) {}
   }
 
   // คืนสถานะเปิด/พับที่จำไว้ ถ้ายังไม่เคยจำไว้เลยให้เปิดเฉพาะกลุ่มของหน้าปัจจุบัน
   function restoreSidebarGroupsState(activePage) {
     let state = {};
-    try { state = JSON.parse(sessionStorage.getItem('ebcs_admin_sb_state') || '{}'); } catch (e) {}
+    try { state = JSON.parse(sessionStorage.getItem('nbtc_admin_sb_state') || '{}'); } catch (e) {}
     const hasSaved = Object.keys(state).length > 0;
 
     document.querySelectorAll('.sb-group').forEach(g => {
@@ -785,7 +785,7 @@ async function deleteLicense(id, no) {
 
     // จำหน้าล่าสุดไว้กลับมาตอน refresh (taxpayer-detail หายไปตอน refresh จึงจำเป็น taxpayers แทน)
     try {
-      sessionStorage.setItem('ebcs_admin_last_page', page === 'taxpayer-detail' ? 'taxpayers' : page);
+      sessionStorage.setItem('nbtc_admin_last_page', page === 'taxpayer-detail' ? 'taxpayers' : page);
     } catch (e) {}
     const meta = PAGE_META[page] || {};
     document.getElementById('pageTitle').textContent    = meta.title || page;

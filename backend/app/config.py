@@ -14,8 +14,8 @@ class Config:
     # ── MySQL ────────────────────────────────────────────
     DB_HOST     = "mysql"
     DB_PORT     = 3306
-    DB_NAME     = os.environ.get("MYSQL_DATABASE", "ebcs")
-    DB_USER     = os.environ.get("MYSQL_USER", "ebcs_user")
+    DB_NAME     = os.environ.get("MYSQL_DATABASE", "nbtcfiling")
+    DB_USER     = os.environ.get("MYSQL_USER", "nbtcfiling_user")
     DB_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
 
     # ── Redis ────────────────────────────────────────────

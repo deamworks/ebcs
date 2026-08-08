@@ -158,13 +158,13 @@ tbody tr:hover td { background:var(--accent-bg); }
       box-shadow: 0 2px 16px rgba(27,45,122,0.3);
     }
     .brand-nbtc-text { font-size:12px; color:rgba(255,255,255,0.65); letter-spacing:.04em; font-weight:400; }
-    .brand-ebcs {
+    .brand-logo {
       background:#fff; color:#1e2d5e; border-radius:6px;
       padding:4px 13px; font-size:15px; font-weight:700;
       box-shadow:0 2px 8px rgba(0,0,0,0.15);
       letter-spacing:.04em;
     }
-    .brand-ebcs .e-dot { color:#2e86ab; }
+    .brand-logo .e-dot { color:#2e86ab; }
 
     /* Breadcrumb */
     .breadcrumb-bar {

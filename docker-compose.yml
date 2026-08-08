@@ -11,7 +11,7 @@ services:
   #   - ขอ /api/...        → ส่งต่อให้ Flask
   nginx:
     image: nginx:1.27-alpine          # ใช้ nginx เวอร์ชัน 1.27 แบบเล็ก (alpine)
-    container_name: ebcs-nginx        # ชื่อ container ที่เห็นใน Docker Desktop
+    container_name: nbtc-filing-nginx        # ชื่อ container ที่เห็นใน Docker Desktop
     ports:
       - "80:80"                        # เปิด port 80 ให้ browser เข้าได้
     volumes:
@@ -28,7 +28,7 @@ services:
   # ไม่มี ports: เปิดออกข้างนอก — ป้องกันการเรียก API ตรงๆ ต้องผ่าน Nginx
   flask-api:
     build: ./backend                   # build จาก backend/Dockerfile
-    container_name: ebcs-api
+    container_name: nbtc-filing-api
     env_file: .env                     # อ่าน environment variables จาก .env
     volumes:
       # mount โฟลเดอร์ uploads เพื่อเก็บไฟล์แนบจริง
@@ -45,7 +45,7 @@ services:
   # schema.sql จะรันอัตโนมัติตอนสร้าง DB ครั้งแรก
   mysql:
     image: mysql:8.0
-    container_name: ebcs-mysql
+    container_name: nbtc-filing-mysql
     env_file: .env
     # ตั้งค่าให้รองรับภาษาไทย
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -66,7 +66,7 @@ services:
   # หน้าที่: เก็บ OTP ชั่วคราว (หมดอายุอัตโนมัติ 5 นาที)
   redis:
     image: redis:7-alpine
-    container_name: ebcs-redis
+    container_name: nbtc-filing-redis
     restart: unless-stopped
 
   # ── 5. phpMyAdmin 
@@ -74,7 +74,7 @@ services:
   # เปิดที่: http://localhost:8080
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: ebcs-pma
+    container_name: nbtc-filing-pma
     ports:
       - "8181:80"                      # เปิด port 8080
     environment:

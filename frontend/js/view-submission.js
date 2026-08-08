@@ -26,8 +26,8 @@ async function _vsPreviewAttachment(path, fileName) {
   try {
     const isAdminPage = window.location.pathname.includes('admin');
     const token = isAdminPage
-      ? localStorage.getItem('ebcs_admin_token')
-      : localStorage.getItem('ebcs_token');
+      ? localStorage.getItem('nbtc_admin_token')
+      : localStorage.getItem('nbtc_token');
     const res = await fetch(`${API_BASE}${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
